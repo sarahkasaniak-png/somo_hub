@@ -19,8 +19,16 @@ import {
 } from "lucide-react";
 
 // Create a contact API interface
+interface ContactResponse {
+  success: boolean;
+  message?: string;
+  // add any other fields your API returns
+}
+
+// Create a contact API interface with proper typing
 const contactApi = {
-  sendMessage: (data: any) => client.post("/contact", data),
+  sendMessage: (data: any): Promise<ContactResponse> =>
+    client.post<ContactResponse>("/contact", data),
 };
 
 export default function ContactPage() {

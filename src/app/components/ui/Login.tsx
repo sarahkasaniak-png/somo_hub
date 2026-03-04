@@ -24,6 +24,12 @@ import {
 import { useAuth } from "@/app/context/AuthContext";
 import { getPostLoginRedirect } from "@/lib/utils/redirectLogic"; // Add this import
 
+interface VerifyOtpResponse {
+  verified: boolean;
+  message?: string;
+  // add any other fields your API returns
+}
+
 const Login = ({
   isLoginOpen,
   setIsLoginOpen,
@@ -271,7 +277,7 @@ const Login = ({
       } else {
         // Verify registration OTP - use registration email
         const result = await authVerifyOtp(email, code, "registration");
-        if (result?.verified) {
+        if (result && (result as any).verified === true) {
           // Registration OTP verified successfully
           setRegistrationSuccess(true);
           setStep(3); // Move to registration success step

@@ -265,7 +265,15 @@ export default function TutorDashboard() {
 
       // Process dashboard stats
       if (statsResponse.status === "fulfilled" && statsResponse.value.success) {
-        const statsData = statsResponse.value.data;
+        const statsData = statsResponse.value.data as {
+          totalStudents?: number;
+          totalEarnings?: number;
+          pendingApplications?: number;
+          totalEnrollments?: number;
+          completionRate?: number;
+          averageRating?: number;
+          totalReviews?: number;
+        };
         setStats((prev) => ({
           ...prev,
           totalStudents: statsData.totalStudents || prev.totalStudents,
@@ -286,7 +294,7 @@ export default function TutorDashboard() {
         const earningsData = earningsResponse.value.data;
         setStats((prev) => ({
           ...prev,
-          totalEarnings: earningsData.total_earned || prev.totalEarnings,
+          totalEarnings: earningsData?.total_earned || prev.totalEarnings,
         }));
       }
 
@@ -300,21 +308,28 @@ export default function TutorDashboard() {
         // Format recent activity
         if (userData.recentActivity) {
           const activities = userData.recentActivity.map(
-            (activity: any, index: number) => ({
-              id: index,
-              type: activity.action.includes("enroll")
-                ? "enrollment"
-                : activity.action.includes("pay")
-                  ? "payment"
-                  : activity.action.includes("session")
-                    ? "session"
-                    : activity.action.includes("review")
-                      ? "review"
-                      : "course",
-              description: formatActivityDescription(activity),
-              timestamp: formatRelativeTime(activity.created_at),
-              metadata: activity.metadata,
-            }),
+            (activity: any, index: number) => {
+              // Determine the activity type with proper typing
+              let type: Activity["type"] = "course"; // default
+
+              if (activity.action.includes("enroll")) {
+                type = "enrollment";
+              } else if (activity.action.includes("pay")) {
+                type = "payment";
+              } else if (activity.action.includes("session")) {
+                type = "session";
+              } else if (activity.action.includes("review")) {
+                type = "review";
+              }
+
+              return {
+                id: index,
+                type: type,
+                description: formatActivityDescription(activity),
+                timestamp: formatRelativeTime(activity.created_at),
+                metadata: activity.metadata,
+              };
+            },
           );
           setRecentActivity(activities.slice(0, 5));
         }
@@ -444,7 +459,9 @@ export default function TutorDashboard() {
     if (action.includes("review_received"))
       return `New ${metadata.rating || ""}-star review received`;
 
-    return action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    return action
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l: string) => l.toUpperCase());
   };
 
   const formatDate = (dateString: string) => {

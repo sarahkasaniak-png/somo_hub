@@ -88,14 +88,17 @@ export default function TutorsPage() {
 
       const response = await tuitionApi.getTutors(params);
 
-      if (response.success && response.data) {
+      if (response.success) {
+        const tutorsData = response.data?.tutors || [];
+        const totalCount = response.data?.total || 0;
+
         if (reset) {
-          setTutors(response.data.tutors);
+          setTutors(tutorsData);
         } else {
-          setTutors((prev) => [...prev, ...response.data.tutors]);
+          setTutors((prev) => [...prev, ...tutorsData]);
         }
-        setTotal(response.data.total);
-        setHasMore(response.data.tutors.length === 12);
+        setTotal(totalCount);
+        setHasMore(tutorsData.length === 12);
         setPage(pageNum);
       }
     } catch (error) {

@@ -29,6 +29,12 @@ import {
   DollarSign,
 } from "lucide-react";
 
+function hasSessionsData(
+  data: any,
+): data is { sessions: TutorSession[]; total: number } {
+  return data && Array.isArray(data.sessions) && typeof data.total === "number";
+}
+
 export default function SessionsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -96,14 +102,17 @@ export default function SessionsPage() {
 
       const response = await tuitionApi.getSessions(params);
 
-      if (response.success && response.data) {
+      if (response.success) {
+        // Use non-null assertion operator since we know data exists on success
+        const data = response.data!;
+
         if (reset) {
-          setSessions(response.data.sessions);
+          setSessions(data.sessions);
         } else {
-          setSessions((prev) => [...prev, ...response.data.sessions]);
+          setSessions((prev) => [...prev, ...data.sessions]);
         }
-        setTotal(response.data.total);
-        setHasMore(response.data.sessions.length === 12);
+        setTotal(data.total);
+        setHasMore(data.sessions.length === 12);
         setPage(pageNum);
       }
     } catch (error) {

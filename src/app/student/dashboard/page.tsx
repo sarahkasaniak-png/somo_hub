@@ -78,7 +78,12 @@ interface Enrollment {
   id: number;
   tutor_course_session_id: number;
   student_id: number;
-  enrollment_status: "pending" | "active" | "completed" | "dropped";
+  enrollment_status:
+    | "pending"
+    | "active"
+    | "completed"
+    | "dropped"
+    | "suspended";
   payment_status: "pending" | "paid" | "partial" | "refunded";
   payment_amount: number;
   enrolled_at: string;
@@ -123,7 +128,7 @@ interface Schedule {
   mode: "virtual" | "in_person" | "hybrid";
   meeting_link: string | null;
   student_meeting_link: string | null;
-  status: "scheduled" | "ongoing" | "completed" | "cancelled";
+  status: "scheduled" | "ongoing" | "completed" | "cancelled" | "rescheduled";
   course_title?: string;
   session_name?: string;
   session_code?: string;
@@ -338,7 +343,9 @@ export default function StudentDashboard() {
     if (action.includes("review_submitted"))
       return `Left a review for ${metadata.course_title || ""}`;
 
-    return action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    return action
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l: string) => l.toUpperCase());
   };
 
   const formatRelativeTime = (dateString: string) => {
