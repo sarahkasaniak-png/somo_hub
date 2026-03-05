@@ -7,18 +7,14 @@ import Link from "next/link";
 import {
   UserRound,
   BookOpenCheck,
-  CirclePile,
   SearchIcon,
   X,
   MessageCircleQuestionMark,
   Presentation,
-  School,
   User2,
-  MessageSquare,
   CircleUserRound,
   MonitorCloud,
   ChevronDown,
-  GraduationCap,
   Home,
 } from "lucide-react";
 import CategoryTab from "./CategoryTab";
@@ -44,10 +40,10 @@ export default function Navbar() {
   const [displaySearchCount, setDisplaySearchCount] = useState<number>(0);
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
 
-  // Scroll state for mobile nav
-  const [showMobileNav, setShowMobileNav] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const [navbarHeight, setNavbarHeight] = useState("auto");
+  // Scroll state for mobile nav - simplified
+  const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollTimeout = useRef<NodeJS.Timeout>();
 
   // Filter states for sessions
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -60,18 +56,18 @@ export default function Navbar() {
   const [tutorSearchTerm, setTutorSearchTerm] = useState<string>("");
   const [tutorSubject, setTutorSubject] = useState<string>("");
 
-  // Mobile search states - separate from desktop
+  // Mobile search states
   const [mobileCategory, setMobileCategory] = useState<string>("all");
   const [mobileLevel, setMobileLevel] = useState<string>("all");
   const [mobileSearchTerm, setMobileSearchTerm] = useState<string>("");
 
-  // Mobile dropdown states - separate
+  // Mobile dropdown states
   const [showMobileCategoryDropdown, setShowMobileCategoryDropdown] =
     useState(false);
   const [showMobileLevelDropdown, setShowMobileLevelDropdown] = useState(false);
 
   // Get auth state
-  const { user, loading, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -80,61 +76,75 @@ export default function Navbar() {
   const desktopSearchRef = useRef<HTMLDivElement>(null);
   const navbarRef = useRef<HTMLDivElement>(null);
 
+  // Handle scroll hide/show for mobile nav - optimized
+  useEffect(() => {
+    const controlNavbar = () => {
+      if (typeof window === "undefined" || displaySearch) return;
+
+      const currentScrollY = window.scrollY;
+
+      // Use requestAnimationFrame for smoother updates
+      requestAnimationFrame(() => {
+        // Scroll down - hide mobile nav
+        if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+          setIsMobileNavVisible(false);
+        }
+        // Scroll up - show mobile nav
+        else if (currentScrollY < lastScrollY.current) {
+          setIsMobileNavVisible(true);
+        }
+
+        lastScrollY.current = currentScrollY;
+      });
+    };
+
+    // Throttle scroll events
+    const throttledControl = () => {
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+      scrollTimeout.current = setTimeout(controlNavbar, 10);
+    };
+
+    window.addEventListener("scroll", throttledControl, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", throttledControl);
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+    };
+  }, [displaySearch]);
+
+  // Prevent body scroll when search is open on mobile
+  useEffect(() => {
+    if (displaySearch) {
+      document.body.style.overflow = "hidden";
+      setIsMobileNavVisible(false); // Force hide mobile nav when search is open
+    } else {
+      document.body.style.overflow = "";
+      setIsMobileNavVisible(true); // Restore mobile nav when search closes
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [displaySearch]);
+
   const handleHamburgerNav = () => {
-    setShowHamburgerNav((val) => {
-      return !val;
-    });
+    setShowHamburgerNav((val) => !val);
   };
 
   const openLoginDialog = () => {
     setIsLoginOpen(true);
   };
 
-  // Handle scroll hide/show for mobile nav links and navbar height
-  useEffect(() => {
-    const controlNavbar = () => {
-      if (typeof window !== "undefined") {
-        const currentScrollY = window.scrollY;
-
-        // Don't hide if search panel is open
-        if (displaySearch) {
-          setShowMobileNav(true);
-          setNavbarHeight("auto");
-          return;
-        }
-
-        // Scroll down - hide mobile nav and reduce navbar height
-        if (currentScrollY > lastScrollY && currentScrollY > 50) {
-          setShowMobileNav(false);
-          setNavbarHeight("60px");
-        }
-        // Scroll up - show mobile nav and restore navbar height
-        else {
-          setShowMobileNav(true);
-          setNavbarHeight("auto");
-        }
-
-        setLastScrollY(currentScrollY);
-      }
-    };
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("scroll", controlNavbar);
-
-      return () => {
-        window.removeEventListener("scroll", controlNavbar);
-      };
-    }
-  }, [lastScrollY, displaySearch]);
-
   // Filter handlers for sessions
   const handleCategoryChange = (category: string) => {
-    console.log("Category changed to:", category);
     setSelectedCategory(category);
   };
 
   const handleLevelChange = (level: string) => {
-    console.log("Level changed to:", level);
     setSelectedLevel(level);
   };
 
@@ -142,11 +152,10 @@ export default function Navbar() {
     setSearchTerm(term);
   };
 
-  // Updated handleSearch with conditional behavior
   const handleSearch = () => {
+    const params = new URLSearchParams();
+
     if (isTutorsPage) {
-      // Tutor search - update URL params without redirect
-      const params = new URLSearchParams();
       if (selectedCategory && selectedCategory !== "all") {
         params.append("category", selectedCategory);
       }
@@ -156,13 +165,13 @@ export default function Navbar() {
       if (searchTerm) {
         params.append("q", searchTerm);
       }
-      const queryString = params.toString();
-      router.replace(`/tutors${queryString ? `?${queryString}` : ""}`, {
-        scroll: false,
-      });
+      router.replace(
+        `/tutors${params.toString() ? `?${params.toString()}` : ""}`,
+        {
+          scroll: false,
+        },
+      );
     } else if (isSessionsPage) {
-      // Session search - update URL params without redirect
-      const params = new URLSearchParams();
       if (selectedCategory && selectedCategory !== "all") {
         params.append("category", selectedCategory);
       }
@@ -172,13 +181,13 @@ export default function Navbar() {
       if (searchTerm) {
         params.append("q", searchTerm);
       }
-      const queryString = params.toString();
-      router.replace(`/sessions${queryString ? `?${queryString}` : ""}`, {
-        scroll: false,
-      });
+      router.replace(
+        `/sessions${params.toString() ? `?${params.toString()}` : ""}`,
+        {
+          scroll: false,
+        },
+      );
     } else {
-      // Default behavior - redirect to search page
-      const params = new URLSearchParams();
       if (selectedCategory && selectedCategory !== "all") {
         params.append("category", selectedCategory);
       }
@@ -188,24 +197,20 @@ export default function Navbar() {
       if (searchTerm) {
         params.append("q", searchTerm);
       }
-      const queryString = params.toString();
-      router.push(`/search${queryString ? `?${queryString}` : ""}`);
+      router.push(`/search${params.toString() ? `?${params.toString()}` : ""}`);
     }
 
-    // Close search panels
     setSelected(null);
     setDisplaySearch(false);
   };
 
   // Tutor filter handlers
   const handleTutorCategoryChange = (category: string) => {
-    console.log("Tutor category changed to:", category);
     setTutorCategory(category);
     updateTutorSearch();
   };
 
   const handleTutorLevelChange = (level: string) => {
-    console.log("Tutor level changed to:", level);
     setTutorLevel(level);
     updateTutorSearch();
   };
@@ -233,10 +238,12 @@ export default function Navbar() {
       params.append("subject", tutorSubject);
     }
 
-    const queryString = params.toString();
-    router.replace(`/tutors${queryString ? `?${queryString}` : ""}`, {
-      scroll: false,
-    });
+    router.replace(
+      `/tutors${params.toString() ? `?${params.toString()}` : ""}`,
+      {
+        scroll: false,
+      },
+    );
   };
 
   const handleTutorSearch = () => {
@@ -245,18 +252,9 @@ export default function Navbar() {
     setDisplaySearch(false);
   };
 
-  const handleTutorKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleTutorSearch();
-    }
-  };
-
   const handleProtectedNavigation = (path: string) => {
     if (!user) {
-      // If not logged in, open login modal and store the intended path
       setIsLoginOpen(true);
-      // You could store the intended path in state if you want to redirect after login
-      // setPendingRoute(path);
     } else {
       router.push(path);
     }
@@ -272,14 +270,12 @@ export default function Navbar() {
 
   // Mobile search handlers
   const handleMobileCategorySelect = (category: string) => {
-    console.log("Mobile category selected:", category);
     setMobileCategory(category);
     setShowMobileCategoryDropdown(false);
     setDisplaySearchCount(1);
   };
 
   const handleMobileLevelSelect = (level: string) => {
-    console.log("Mobile level selected:", level);
     setMobileLevel(level);
     setShowMobileLevelDropdown(false);
     setDisplaySearchCount(2);
@@ -293,12 +289,6 @@ export default function Navbar() {
   };
 
   const handleMobileSearch = () => {
-    console.log("Mobile search with:", {
-      category: mobileCategory,
-      level: mobileLevel,
-      searchTerm: mobileSearchTerm,
-    });
-
     const params = new URLSearchParams();
     if (mobileCategory && mobileCategory !== "all") {
       params.append("category", mobileCategory);
@@ -310,23 +300,19 @@ export default function Navbar() {
       params.append("q", mobileSearchTerm);
     }
 
-    const queryString = params.toString();
-    router.push(`/search${queryString ? `?${queryString}` : ""}`);
+    router.push(`/search${params.toString() ? `?${params.toString()}` : ""}`);
 
-    // Close search panels
     setDisplaySearch(false);
     setSelected(null);
     setDisplaySearchCount(0);
     setShowMobileCategoryDropdown(false);
     setShowMobileLevelDropdown(false);
-    // Reset mobile filters
     setMobileCategory("all");
     setMobileLevel("all");
     setMobileSearchTerm("");
   };
 
   const clearMobileFilters = () => {
-    console.log("Clearing mobile filters");
     setMobileCategory("all");
     setMobileLevel("all");
     setMobileSearchTerm("");
@@ -335,9 +321,16 @@ export default function Navbar() {
     setShowMobileLevelDropdown(false);
   };
 
-  // Close mobile dropdowns when clicking outside
+  // Handle click outside for dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowHamburgerNav(false);
+      }
+
       if (
         mobileCategoryRef.current &&
         !mobileCategoryRef.current.contains(event.target as Node)
@@ -350,6 +343,13 @@ export default function Navbar() {
       ) {
         setShowMobileLevelDropdown(false);
       }
+
+      if (
+        desktopSearchRef.current &&
+        !desktopSearchRef.current.contains(event.target as Node)
+      ) {
+        setSelected(null);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -358,38 +358,12 @@ export default function Navbar() {
     };
   }, []);
 
-  // Handle click outside for desktop search
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // Hamburger dropdown
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowHamburgerNav(false);
-      }
-
-      // Only close desktop dropdowns if clicking outside the entire search bar
-      if (
-        desktopSearchRef.current &&
-        !desktopSearchRef.current.contains(event.target as Node)
-      ) {
-        setSelected(null);
-      }
-    };
-    document.addEventListener("click", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-    };
-  }, []);
-
   const handleLogout = async () => {
     await logout();
     router.push("/");
   };
 
-  // Category display mapping
+  // Display mappings
   const getCategoryDisplay = (category: string) => {
     const map: Record<string, string> = {
       all: "All Sessions",
@@ -399,7 +373,6 @@ export default function Navbar() {
     return map[category] || category;
   };
 
-  // Level display mapping
   const getLevelDisplay = (level: string) => {
     const map: Record<string, string> = {
       all: "All Levels",
@@ -412,7 +385,6 @@ export default function Navbar() {
     return map[level] || level;
   };
 
-  // Tutor category display mapping
   const getTutorCategoryDisplay = (category: string) => {
     const map: Record<string, string> = {
       all: "All Tutors",
@@ -423,7 +395,6 @@ export default function Navbar() {
     return map[category] || category;
   };
 
-  // Tutor level display mapping
   const getTutorLevelDisplay = (level: string) => {
     const map: Record<string, string> = {
       all: "All Levels",
@@ -443,8 +414,9 @@ export default function Navbar() {
       <div className="nav-wrapper">
         <div
           ref={navbarRef}
-          className="nav-container transition-all duration-300 ease-in-out"
-          style={{ height: navbarHeight }}
+          className={`nav-container transition-all duration-300 ${
+            displaySearch ? "shadow-lg" : ""
+          }`}
         >
           <nav className="navbar md:py-3">
             <div
@@ -463,7 +435,7 @@ export default function Navbar() {
               </span>
             </div>
 
-            {/* Desktop Navigation Links - hidden on mobile */}
+            {/* Desktop Navigation Links */}
             <ul className="nav-links hidden md:flex">
               <li>
                 <Link
@@ -474,7 +446,7 @@ export default function Navbar() {
                       : ""
                   }`}
                 >
-                  <Home className="w-4 h-4 md:w-6 md:h6 text-gray-800" />{" "}
+                  <Home className="w-4 h-4 md:w-6 md:h6 text-gray-800" />
                   <span className="md:text-base text-[12px] text-zinc-600">
                     Home
                   </span>
@@ -489,7 +461,7 @@ export default function Navbar() {
                       : ""
                   }`}
                 >
-                  <BookOpenCheck className="w-4 h-4 md:w-6 md:h6 text-gray-800" />{" "}
+                  <BookOpenCheck className="w-4 h-4 md:w-6 md:h6 text-gray-800" />
                   <span className="md:text-base text-[12px] text-zinc-600">
                     Tuition
                   </span>
@@ -504,7 +476,7 @@ export default function Navbar() {
                       : ""
                   }`}
                 >
-                  <UserRound className="w-4 h-4 md:w-6 md:h6 text-gray-800" />{" "}
+                  <UserRound className="w-4 h-4 md:w-6 md:h6 text-gray-800" />
                   <span className="md:text-base text-[12px] text-zinc-600">
                     Tutors
                   </span>
@@ -512,10 +484,10 @@ export default function Navbar() {
               </li>
             </ul>
 
-            <div className="flex justify-center items-center gap-3 ">
+            <div className="flex justify-center items-center gap-3">
               {!user ? (
                 <span
-                  className="hidden md:flex justify-center items-center font-semibold cursor-pointer  hover:bg-zinc-200 py-2 px-3 rounded-3xl"
+                  className="hidden md:flex justify-center items-center font-semibold cursor-pointer hover:bg-zinc-200 py-2 px-3 rounded-3xl"
                   onClick={() => handleProtectedNavigation("/onboarding/tutor")}
                 >
                   Become a Tutor
@@ -542,8 +514,7 @@ export default function Navbar() {
                   )}
                   <div
                     className="hidden md:flex profile-pic h-10 w-10 rounded-full ring-1 ring-offset-neutral-50 text-zinc-50 bg-zinc-900 justify-center items-center text-[12px] cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onClick={() => {
                       user.roles?.includes("tutor")
                         ? router.push("/tutor")
                         : router.push("/student");
@@ -558,15 +529,14 @@ export default function Navbar() {
                 ref={dropdownRef}
                 className={`hamburger-container relative ${
                   displaySearch
-                    ? "bg-white  ring-1 ring-zinc-100 shadow-md    hover:scale-110 transition-all duration-200"
-                    : "bg-zinc-200  hover:bg-zinc-300"
+                    ? "bg-white ring-1 ring-zinc-100 shadow-md hover:scale-110 transition-all duration-200"
+                    : "bg-zinc-200 hover:bg-zinc-300"
                 }`}
                 onClick={() => {
                   if (displaySearch) {
                     setDisplaySearch(false);
                     setDisplaySearchCount(0);
                     setSelected(null);
-                    // Reset mobile filters when closing
                     setMobileCategory("all");
                     setMobileLevel("all");
                     setMobileSearchTerm("");
@@ -587,7 +557,6 @@ export default function Navbar() {
                         setDisplaySearch(false);
                         setSelected(null);
                         setDisplaySearchCount(0);
-                        // Reset mobile filters when closing
                         setMobileCategory("all");
                         setMobileLevel("all");
                         setMobileSearchTerm("");
@@ -603,80 +572,75 @@ export default function Navbar() {
             </div>
           </nav>
 
-          {/* Mobile Navigation Links - only show when search is not active */}
-          {!displaySearch && (
-            <div
-              className={`
-                md:hidden w-full px-6 py-1
-                transition-all duration-300 ease-in-out
-                ${showMobileNav ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full h-0 py-0"}
-                overflow-hidden
-              `}
-            >
-              <ul className="flex justify-center items-center gap-6 w-full">
-                <li>
-                  <Link
-                    href="/"
-                    className={`flex flex-col items-center gap-0.5 ${
-                      pathname === "/"
-                        ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
-                        : ""
-                    }`}
-                  >
-                    <Home className="w-5 h-5 text-gray-800" />
-                    <span className="text-[12px] text-zinc-600">Home</span>
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/sessions"
-                    className={`flex flex-col items-center gap-0.5 ${
-                      pathname === "/sessions"
-                        ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
-                        : ""
-                    }`}
-                  >
-                    <BookOpenCheck className="w-5 h-5 text-gray-800" />
-                    <span className="text-[12px] text-zinc-600">Tuition</span>
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/tutors"
-                    className={`flex flex-col items-center gap-0.5 ${
-                      pathname === "/tutors"
-                        ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
-                        : ""
-                    }`}
-                  >
-                    <UserRound className="w-5 h-5 text-gray-800" />
-                    <span className="text-[12px] text-zinc-600">Tutors</span>
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          )}
+          {/* Mobile Navigation Links - Fixed visibility */}
+          <div
+            className={`
+              md:hidden w-full px-6 py-1
+              transition-all duration-300
+              ${!displaySearch && isMobileNavVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full h-0 py-0 pointer-events-none"}
+              overflow-hidden
+            `}
+          >
+            <ul className="flex justify-center items-center gap-6 w-full">
+              <li>
+                <Link
+                  href="/"
+                  className={`flex flex-col items-center gap-0.5 ${
+                    pathname === "/"
+                      ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
+                      : ""
+                  }`}
+                  onClick={() => setDisplaySearch(false)}
+                >
+                  <Home className="w-5 h-5 text-gray-800" />
+                  <span className="text-[12px] text-zinc-600">Home</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/sessions"
+                  className={`flex flex-col items-center gap-0.5 ${
+                    pathname === "/sessions"
+                      ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
+                      : ""
+                  }`}
+                  onClick={() => setDisplaySearch(false)}
+                >
+                  <BookOpenCheck className="w-5 h-5 text-gray-800" />
+                  <span className="text-[12px] text-zinc-600">Tuition</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/tutors"
+                  className={`flex flex-col items-center gap-0.5 ${
+                    pathname === "/tutors"
+                      ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
+                      : ""
+                  }`}
+                  onClick={() => setDisplaySearch(false)}
+                >
+                  <UserRound className="w-5 h-5 text-gray-800" />
+                  <span className="text-[12px] text-zinc-600">Tutors</span>
+                </Link>
+              </li>
+            </ul>
+          </div>
 
+          {/* Hamburger Menu Dropdown */}
           <div
             className={`dropdown-menu z-20 ${!showHamburgerNav && "hidden"}`}
           >
-            <div className="w-full flex flex-col ">
+            <div className="w-full flex flex-col">
               {user && (
-                <div className=" pb-2 border-b-2 border-zinc-200 flex flex-col justify-start items-start">
-                  {/* <div className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2  pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100">
-                    <MessageSquare size={18} />
-                    <span className="text-[14px] font-sans text-zinc-700">
-                      Messages
-                    </span>
-                  </div> */}
+                <div className="pb-2 border-b-2 border-zinc-200 flex flex-col justify-start items-start">
                   <div
-                    className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2  pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100"
+                    className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2 pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100"
                     onClick={() => {
-                      {
-                        user?.roles?.includes("tutor")
-                          ? handleProtectedNavigation("/tutor/profile")
-                          : handleProtectedNavigation("/student/profile");
-                      }
+                      user?.roles?.includes("tutor")
+                        ? handleProtectedNavigation("/tutor/profile")
+                        : handleProtectedNavigation("/student/profile");
+                      setShowHamburgerNav(false);
                     }}
                   >
                     <CircleUserRound size={18} />
@@ -685,13 +649,12 @@ export default function Navbar() {
                     </span>
                   </div>
                   <div
-                    className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2  pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100"
+                    className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2 pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100"
                     onClick={() => {
-                      {
-                        user?.roles?.includes("tutor")
-                          ? handleProtectedNavigation("/tutor/sessions")
-                          : handleProtectedNavigation("/student/schedule");
-                      }
+                      user?.roles?.includes("tutor")
+                        ? handleProtectedNavigation("/tutor/sessions")
+                        : handleProtectedNavigation("/student/schedule");
+                      setShowHamburgerNav(false);
                     }}
                   >
                     <MonitorCloud size={18} />
@@ -705,40 +668,41 @@ export default function Navbar() {
                 className="font-medium text-zinc-700 flex justify-start items-center gap-2 border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
                 onClick={() => {
                   router.push("/help/tutor");
+                  setShowHamburgerNav(false);
                 }}
               >
                 <MessageCircleQuestionMark size={18} />
                 <span className="text-[14px] font-san">Help & Support</span>
               </div>
               <div
-                className="font-medium text-zinc-700 flex  justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
-                onClick={() => router.push("/tutors")}
+                className="font-medium text-zinc-700 flex justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
+                onClick={() => {
+                  router.push("/tutors");
+                  setShowHamburgerNav(false);
+                }}
               >
-                <div className="font-medium text-zinc-700 flex flex-col justify-start items-start ">
-                  <span
-                    className="text-[14px] font-sans   text-zinc-700 leading-tight font-sans tracking-normal"
-                    onClick={() => router.push("/tutors")}
-                  >
+                <div className="font-medium text-zinc-700 flex flex-col justify-start items-start">
+                  <span className="text-[14px] font-sans text-zinc-700 leading-tight tracking-normal">
                     Tutors
                   </span>
-                  <span className="text-zinc-500 text-[13px] ">
+                  <span className="text-zinc-500 text-[13px]">
                     Verified tutors with qualified academic background
                   </span>
                 </div>
                 <User2 size={30} />
               </div>
               <div
-                className="font-medium text-zinc-700 flex  justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
-                onClick={() => router.push("/sessions")}
+                className="font-medium text-zinc-700 flex justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
+                onClick={() => {
+                  router.push("/sessions");
+                  setShowHamburgerNav(false);
+                }}
               >
-                <div className="font-medium text-zinc-700 flex flex-col justify-start items-start ">
-                  <span
-                    className="text-[14px] font-sans   text-zinc-700 leading-tight font-sans tracking-normal"
-                    onClick={() => router.push("/tutors")}
-                  >
+                <div className="font-medium text-zinc-700 flex flex-col justify-start items-start">
+                  <span className="text-[14px] font-sans text-zinc-700 leading-tight tracking-normal">
                     Tuition & Sessions
                   </span>
-                  <span className="text-zinc-500 text-[13px] ">
+                  <span className="text-zinc-500 text-[13px]">
                     Sessions managed virtually within the app
                   </span>
                 </div>
@@ -746,42 +710,23 @@ export default function Navbar() {
               </div>
               {!user?.roles?.includes("tutor") && (
                 <div
-                  className="font-medium text-zinc-700 flex  justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
-                  onClick={() => handleProtectedNavigation("/onboarding/tutor")}
+                  className="font-medium text-zinc-700 flex justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
+                  onClick={() => {
+                    handleProtectedNavigation("/onboarding/tutor");
+                    setShowHamburgerNav(false);
+                  }}
                 >
-                  <div className="font-medium text-zinc-700 flex flex-col justify-start items-start ">
-                    <span
-                      className="text-[14px] font-sans   text-zinc-700 leading-tight font-sans tracking-normal"
-                      onClick={() =>
-                        handleProtectedNavigation("/onboarding/tutor")
-                      }
-                    >
+                  <div className="font-medium text-zinc-700 flex flex-col justify-start items-start">
+                    <span className="text-[14px] font-sans text-zinc-700 leading-tight tracking-normal">
                       Become a Tutor
                     </span>
-                    <span className="text-zinc-500 text-[13px] ">
+                    <span className="text-zinc-500 text-[13px]">
                       It's easy to start and earn an extra income
                     </span>
                   </div>
                   <Presentation size={30} />
                 </div>
               )}
-              {/* <div
-                className="font-medium text-zinc-700 flex  justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
-                onClick={() =>
-                  handleProtectedNavigation("/onboarding/community")
-                }
-              >
-                <div className="font-medium text-zinc-700 flex flex-col justify-start items-start ">
-                  <span className="text-[14px] font-sans md:text-[14px] text-zinc-700 leading-tight tracking-normal font-sans">
-                    Register your Community
-                  </span>
-                  <span className="text-zinc-500 text-[13px] ">
-                    Register your learning community with us (schools, colleges,
-                    groups, etc)
-                  </span>
-                </div>
-                <School className="w-14 h-" />
-              </div> */}
               <div
                 onClick={() => {
                   if (!user) {
@@ -789,8 +734,9 @@ export default function Navbar() {
                   } else {
                     logout();
                   }
+                  setShowHamburgerNav(false);
                 }}
-                className="font-medium text-zinc-700 flex justify-start items-center gap-2  border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
+                className="font-medium text-zinc-700 flex justify-start items-center gap-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
               >
                 <span className="text-[14px] font-san">
                   {!user ? "Login or sign up" : "Log out"}
@@ -801,23 +747,25 @@ export default function Navbar() {
         </div>
 
         {/* Search Bar */}
-        <div className="pb-1 md:pl-8 md:pr-8 w-full md:pb-5 box-border ">
+        <div className="pb-1 md:pl-8 md:pr-8 w-full md:pb-5 box-border">
           <div
             ref={searchRef}
             className={`search flex ${
               displaySearch
-                ? "flex-col justify-start items-start box-border h-screen"
+                ? "flex-col justify-start items-start box-border fixed inset-0 bg-white z-50 pt-16"
                 : "justify-center items-center"
             } w-full md:max-w-4xl md:m-auto`}
           >
-            {/* Mobile Search Bar - Full featured like desktop */}
+            {/* Mobile Search Bar */}
             <div
-              className={`w-full m:0 md:m-0 px-0 transition-colors duration-200 relative md:hidden
+              className={`
+                w-full transition-all duration-300 relative md:hidden
                 ${
                   displaySearch
-                    ? "flex flex-col justify-start items-start h-screen w-screen pl-4 pr-4 ml-0 mr-0 box-border gap-4 bg-white overflow-y-auto"
+                    ? "flex flex-col justify-start items-start h-full w-full px-4 gap-4 bg-white overflow-y-auto"
                     : "cursor-pointer shadow-lg max-w-4xl h-14 border border-zinc-300 hover:ring-1 hover:ring-zinc-900 w-full m-3 ml-4 mr-4 bg-white flex flex-col justify-center items-center rounded-full"
-                }`}
+                }
+              `}
               onClick={() => {
                 if (!displaySearch) {
                   setDisplaySearch(true);
@@ -826,7 +774,7 @@ export default function Navbar() {
             >
               {!displaySearch && (
                 <div className="flex justify-center items-center gap-2 w-full">
-                  <SearchIcon size={12} strokeWidth={3} />{" "}
+                  <SearchIcon size={12} strokeWidth={3} />
                   <div className="text-sm font-semibold text-zinc-700">
                     Start your search
                   </div>
@@ -1399,9 +1347,9 @@ export default function Navbar() {
             <div
               ref={desktopSearchRef}
               className="w-full max-w-4xl m-3 md:m-0 px-0 h-14 md:h-16
-             border border-zinc-300 shadow-md
-             rounded-full bg-white
-             hidden md:flex items-center relative"
+                border border-zinc-300 shadow-md
+                rounded-full bg-white
+                hidden md:flex items-center relative"
             >
               {isTutorsPage ? (
                 // Tutor Search with Category and Level tabs
@@ -1512,8 +1460,8 @@ export default function Navbar() {
                   className={`h-12 ${
                     !isTutorsPage && selected !== null ? "w-24" : "w-12"
                   } bg-main rounded-full flex justify-center items-center gap-2
-                 hover:ring-1 ring-main hover:bg-main/95 hover:text-main-50 cursor-pointer
-                 transition-all duration-300`}
+                    hover:ring-1 ring-main hover:bg-main/95 hover:text-main-50 cursor-pointer
+                    transition-all duration-300`}
                 >
                   <SearchIcon
                     size={16}
