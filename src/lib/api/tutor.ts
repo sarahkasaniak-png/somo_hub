@@ -1,7 +1,5 @@
-
-
 // src/lib/api/tutor.ts
-import apiClient from "./client";
+import client from "./client";
 import tutorScheduleApi from "./tutor-schedule"; // Import the schedule API
 
 // Export types from tutor-schedule
@@ -245,7 +243,7 @@ type StepData =
 
 export const loadApplication = async (): Promise<LoadApplicationResponse> => {
   try {
-    const response = await apiClient.get<LoadApplicationResponse>("/tutor/application/status");
+    const response = await client.get<LoadApplicationResponse>("/tutor/application/status");
     console.log("Load application response:", response);
     return response;
   } catch (error: any) {
@@ -263,7 +261,7 @@ export const saveStep = async (step: number, data: StepData): Promise<SaveStepRe
 
     console.log(`Saving step ${step} with data:`, data);
     
-    const response = await apiClient.post<SaveStepResponse>(
+    const response = await client.post<SaveStepResponse>(
       `/tutor/application/step/${step}`, 
       data
     );
@@ -300,7 +298,7 @@ export const submitApplication = async (
   try {
     console.log("Submitting application with payment:", { paymentReference, paymentMethod });
     
-    const response = await apiClient.post<ApiResponse>("/tutor/application/submit", {
+    const response = await client.post<ApiResponse>("/tutor/application/submit", {
       payment_reference: paymentReference,
       payment_method: paymentMethod,
     });
@@ -320,7 +318,7 @@ export const uploadDocument = async (formData: FormData): Promise<ApiResponse> =
       file: formData.get("document") ? "File present" : "No file",
     });
     
-    const response = await apiClient.upload<ApiResponse>(
+    const response = await client.upload<ApiResponse>(
       "/tutor/upload-document?target=tutor-documents", 
       formData
     );
@@ -341,7 +339,7 @@ export const uploadAvatar = async (formData: FormData): Promise<ApiResponse> => 
       file: formData.get("document") ? "File present" : "No file",
     });
     
-    const response = await apiClient.upload<ApiResponse>(
+    const response = await client.upload<ApiResponse>(
       `/tutor/upload-document?target=${fileType == "avatar" ? "avatars" : "tutor-documents"  }`, 
       formData
     );
@@ -356,7 +354,7 @@ export const uploadAvatar = async (formData: FormData): Promise<ApiResponse> => 
 
 export const getApplicationStatus = async (): Promise<LoadApplicationResponse> => {
   try {
-    const response = await apiClient.get<LoadApplicationResponse>("/tutor/application/status");
+    const response = await client.get<LoadApplicationResponse>("/tutor/application/status");
     return response;
   } catch (error: any) {
     console.error("Error getting application status:", error);
@@ -582,7 +580,7 @@ export const getStepRequirements = (
 export const debugApplicationData = async (): Promise<any> => {
   try {
     // You might need to create a debug endpoint in your backend
-    const response = await apiClient.get<any>("/tutor/debug/application");
+    const response = await client.get<any>("/tutor/debug/application");
     return response;
   } catch (error) {
     console.error("Debug error:", error);
@@ -590,8 +588,8 @@ export const debugApplicationData = async (): Promise<any> => {
   }
 };
 
-// src/lib/api/tutor.ts
-import client from "./client";
+
+
 // these ones have been added to sort out tutor courses and sessions, but we can move them to a separate file if it gets too big
 /* ================= TYPES ================= */
 
@@ -831,11 +829,6 @@ const getDashboardStats = (): Promise<{
 }> => client.get("/tutor/dashboard/stats");
 
 
-
-
-
-
-
 // ================= ENROLLMENT MANAGEMENT =================
 
 /**
@@ -897,8 +890,6 @@ const markAttendance = (enrollmentId: number, scheduleId: number, attended: bool
 
 /* ================= EXPORT ================= */
 
-
-
 const tutorApi = {
   // Courses
   createCourse,
@@ -937,6 +928,5 @@ const tutorApi = {
    // Schedule API - Add this section
   schedules: tutorScheduleApi,
 };
-
 
 export default tutorApi;

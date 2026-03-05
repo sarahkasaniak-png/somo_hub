@@ -35,6 +35,14 @@ import {
   Building,
 } from "lucide-react";
 
+interface PaymentInitResponse {
+  success: boolean;
+  data?: {
+    authorization_url: string;
+    reference: string;
+  };
+  message?: string;
+}
 // Payment Modal Component
 const PaymentModal = ({
   isOpen,
@@ -74,7 +82,7 @@ const PaymentModal = ({
     setProcessing(true);
     try {
       // Initialize payment on backend - Paystack handles all payment methods
-      const response = await paymentApi.initializePayment({
+      const response = (await paymentApi.initializePayment({
         amount,
         currency,
         email,
@@ -85,7 +93,7 @@ const PaymentModal = ({
           session_name: sessionName,
           payment_type: "session_enrollment",
         },
-      });
+      })) as PaymentInitResponse;
 
       if (response.success && response.data) {
         const { authorization_url, reference } = response.data;
@@ -97,6 +105,9 @@ const PaymentModal = ({
 
         // Redirect to Paystack - Paystack shows appropriate UI for selected method
         window.location.href = authorization_url;
+      } else {
+        toast.error(response.message || "Failed to initialize payment");
+        setProcessing(false);
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to initialize payment");

@@ -13,6 +13,12 @@ interface LevelTabProps {
   selectedLevel: string;
 }
 
+interface LevelResponse {
+  success: boolean;
+  data?: Level[];
+  message?: string;
+}
+
 interface Level {
   value: string;
   label: string;
@@ -46,7 +52,7 @@ const LevelTab: React.FC<LevelTabProps> = ({
   const fetchLevels = async () => {
     setLoading(true);
     try {
-      const response = await client.get("/tuitions/levels");
+      const response = await client.get<LevelResponse>("/tuitions/levels");
       if (response.success && response.data && response.data.length > 4) {
         setLevels([{ value: "all", label: "All Levels" }, ...response.data]);
       } else {

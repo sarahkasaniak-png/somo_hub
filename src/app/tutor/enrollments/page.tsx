@@ -80,8 +80,14 @@ interface Enrollment {
     session_code: string;
     start_date: string;
     end_date: string;
-    course_title: string;
-    course_subject: string;
+    max_students: number;
+    fee_amount: number;
+    fee_currency: string;
+    course: {
+      id: number;
+      title: string;
+      subject: string;
+    };
   };
 }
 
@@ -318,8 +324,9 @@ export default function TutorEnrollmentsPage() {
         const studentName = getStudentName(enrollment).toLowerCase();
         const studentEmail = getStudentEmail(enrollment).toLowerCase();
         const sessionName = enrollment.session?.name.toLowerCase() || "";
+        // Update this line to use nested course object
         const courseTitle =
-          enrollment.session?.course_title.toLowerCase() || "";
+          enrollment.session?.course?.title.toLowerCase() || "";
 
         return (
           studentName.includes(searchLower) ||
@@ -715,7 +722,7 @@ export default function TutorEnrollmentsPage() {
                     </div>
                     <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
                       <BookOpen className="w-3 h-3" />
-                      {enrollment.session?.course_title || "Course"}
+                      {enrollment.session?.course?.title || "Course"}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

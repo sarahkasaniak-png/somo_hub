@@ -106,10 +106,13 @@ export default function HomePage() {
       });
 
       if (response.success && response.data?.sessions) {
-        if (response.data.sessions.length > 0) {
-          setGroupSessions((prev) => [...prev, ...response.data.sessions]);
+        // Store the sessions in a variable to avoid repeated optional chaining
+        const sessions = response.data.sessions;
+
+        if (sessions.length > 0) {
+          setGroupSessions((prev) => [...prev, ...sessions]);
           setGroupPage(nextPage);
-          setHasMoreGroup(response.data.sessions.length === 8);
+          setHasMoreGroup(sessions.length === 8);
         } else {
           setHasMoreGroup(false);
         }
@@ -128,10 +131,12 @@ export default function HomePage() {
       });
 
       if (response.success && response.data?.sessions) {
-        if (response.data.sessions.length > 0) {
-          setOneOnOneSessions((prev) => [...prev, ...response.data.sessions]);
+        const sessions = response.data.sessions;
+
+        if (sessions.length > 0) {
+          setOneOnOneSessions((prev) => [...prev, ...sessions]);
           setOneOnOnePage(nextPage);
-          setHasMoreOneOnOne(response.data.sessions.length === 8);
+          setHasMoreOneOnOne(sessions.length === 8);
         } else {
           setHasMoreOneOnOne(false);
         }

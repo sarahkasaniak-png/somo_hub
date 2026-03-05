@@ -30,6 +30,12 @@ interface TitleTabProps {
   searchTerm?: string;
 }
 
+interface AutocompleteResponse {
+  success: boolean;
+  data?: Suggestion[];
+  message?: string;
+}
+
 const TitleTab: React.FC<TitleTabProps> = ({
   selected,
   setSelected,
@@ -49,7 +55,7 @@ const TitleTab: React.FC<TitleTabProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceTimer = useRef<NodeJS.Timeout>();
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -99,9 +105,12 @@ const TitleTab: React.FC<TitleTabProps> = ({
     debounceTimer.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await client.get("/tuitions/autocomplete", {
-          q: internalSearchTerm,
-        });
+        const response = await client.get<AutocompleteResponse>(
+          "/tuitions/autocomplete",
+          {
+            q: internalSearchTerm,
+          },
+        );
         if (response.success && response.data) {
           setSuggestions(response.data);
           setShowSuggestions(true);

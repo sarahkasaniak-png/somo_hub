@@ -69,7 +69,7 @@ export const tutorProfileApi = {
   // In tutor-profile.ts
 deleteDocument: async (documentId: number): Promise<ApiResponse<null>> => {
   try {
-    const response = await client.delete(`/tutor/documents/${documentId}`);
+   const response = await client.delete<ApiResponse<null>>(`/tutor/documents/${documentId}`);
     return response;
   } catch (error) {
     // Log the full error before re-throwing

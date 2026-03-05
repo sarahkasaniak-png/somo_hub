@@ -20,7 +20,7 @@ const experienceSchema = z.object({
         name: z.string(),
         url: z.string().url(),
         issued_date: z.string().optional(),
-      })
+      }),
     )
     .optional()
     .default([]),
@@ -42,7 +42,7 @@ export default function Step3Experience({
   isLoading,
 }: Step3ExperienceProps) {
   const [certificates, setCertificates] = useState<any[]>(
-    initialData?.certificates || []
+    initialData?.certificates || [],
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -125,7 +125,7 @@ export default function Step3Experience({
       if (hasExperience) {
         if (!tscNumber?.trim() && !experienceYears) {
           alert(
-            "Please provide either TSC number or teaching experience years"
+            "Please provide either TSC number or teaching experience years",
           );
           return;
         }
@@ -145,7 +145,8 @@ export default function Step3Experience({
     const hasExperienceStatus = typeof hasExperience !== "undefined";
 
     if (hasExperience) {
-      const hasExperienceDetails = tscNumber?.trim() || experienceYears > 0;
+      const hasExperienceDetails =
+        tscNumber?.trim() || (experienceYears || 0) > 0;
       return hasExperienceStatus && hasExperienceDetails && isValid;
     }
 
@@ -153,7 +154,7 @@ export default function Step3Experience({
   };
 
   const handlePreviousInstitutionsChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLTextAreaElement>,
   ) => {
     const value = e.target.value;
     const institutions = value.split("\n").filter((line) => line.trim() !== "");
@@ -316,7 +317,7 @@ export default function Step3Experience({
                     onClick={() => {
                       remove(index);
                       setCertificates(
-                        certificates.filter((_, i) => i !== index)
+                        certificates.filter((_, i) => i !== index),
                       );
                     }}
                     className="text-red-600 hover:text-red-800 text-sm font-medium ml-4"

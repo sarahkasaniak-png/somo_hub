@@ -101,6 +101,21 @@ interface ProfileData {
   };
 }
 
+interface AvatarUploadResponse {
+  success: boolean;
+  data?: {
+    url: string;
+    // Add any other fields your API returns
+  };
+  message?: string;
+}
+
+interface UpdateProfileResponse {
+  success: boolean;
+  data?: ProfileData; // The API returns the updated profile data
+  message?: string;
+}
+
 export default function StudentProfile() {
   const {
     user,
@@ -152,7 +167,20 @@ export default function StudentProfile() {
         avatar_url: authProfileData.avatar_url || null,
         country: authProfileData.country || "",
         city: authProfileData.city || "",
-        education: authProfileData.education || [],
+        education: (authProfileData.education || []).map((edu) => ({
+          id: edu.id || 0,
+          institution: edu.institution || "",
+          degree: edu.degree || "",
+          field_of_study: edu.field_of_study || "",
+          level: edu.level || "other",
+          grade: edu.grade || "",
+          score: edu.score || "",
+          start_date: edu.start_date || "", // Ensure string, not undefined
+          end_date: edu.end_date || "",
+          current: edu.current || false,
+          description: edu.description || "",
+          achievements: edu.achievements || "",
+        })),
         interests: authProfileData.interests || [],
         learning_goals: authProfileData.learning_goals || [],
         stats: authProfileData.stats || {
@@ -410,9 +438,12 @@ export default function StudentProfile() {
       setUploadingAvatar(true);
       toast.loading("Uploading...", { id: "avatar-upload" });
 
-      const response = await studentApi.uploadAvatar(formData);
+      const response = (await studentApi.uploadAvatar(
+        formData,
+      )) as AvatarUploadResponse;
 
-      if (response.success) {
+      // Check both success and data existence
+      if (response.success && response.data) {
         const newAvatarUrl = response.data.url;
 
         setFormData((prev) =>
@@ -425,6 +456,11 @@ export default function StudentProfile() {
         await refreshUserData();
         await refreshProfileData();
         toast.success("Avatar uploaded successfully", { id: "avatar-upload" });
+      } else {
+        // Handle case where success is true but data is missing
+        toast.error(response.message || "Failed to upload avatar", {
+          id: "avatar-upload",
+        });
       }
     } catch (error) {
       console.error("Failed to upload avatar:", error);
@@ -477,9 +513,12 @@ export default function StudentProfile() {
 
       console.log("Saving changed fields:", changedFields);
 
-      const response = await studentApi.updateProfile(changedFields);
+      const response = (await studentApi.updateProfile(
+        changedFields,
+      )) as UpdateProfileResponse;
 
-      if (response.success) {
+      // Check if response is successful and data exists
+      if (response.success && response.data) {
         setProfile(response.data);
         setIsEditing(false);
         toast.success("Profile updated successfully");
@@ -999,7 +1038,7 @@ export default function StudentProfile() {
                                 </label>
                                 <input
                                   type="date"
-                                  value={edu.start_date}
+                                  value={edu.start_date || ""}
                                   onChange={(e) =>
                                     handleUpdateEducation(
                                       index,
@@ -1017,7 +1056,7 @@ export default function StudentProfile() {
                                 </label>
                                 <input
                                   type="date"
-                                  value={edu.end_date}
+                                  value={edu.end_date || ""}
                                   onChange={(e) =>
                                     handleUpdateEducation(
                                       index,
@@ -1394,10 +1433,10 @@ export default function StudentProfile() {
                                   Level: {getLevelLabel(edu.level || "other")}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  {formatDate(edu.start_date)} -{" "}
+                                  {formatDate(edu.start_date || "")} -{" "}
                                   {edu.current
                                     ? "Present"
-                                    : formatDate(edu.end_date)}
+                                    : formatDate(edu.end_date || "")}
                                 </p>
                                 {edu.grade && (
                                   <p className="text-xs text-gray-500 mt-1">

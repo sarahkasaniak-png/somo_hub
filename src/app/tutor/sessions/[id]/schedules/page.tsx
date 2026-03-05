@@ -36,12 +36,27 @@ import {
   Info,
 } from "lucide-react";
 
+interface ExtendedTutorSessionSchedule extends TutorSessionSchedule {
+  enrolled_students?: number;
+}
+
+interface ScheduleResponse {
+  success: boolean;
+  data?:
+    | ExtendedTutorSessionSchedule[]
+    | {
+        data?: ExtendedTutorSessionSchedule[];
+        schedules?: ExtendedTutorSessionSchedule[];
+      };
+  message?: string;
+}
+
 export default function TutorSchedulesPage() {
-  const [todaySchedules, setTodaySchedules] = useState<TutorSessionSchedule[]>(
-    [],
-  );
+  const [todaySchedules, setTodaySchedules] = useState<
+    ExtendedTutorSessionSchedule[]
+  >([]);
   const [upcomingSchedules, setUpcomingSchedules] = useState<
-    TutorSessionSchedule[]
+    ExtendedTutorSessionSchedule[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [joiningId, setJoiningId] = useState<number | null>(null);
@@ -68,16 +83,25 @@ export default function TutorSchedulesPage() {
     try {
       setLoading(true);
       const [todayRes, upcomingRes] = await Promise.all([
-        tutorApi.schedules.getTodaySchedules(),
-        tutorApi.schedules.getUpcomingSchedules(10),
+        tutorApi.schedules.getTodaySchedules() as Promise<ScheduleResponse>,
+        tutorApi.schedules.getUpcomingSchedules(
+          10,
+        ) as Promise<ScheduleResponse>,
       ]);
 
       // Safely extract data from responses
       if (todayRes.success) {
         // Handle different possible response structures
-        const todayData = Array.isArray(todayRes.data)
-          ? todayRes.data
-          : todayRes.data?.data || todayRes.data?.schedules || [];
+        let todayData: ExtendedTutorSessionSchedule[] = [];
+
+        if (todayRes.data) {
+          if (Array.isArray(todayRes.data)) {
+            todayData = todayRes.data;
+          } else if (typeof todayRes.data === "object") {
+            todayData = todayRes.data.data || todayRes.data.schedules || [];
+          }
+        }
+
         setTodaySchedules(todayData);
       } else {
         setTodaySchedules([]);
@@ -85,9 +109,17 @@ export default function TutorSchedulesPage() {
 
       if (upcomingRes.success) {
         // Handle different possible response structures
-        const upcomingData = Array.isArray(upcomingRes.data)
-          ? upcomingRes.data
-          : upcomingRes.data?.data || upcomingRes.data?.schedules || [];
+        let upcomingData: ExtendedTutorSessionSchedule[] = [];
+
+        if (upcomingRes.data) {
+          if (Array.isArray(upcomingRes.data)) {
+            upcomingData = upcomingRes.data;
+          } else if (typeof upcomingRes.data === "object") {
+            upcomingData =
+              upcomingRes.data.data || upcomingRes.data.schedules || [];
+          }
+        }
+
         setUpcomingSchedules(upcomingData);
       } else {
         setUpcomingSchedules([]);
@@ -292,7 +324,11 @@ export default function TutorSchedulesPage() {
     );
   };
 
-  const ScheduleCard = ({ schedule }: { schedule: TutorSessionSchedule }) => {
+  const ScheduleCard = ({
+    schedule,
+  }: {
+    schedule: ExtendedTutorSessionSchedule;
+  }) => {
     const scheduleIsToday = isToday(schedule.date);
     const canJoin =
       schedule.status === "scheduled" || schedule.status === "ongoing";

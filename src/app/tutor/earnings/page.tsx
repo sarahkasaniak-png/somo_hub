@@ -432,8 +432,8 @@ export default function TutorEarningsPage() {
                 <Star className="w-4 h-4 text-yellow-400 fill-current" />
                 <span className="text-sm font-medium text-gray-900">
                   {overview.average_rating
-                    ? parseFloat(overview.average_rating).toFixed(1)
-                    : 0}
+                    ? Number(overview.average_rating).toFixed(1)
+                    : "0.0"}
                   .0
                 </span>
               </div>

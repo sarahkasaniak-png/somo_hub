@@ -71,7 +71,10 @@ import tutorApi from "@/lib/api/tutor";
 import userApi from "@/lib/api/user";
 import { tutorProfileApi, useTutorProfile } from "@/lib/api/tutor-profile";
 import { uploadAvatar } from "@/lib/api/tutor";
-import { ProfileData, Document } from "@/types/tutor-profile.types";
+import {
+  ProfileData as ApiProfileData,
+  Document as ApiDocument,
+} from "@/types/tutor-profile.types";
 
 interface ProfileData {
   // Basic Info
@@ -571,7 +574,7 @@ export default function TutorProfile() {
         "certificate",
       );
 
-      if (response.success) {
+      if (response.success && response.data) {
         // Add to documents list
         const newDoc = {
           id: response.data.id,
@@ -1057,7 +1060,7 @@ export default function TutorProfile() {
 
       const response = await tutorProfileApi.updateProfile(changedFields);
 
-      if (response.success) {
+      if (response.success && response.data) {
         setProfile(response.data);
         if (typeof calculateCompletion === "function") {
           calculateCompletion(response.data);
@@ -2452,7 +2455,7 @@ export default function TutorProfile() {
                       <h3 className="text-lg font-semibold text-gray-900">
                         Education History
                       </h3>
-                      {profile?.education?.length > 0 ? (
+                      {profile?.education && profile?.education?.length > 0 ? (
                         <div className="space-y-4">
                           {profile.education.map((edu, index) => (
                             <div
@@ -2500,7 +2503,8 @@ export default function TutorProfile() {
                       <h3 className="text-lg font-semibold text-gray-900">
                         Work Experience
                       </h3>
-                      {profile?.experience?.length > 0 ? (
+                      {profile?.experience &&
+                      profile?.experience?.length > 0 ? (
                         <div className="space-y-4">
                           {profile.experience.map((exp, index) => (
                             <div

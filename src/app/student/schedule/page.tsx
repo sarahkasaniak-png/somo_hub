@@ -129,8 +129,8 @@ export default function StudentSchedulePage() {
       setJoiningId(scheduleId);
       const response = await studentApi.joinSession(scheduleId);
 
-      if (response.success && response.data.meeting_link) {
-        window.open(response.data.meeting_link, "_blank");
+      if (response.success && response.data?.meeting_link) {
+        window.open(response.data?.meeting_link, "_blank");
         toast.success("Joining session...");
         setTimeout(() => fetchSchedules(), 2000);
       } else {

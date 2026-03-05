@@ -44,7 +44,12 @@ interface Enrollment {
   id: number;
   tutor_course_session_id: number;
   student_id: number;
-  enrollment_status: "pending" | "active" | "completed" | "dropped";
+  enrollment_status:
+    | "pending"
+    | "active"
+    | "completed"
+    | "dropped"
+    | "suspended";
   payment_status: "pending" | "paid" | "partial" | "refunded";
   payment_amount: number;
   enrolled_at: string;
@@ -113,25 +118,27 @@ export default function StudentSessionsPage() {
       setLoading(true);
       const response = await studentApi.getMyEnrollments();
 
-      if (response.success) {
-        setEnrollments(response.data.enrollments || []);
+      if (response.success && response.data) {
+        // Now TypeScript knows response.data exists
+        const enrollmentsData = response.data.enrollments || [];
+        setEnrollments(enrollmentsData);
 
         // Calculate stats
         const total = response.data.total || 0;
-        const active =
-          response.data.enrollments?.filter(
-            (e: Enrollment) => e.enrollment_status === "active",
-          ).length || 0;
-        const pending =
-          response.data.enrollments?.filter(
-            (e: Enrollment) => e.enrollment_status === "pending",
-          ).length || 0;
-        const completed =
-          response.data.enrollments?.filter(
-            (e: Enrollment) => e.enrollment_status === "completed",
-          ).length || 0;
+        const active = enrollmentsData.filter(
+          (e: Enrollment) => e.enrollment_status === "active",
+        ).length;
+        const pending = enrollmentsData.filter(
+          (e: Enrollment) => e.enrollment_status === "pending",
+        ).length;
+        const completed = enrollmentsData.filter(
+          (e: Enrollment) => e.enrollment_status === "completed",
+        ).length;
 
         setStats({ total, active, pending, completed });
+      } else {
+        // Handle case where response is successful but no data
+        toast.error("No enrollment data found");
       }
     } catch (error) {
       console.error("Failed to fetch enrollments:", error);
@@ -204,6 +211,7 @@ export default function StudentSessionsPage() {
       pending: "bg-amber-50 text-amber-700 border-amber-200",
       completed: "bg-purple-50 text-purple-700 border-purple-200",
       dropped: "bg-red-50 text-red-700 border-red-200",
+      suspended: "bg-orange-50 text-orange-700 border-orange-200",
     };
     return colors[status] || "bg-gray-50 text-gray-700 border-gray-200";
   };

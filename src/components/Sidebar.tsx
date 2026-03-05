@@ -16,6 +16,7 @@ import {
   CalendarDays, // Add this import
   Calendar,
   Presentation,
+  type LucideProps, // Add this import
 } from "lucide-react";
 
 interface SidebarProps {
@@ -25,6 +26,23 @@ interface SidebarProps {
   isSidebarCollapsed: boolean;
   setIsSidebarCollapsed: (isCollapsed: boolean) => void;
   isMobile: boolean;
+}
+
+interface MenuItem {
+  name: string;
+  href: string;
+  icon: React.ForwardRefExoticComponent<
+    Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
+  >;
+  submenu?: SubMenuItem[]; // Optional submenu property
+}
+
+interface SubMenuItem {
+  name: string;
+  href: string;
+  icon: React.ForwardRefExoticComponent<
+    Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
+  >;
 }
 
 const Sidebar = ({
@@ -37,14 +55,13 @@ const Sidebar = ({
 }: SidebarProps) => {
   const pathname = usePathname();
 
-  const tutorMenu = [
+  const tutorMenu: MenuItem[] = [
     { name: "Dashboard", href: "/tutor/dashboard", icon: Home },
     { name: "Courses", href: "/tutor/courses", icon: BookOpen },
     {
       name: "Sessions",
       href: "/tutor/sessions",
       icon: Target,
-      // Add submenu for sessions
       submenu: [
         { name: "All Sessions", href: "/tutor/sessions", icon: Target },
         {
@@ -64,35 +81,19 @@ const Sidebar = ({
     { name: "Profile", href: "/tutor/profile", icon: User },
   ];
 
-  const studentMenu = [
+  const studentMenu: MenuItem[] = [
     { name: "Dashboard", href: "/student/dashboard", icon: Home },
-    {
-      name: "My Classes",
-      href: "/student/schedule",
-      icon: Presentation,
-    },
+    { name: "My Classes", href: "/student/schedule", icon: Presentation },
     {
       name: "Sessions / Tuition",
       href: "/student/sessions",
       icon: GraduationCap,
     },
-    // {
-    //   name: "My Schedule",
-    //   href: "/student/schedule",
-    //   icon: CalendarDays,
-    // },
-
-    // {
-    //   name: "Learning History",
-    //   href: "/student/learning-history",
-    //   icon: BarChart3,
-    // },
     { name: "Payments", href: "/student/payments", icon: DollarSign },
-    // { name: "Virtual Class", href: "/student/virtual-class", icon: Laptop },
     { name: "Profile", href: "/student/profile", icon: User },
   ];
 
-  const communityMenu = [
+  const communityMenu: MenuItem[] = [
     { name: "Dashboard", href: "/community/dashboard", icon: Home },
     { name: "Analytics", href: "/community/analytics", icon: BarChart3 },
     { name: "Courses", href: "/community/courses", icon: BookOpen },
@@ -362,35 +363,37 @@ const Sidebar = ({
                           </button>
 
                           {/* Submenu */}
-                          {isExpanded && (!isSidebarCollapsed || isMobile) && (
-                            <ul className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
-                              {item.submenu.map((subItem: any) => {
-                                const SubIcon = subItem.icon;
-                                const isSubActive =
-                                  pathname === subItem.href ||
-                                  pathname.startsWith(subItem.href + "/");
+                          {isExpanded &&
+                            (!isSidebarCollapsed || isMobile) &&
+                            item.submenu && (
+                              <ul className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                                {item.submenu.map((subItem: any) => {
+                                  const SubIcon = subItem.icon;
+                                  const isSubActive =
+                                    pathname === subItem.href ||
+                                    pathname.startsWith(subItem.href + "/");
 
-                                return (
-                                  <li key={subItem.name}>
-                                    <Link
-                                      href={subItem.href}
-                                      className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${
-                                        isSubActive
-                                          ? "bg-purple-50 text-purple-700 font-medium"
-                                          : "hover:bg-gray-50 text-gray-600 hover:text-gray-900"
-                                      }`}
-                                      onClick={handleMenuItemClick}
-                                    >
-                                      <SubIcon className="w-4 h-4 flex-shrink-0" />
-                                      <span className="text-sm truncate">
-                                        {subItem.name}
-                                      </span>
-                                    </Link>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          )}
+                                  return (
+                                    <li key={subItem.name}>
+                                      <Link
+                                        href={subItem.href}
+                                        className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${
+                                          isSubActive
+                                            ? "bg-purple-50 text-purple-700 font-medium"
+                                            : "hover:bg-gray-50 text-gray-600 hover:text-gray-900"
+                                        }`}
+                                        onClick={handleMenuItemClick}
+                                      >
+                                        <SubIcon className="w-4 h-4 flex-shrink-0" />
+                                        <span className="text-sm truncate">
+                                          {subItem.name}
+                                        </span>
+                                      </Link>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
                         </div>
                       ) : (
                         // Regular menu item without submenu

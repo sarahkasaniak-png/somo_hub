@@ -89,7 +89,7 @@ interface EnrollmentDetail {
     id: number;
     name: string;
     session_code: string;
-    description: string;
+    description: string | null; // Changed from 'string' to 'string | null'
     start_date: string;
     end_date: string;
     session_type: string;

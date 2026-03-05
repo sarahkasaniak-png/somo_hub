@@ -222,7 +222,7 @@ export default function TutorActivityPage() {
                   description ||
                   activity.action
                     .replace(/_/g, " ")
-                    .replace(/\b\w/g, (l) => l.toUpperCase()),
+                    .replace(/\b\w/g, (l: string) => l.toUpperCase()),
                 timestamp: activity.created_at,
                 date: formatDate(timestamp),
                 time: formatTime(timestamp),

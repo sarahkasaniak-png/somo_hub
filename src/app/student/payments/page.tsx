@@ -85,6 +85,17 @@ interface PaymentSummary {
   failed_payments: number;
   refunded_amount: number;
 }
+interface PaymentsResponse {
+  success: boolean;
+  data?: {
+    payments: Payment[];
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  message?: string;
+}
 
 export default function StudentPaymentsPage() {
   const router = useRouter();
@@ -147,19 +158,24 @@ export default function StudentPaymentsPage() {
         params.to_date = dateRange.to;
       }
 
-      const response = await studentApi.getPayments(params);
+      const response = (await studentApi.getPayments(
+        params,
+      )) as PaymentsResponse;
 
-      if (response.success) {
-        setPayments(response.data.payments || []);
+      if (response.success && response.data) {
+        // Store data in a variable to avoid repeated optional chaining
+        const data = response.data;
+
+        setPayments(data.payments || []);
         setPagination({
-          page: response.data.page,
-          limit: response.data.limit,
-          total: response.data.total,
-          totalPages: response.data.totalPages,
+          page: data.page,
+          limit: data.limit,
+          total: data.total,
+          totalPages: data.totalPages,
         });
 
         // Calculate summary
-        const summaryData = calculateSummary(response.data.payments || []);
+        const summaryData = calculateSummary(data.payments || []);
         setSummary(summaryData);
       }
     } catch (error) {

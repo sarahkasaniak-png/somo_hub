@@ -1,19 +1,19 @@
 // app/login/page.tsx
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Login from "@/app/components/ui/Login";
 import { useAuth } from "@/app/context/AuthContext";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const returnUrl = searchParams.get("returnUrl") || "/";
   const { user } = useAuth();
   const [isLoginOpen, setIsLoginOpen] = useState(true);
 
-  // If user becomes authenticated, redirect to returnUrl
   useEffect(() => {
     if (user) {
       router.push(returnUrl);
@@ -31,5 +31,15 @@ export default function LoginPage() {
       setIsLoginOpen={handleClose}
       redirectPath={returnUrl}
     />
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={<div className="h-screen animate-pulse bg-gray-100"></div>}
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

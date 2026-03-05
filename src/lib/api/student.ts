@@ -221,29 +221,30 @@ const studentApi = {
     client.get("/student/profile"),
 
   // Get dashboard stats
-  getDashboardStats: async (): Promise<ApiResponse<DashboardStats>> => {
-    try {
-      const response = await client.get("/student/dashboard/stats");
-      return response;
-    } catch (error: any) {
-      console.error("Error fetching dashboard stats:", error);
-      // Return default stats to prevent UI breakage
-      return {
-        success: true,
-        data: {
-          activeEnrollments: 0,
-          completedCourses: 0,
-          totalSessions: 0,
-          upcomingSessions: 0,
-          completedSessions: 0,
-          totalSpent: 0,
-          averageRating: 0,
-          certificates: 0,
-          learningHours: 0,
-        },
-      };
-    }
-  },
+
+getDashboardStats: async (): Promise<ApiResponse<DashboardStats>> => {
+  try {
+    const response = await client.get<ApiResponse<DashboardStats>>("/student/dashboard/stats");
+    return response;
+  } catch (error: any) {
+    console.error("Error fetching dashboard stats:", error);
+    // Return default stats to prevent UI breakage
+    return {
+      success: true,
+      data: {
+        activeEnrollments: 0,
+        completedCourses: 0,
+        totalSessions: 0,
+        upcomingSessions: 0,
+        completedSessions: 0,
+        totalSpent: 0,
+        averageRating: 0,
+        certificates: 0,
+        learningHours: 0,
+      },
+    };
+  }
+},
 
   // Get all enrollments for the student
   getMyEnrollments: (params?: {
@@ -278,38 +279,38 @@ const studentApi = {
     client.get(`/student/sessions/${sessionId}`),
 
   // Update profile following the same pattern as tutor-profile.ts
-  updateProfile: async (data: Partial<StudentProfileData>): Promise<ApiResponse<ProfileData>> => {
-    // Only include fields that are actually updatable for students
-    const updatableFields = [
-      'first_name', 'last_name', 'phone', 'date_of_birth', 'avatar_url',
-      'country', 'city',
-      'education', 'learning_goals', 'interests',
-      'notification_preferences'
-    ];
-    
-    // Filter the data to only include updatable fields
-    const cleanData = Object.fromEntries(
-      Object.entries(data).filter(([key, value]) => 
-        updatableFields.includes(key) && value !== undefined
-      )
-    );
-    
-    console.log('📤 Sending student profile update data:', JSON.stringify(cleanData, null, 2));
-    
-    try {
-      const response = await client.put("/student/profile", cleanData);
-      console.log('📥 Student profile update response:', response);
-      return response;
-    } catch (error: any) {
-      console.error('❌ Student profile update error:', {
-        message: error?.message,
-        status: error?.status || error?.response?.status,
-        data: error?.response?.data,
-        stack: error?.stack
-      });
-      throw error;
-    }
-  },
+updateProfile: async (data: Partial<StudentProfileData>): Promise<ApiResponse<ProfileData>> => {
+  // Only include fields that are actually updatable for students
+  const updatableFields = [
+    'first_name', 'last_name', 'phone', 'date_of_birth', 'avatar_url',
+    'country', 'city',
+    'education', 'learning_goals', 'interests',
+    'notification_preferences'
+  ];
+  
+  // Filter the data to only include updatable fields
+  const cleanData = Object.fromEntries(
+    Object.entries(data).filter(([key, value]) => 
+      updatableFields.includes(key) && value !== undefined
+    )
+  );
+  
+  console.log('📤 Sending student profile update data:', JSON.stringify(cleanData, null, 2));
+  
+  try {
+    const response = await client.put<ApiResponse<ProfileData>>("/student/profile", cleanData);
+    console.log('📥 Student profile update response:', response);
+    return response;
+  } catch (error: any) {
+    console.error('❌ Student profile update error:', {
+      message: error?.message,
+      status: error?.status || error?.response?.status,
+      data: error?.response?.data,
+      stack: error?.stack
+    });
+    throw error;
+  }
+},
 
   // Upload avatar
   uploadAvatar: (formData: FormData): Promise<ApiResponse<{ url: string }>> =>

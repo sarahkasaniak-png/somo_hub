@@ -66,7 +66,7 @@ import {
 
 // Types for schedule configs
 interface ScheduleConfig {
-  id: number;
+  id?: number;
   day_of_week: number;
   start_time: string;
   end_time: string;
@@ -89,7 +89,7 @@ export default function SessionDetailPage() {
   const [enrollments, setEnrollments] = useState<SessionEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "schedule" | "enrollments" | "settings"
+    "overview" | "schedule" | "schedules" | "enrollments" | "settings"
   >("overview");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
@@ -127,12 +127,30 @@ export default function SessionDetailPage() {
     }
   };
 
+  // Update the fetchSessionDetails function (around line 135)
+
   const fetchSessionDetails = async () => {
     try {
       setLoading(true);
       const response = await tutorApi.getSession(parseInt(sessionId));
       if (response.success) {
-        setSession(response.data);
+        // Map the response to ensure schedule_configs matches the expected type
+        const sessionData = response.data;
+
+        // Transform schedule_configs if they exist
+        const extendedSession: ExtendedTutorSession = {
+          ...sessionData,
+          schedule_configs: sessionData.schedule_configs?.map((config) => ({
+            id: config.id || 0,
+            day_of_week: config.day_of_week,
+            start_time: config.start_time,
+            end_time: config.end_time,
+            duration_minutes: config.duration_minutes || 0, // Provide default value
+            is_active: config.is_active ?? true, // Provide default value
+          })),
+        };
+
+        setSession(extendedSession);
       }
     } catch (error) {
       console.error("Failed to fetch session:", error);
