@@ -21,6 +21,7 @@ import {
   Loader2,
   CheckCircle,
   Mail,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { getPostLoginRedirect } from "@/lib/utils/redirectLogic";
@@ -71,6 +72,7 @@ export default function LoginContent({
   const [resetVerified, setResetVerified] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [otpSent, setOtpSent] = useState(false); // Track if OTP has been sent
 
   const {
     passwordLogin: authPasswordLogin,
@@ -149,6 +151,7 @@ export default function LoginContent({
     setResetStep(1);
     setResetVerified(false);
     setRegistrationSuccess(false);
+    setOtpSent(false);
   };
 
   /* ================= PASSWORD LOGIN ================= */
@@ -235,11 +238,13 @@ export default function LoginContent({
     setErrorEmail("");
     setErrorPassword("");
     setErrorConfirmPassword("");
+    setOtpSent(false);
 
     try {
       const result = await authRegister(email, password, confirmPassword);
       if (result?.user) {
         setStep(2);
+        setOtpSent(true);
         otpRefs[0].current?.focus();
       }
     } catch (err: any) {
@@ -304,6 +309,7 @@ export default function LoginContent({
 
     setLoading(true);
     setErrorEmail("");
+    setOtpSent(false);
 
     try {
       const result = await authForgotPassword(emailToUse);
@@ -312,6 +318,7 @@ export default function LoginContent({
           setForgotPasswordFlow(true);
         }
         setResetStep(2); // Move to OTP step
+        setOtpSent(true);
         otpRefs[0].current?.focus();
       }
     } catch (err: any) {
@@ -391,6 +398,8 @@ export default function LoginContent({
           isRegistering ? "registration" : "reset_password",
         );
       }
+      // Show success message with spam notice
+      alert("OTP resent! Please check your inbox or spam folder.");
     } catch {
       setErrorOtp("Failed to resend OTP");
     } finally {
@@ -725,9 +734,23 @@ export default function LoginContent({
           {forgotPasswordFlow ? "Reset Password" : "Verify your email"}
         </h1>
 
-        <div className="text-md w-full text-center 17px] mb-6">
+        <div className="text-md w-full text-center mb-2">
           Enter the code sent to {truncateEmail(emailToShow)}
         </div>
+
+        {/* Spam folder notice - show when OTP is sent */}
+        {otpSent && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm">
+            <p className="text-yellow-800 flex items-start gap-2">
+              <Mail className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <span>
+                <strong>Didn't receive the email?</strong> Please check your
+                spam folder and mark as "Not Spam" to ensure future emails reach
+                your inbox.
+              </span>
+            </p>
+          </div>
+        )}
 
         <div className="flex gap-2 justify-center items-center mb-4">
           {[0, 1, 2, 3].map((index) => (
@@ -1025,24 +1048,36 @@ export default function LoginContent({
         }
       }}
     >
-      <DialogContent className="p-0 pt-2 w-full h-screen overflow-x-auto max-w-none md:w-lg md:max-w-lg md:max-h-[90vh] lg:max-h-[90vh] md:h-auto lg:h-auto rounded-none md:rounded-2xl flex flex-col justify-start items-center">
+      <DialogContent
+        className="p-0 w-full h-screen overflow-x-auto max-w-none md:w-lg md:max-w-lg md:max-h-[90vh] lg:max-h-[90vh] md:h-auto lg:h-auto rounded-none md:rounded-2xl flex flex-col justify-start items-center [&>button]:hidden" // This hides the default close button
+      >
         <DialogHeader className="w-full">
           <DialogTitle
             className={`w-full flex ${
               showBackButton ? "justify-between" : "justify-center"
-            } items-center border-b-2 p-6`}
+            } items-center border-b-2 p-4 sm:p-6 relative`}
           >
             {showBackButton && (
               <div
-                className="flex items-center gap-2 cursor-pointer"
+                className="flex items-center gap-2 cursor-pointer p-2 -ml-2 hover:bg-gray-100 rounded-lg transition-colors"
                 onClick={handleBack}
               >
                 <ArrowLeft className="w-5 h-5" />
               </div>
             )}
-            <span className={showBackButton ? "ml-auto mr-auto" : ""}>
+
+            <span className={showBackButton ? "" : "mx-auto"}>
               {getDialogTitle()}
             </span>
+
+            {/* Always show close button */}
+            <button
+              onClick={() => setIsLoginOpen(false)}
+              className="flex items-center justify-center p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
           </DialogTitle>
         </DialogHeader>
 
