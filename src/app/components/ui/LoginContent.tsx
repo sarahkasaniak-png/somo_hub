@@ -1025,7 +1025,7 @@ export default function LoginContent({
         }
       }}
     >
-      <DialogContent className="p-0 w-full h-screen overflow-x-auto max-w-none md:w-lg md:max-w-lg md:max-h-[90vh] lg:max-h-[90vh] md:h-auto lg:h-auto rounded-none md:rounded-2xl flex flex-col justify-start items-center">
+      <DialogContent className="p-0 pt-2 w-full h-screen overflow-x-auto max-w-none md:w-lg md:max-w-lg md:max-h-[90vh] lg:max-h-[90vh] md:h-auto lg:h-auto rounded-none md:rounded-2xl flex flex-col justify-start items-center">
         <DialogHeader className="w-full">
           <DialogTitle
             className={`w-full flex ${
