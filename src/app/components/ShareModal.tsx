@@ -161,7 +161,7 @@ export default function ShareModal({
           </div>
 
           {/* Native Share (if available) */}
-          {navigator.share && (
+          {typeof navigator !== "undefined" && "share" in navigator && (
             <button
               onClick={handleNativeShare}
               className="w-full py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
