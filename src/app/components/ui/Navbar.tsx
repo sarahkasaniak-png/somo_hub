@@ -463,9 +463,9 @@ export default function Navbar() {
     }`;
   }, [isScrolled, isSearchExpanded]);
 
-  // Mobile search bar classes - hidden when modal is open
+  // Mobile search bar classes - completely stable, no transitions on scroll
   const mobileSearchBarClasses = useMemo(() => {
-    return `w-[90%] mb-3 mt-1 mx-auto transition-all duration-300 relative md:hidden ${
+    return `w-[90%] mb-3 mt-1 mx-auto relative md:hidden ${
       displaySearch
         ? "hidden" // Hide completely when modal is open
         : `cursor-pointer shadow-lg h-14 border border-zinc-300 hover:ring-1 hover:ring-zinc-900 bg-white flex flex-col justify-center items-center rounded-full`
