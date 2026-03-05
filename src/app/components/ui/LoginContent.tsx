@@ -1070,7 +1070,7 @@ export default function LoginContent({
               {getDialogTitle()}
             </span>
 
-            {/* Always show close button */}
+            {/* Close button at top right */}
             <button
               onClick={() => setIsLoginOpen(false)}
               className="flex items-center justify-center p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1090,7 +1090,16 @@ export default function LoginContent({
               : ""
           }`}
         >
-          {/* Footer buttons if needed */}
+          {/* Close button at bottom right */}
+          <div className="w-full flex justify-end">
+            <button
+              onClick={() => setIsLoginOpen(false)}
+              className="flex items-center justify-center p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
