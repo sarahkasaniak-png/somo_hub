@@ -218,7 +218,7 @@ export default function HomePage() {
         {/* Compact Header with Tutor Avatar and Session Type */}
         <div className="p-3 flex items-center gap-2 border-b border-gray-100">
           {/* Tutor Avatar - Prominently displayed */}
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 overflow-hidden flex-shrink-0">
+          <div className="w-12 h-12 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 overflow-hidden flex-shrink-0">
             {session.tutor_avatar ? (
               <img
                 src={session.tutor_avatar}
