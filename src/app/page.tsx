@@ -488,7 +488,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-max mx-auto px-4 sm:px-20 lg:px-20 py-8 space-y-8">
+      <div className="w-full mx-auto px-4 sm:px-20 lg:px-20 py-8 space-y-8">
         {/* Group Sessions Section */}
         <section>
           <SectionHeader
