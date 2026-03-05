@@ -49,8 +49,8 @@ export default function Navbar() {
   // Scroll state for navbar height and search box size
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
-  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const lastScrollY = useRef(0);
+  const ticking = useRef(false);
   const navbarRef = useRef<HTMLDivElement>(null);
   const desktopSearchRef = useRef<HTMLDivElement>(null);
   const mobileNavRef = useRef<HTMLDivElement>(null);
@@ -110,39 +110,41 @@ export default function Navbar() {
     [],
   );
 
-  // Optimized scroll handler with debounce
+  // Optimized scroll handler with requestAnimationFrame
   const handleScroll = useCallback(() => {
     if (typeof window === "undefined" || displaySearch) return;
 
     const currentScrollY = window.scrollY;
 
-    // Set scrolled state for navbar height and search box size (reduces after 20px scroll)
+    // Set scrolled state for navbar height and search box size
     // Only reduce if search is not expanded
     if (!isSearchExpanded) {
       setIsScrolled(currentScrollY > 20);
     }
 
-    // Handle mobile nav visibility - only hide when scrolling down significantly
+    // Handle mobile nav visibility - only update if state would change
     if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
-      setIsMobileNavVisible(false);
+      if (isMobileNavVisible) {
+        setIsMobileNavVisible(false);
+      }
     } else if (currentScrollY < lastScrollY.current) {
-      setIsMobileNavVisible(true);
+      if (!isMobileNavVisible) {
+        setIsMobileNavVisible(true);
+      }
     }
 
     lastScrollY.current = currentScrollY;
-  }, [displaySearch, isSearchExpanded]);
+  }, [displaySearch, isSearchExpanded, isMobileNavVisible]);
 
-  // Throttled scroll effect with cleanup
+  // Optimized scroll listener with requestAnimationFrame
   useEffect(() => {
-    let ticking = false;
-
     const onScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
+      if (!ticking.current) {
+        requestAnimationFrame(() => {
           handleScroll();
-          ticking = false;
+          ticking.current = false;
         });
-        ticking = true;
+        ticking.current = true;
       }
     };
 
@@ -463,11 +465,11 @@ export default function Navbar() {
     }`;
   }, [isScrolled, isSearchExpanded]);
 
-  // Mobile search bar classes - completely stable, no transitions on scroll
+  // Mobile search bar classes - completely stable, no transitions
   const mobileSearchBarClasses = useMemo(() => {
     return `w-[90%] mb-3 mt-1 mx-auto relative md:hidden ${
       displaySearch
-        ? "hidden" // Hide completely when modal is open
+        ? "hidden"
         : `cursor-pointer shadow-lg h-14 border border-zinc-300 hover:ring-1 hover:ring-zinc-900 bg-white flex flex-col justify-center items-center rounded-full`
     }`;
   }, [displaySearch]);
@@ -493,18 +495,16 @@ export default function Navbar() {
     } bg-main rounded-full flex items-center justify-center hover:ring-1 ring-main hover:bg-main/95 hover:text-main-50 cursor-pointer`;
   }, [isScrolled, isSearchExpanded, isTutorsPage, selected]);
 
-  // Mobile navigation links - with height transition for navbar resizing
+  // Mobile navigation links - with will-change for better performance
   const mobileNavClasses = useMemo(() => {
-    // Always hidden when search is open
     if (displaySearch) {
       return "md:hidden hidden";
     }
 
-    // When not in search mode, control visibility with height transition
-    return `md:hidden w-full px-6 transition-all duration-300 overflow-hidden ${
+    return `md:hidden w-full px-6 transition-all duration-300 will-change-transform will-change-opacity overflow-hidden ${
       isMobileNavVisible
-        ? "opacity-100 py-1 max-h-20"
-        : "opacity-0 py-0 max-h-0 pointer-events-none"
+        ? "opacity-100 translate-y-0 max-h-20 py-1"
+        : "opacity-0 -translate-y-2 max-h-0 py-0 pointer-events-none"
     }`;
   }, [displaySearch, isMobileNavVisible]);
 
@@ -542,7 +542,7 @@ export default function Navbar() {
     setMobileSearchTerm("");
     setShowMobileCategoryDropdown(false);
     setShowMobileLevelDropdown(false);
-    setShowHamburgerNav(false); // Also close hamburger nav if open
+    setShowHamburgerNav(false);
   }, []);
 
   return (
@@ -684,7 +684,7 @@ export default function Navbar() {
             </div>
           </nav>
 
-          {/* Mobile Navigation Links - with height transition for navbar resizing */}
+          {/* Mobile Navigation Links - with will-change for better performance */}
           <div ref={mobileNavRef} className={mobileNavClasses}>
             <ul className="flex justify-center items-center gap-6 w-full">
               <li>
@@ -742,7 +742,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Hamburger Menu Dropdown - Moved outside nav-container to avoid interference */}
+        {/* Hamburger Menu Dropdown */}
         {showHamburgerNav && (
           <div
             ref={dropdownRef}
@@ -867,7 +867,7 @@ export default function Navbar() {
                 : "justify-center items-center"
             } w-full md:max-w-4xl md:m-auto`}
           >
-            {/* Mobile Search Bar - hidden when modal is open */}
+            {/* Mobile Search Bar */}
             {!displaySearch && (
               <div
                 className={mobileSearchBarClasses}
@@ -882,7 +882,7 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Mobile Search Modal Content - only shown when displaySearch is true */}
+            {/* Mobile Search Modal Content */}
             {displaySearch && (
               <div className="w-full h-full flex flex-col">
                 {/* Header with close button */}
@@ -911,6 +911,7 @@ export default function Navbar() {
                 {isTutorsPage ? (
                   // Mobile Tutor Search
                   <div className="flex-1 overflow-y-auto px-4 pb-6">
+                    {/* Tutor Category Selection */}
                     <div className="w-full" ref={mobileCategoryRef}>
                       <div
                         className="flex justify-between items-center py-3 border-b border-gray-100 cursor-pointer"
@@ -981,6 +982,7 @@ export default function Navbar() {
                       )}
                     </div>
 
+                    {/* Tutor Level Selection */}
                     <div className="w-full" ref={mobileLevelRef}>
                       <div
                         className="flex justify-between items-center py-3 border-b border-gray-100 cursor-pointer"
@@ -1038,6 +1040,7 @@ export default function Navbar() {
                       )}
                     </div>
 
+                    {/* Search Inputs */}
                     <div className="w-full">
                       <div className="py-3 border-b border-gray-100">
                         <span className="text-sm font-medium text-gray-700">
@@ -1077,6 +1080,7 @@ export default function Navbar() {
                           />
                         </div>
 
+                        {/* Popular subjects */}
                         <div className="mt-2">
                           <p className="text-xs font-medium text-gray-500 mb-2">
                             Popular subjects
@@ -1100,6 +1104,7 @@ export default function Navbar() {
                           </div>
                         </div>
 
+                        {/* Selected filters summary */}
                         {(tutorCategory !== "all" ||
                           tutorLevel !== "all" ||
                           tutorSearchTerm ||
@@ -1159,6 +1164,7 @@ export default function Navbar() {
                       </div>
                     </div>
 
+                    {/* Action Buttons */}
                     <div className="w-full mt-4 flex gap-3">
                       <button
                         onClick={clearTutorFilters}
@@ -1177,6 +1183,7 @@ export default function Navbar() {
                 ) : (
                   // Mobile Session Search
                   <div className="flex-1 overflow-y-auto px-4 pb-6">
+                    {/* Category Selection */}
                     <div className="w-full" ref={mobileCategoryRef}>
                       <div
                         className="flex justify-between items-center py-3 border-b border-gray-100 cursor-pointer"
@@ -1241,6 +1248,7 @@ export default function Navbar() {
                       )}
                     </div>
 
+                    {/* Level Selection */}
                     <div className="w-full" ref={mobileLevelRef}>
                       <div
                         className="flex justify-between items-center py-3 border-b border-gray-100 cursor-pointer"
@@ -1295,6 +1303,7 @@ export default function Navbar() {
                       )}
                     </div>
 
+                    {/* Title/Subject Search */}
                     <div className="w-full">
                       <div className="py-3 border-b border-gray-100">
                         <span className="text-sm font-medium text-gray-700">
@@ -1315,6 +1324,7 @@ export default function Navbar() {
                           className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring- focus:border-transparent outline-none"
                         />
 
+                        {/* Popular searches */}
                         <div className="mt-4">
                           <p className="text-xs font-medium text-gray-500 mb-2">
                             Popular searches
@@ -1341,6 +1351,7 @@ export default function Navbar() {
                           </div>
                         </div>
 
+                        {/* Selected filters summary */}
                         {(mobileCategory !== "all" ||
                           mobileLevel !== "all" ||
                           mobileSearchTerm) && (
@@ -1388,6 +1399,7 @@ export default function Navbar() {
                       </div>
                     </div>
 
+                    {/* Action Buttons */}
                     <div className="w-full mt-4 flex gap-3">
                       <button
                         onClick={clearMobileFilters}
@@ -1452,7 +1464,7 @@ export default function Navbar() {
                             : "Subject/Title"}
                         </span>
                       </div>
-                      {/* Search icon at the end - larger in reduced size */}
+                      {/* Search icon at the end */}
                       <div className="flex items-center justify-center px-3">
                         <div
                           className={`${
@@ -1520,7 +1532,7 @@ export default function Navbar() {
                         subject={tutorSubject}
                       />
 
-                      {/* Search icon button in expanded view - bigger */}
+                      {/* Search icon button in expanded view */}
                       <div className="px-2">
                         <button
                           onClick={handleTutorSearch}
@@ -1574,7 +1586,7 @@ export default function Navbar() {
                           {searchTerm ? "Active" : "Subject/Title"}
                         </span>
                       </div>
-                      {/* Search icon at the end - larger in reduced size */}
+                      {/* Search icon at the end */}
                       <div className="flex items-center justify-center px-3">
                         <div
                           className={`${
@@ -1640,7 +1652,7 @@ export default function Navbar() {
                         searchTerm={searchTerm}
                       />
 
-                      {/* Search icon button in expanded view - bigger */}
+                      {/* Search icon button in expanded view */}
                       <div className="px-2">
                         <button
                           onClick={handleSearch}
