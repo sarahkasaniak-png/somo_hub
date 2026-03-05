@@ -53,6 +53,7 @@ export default function Navbar() {
   const lastScrollY = useRef(0);
   const navbarRef = useRef<HTMLDivElement>(null);
   const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
 
   // State to track if search is expanded (when clicked)
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -86,7 +87,6 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileCategoryRef = useRef<HTMLDivElement>(null);
   const mobileLevelRef = useRef<HTMLDivElement>(null);
-  const mobileNavRef = useRef<HTMLDivElement>(null);
   const hamburgerButtonRef = useRef<HTMLDivElement>(null);
 
   // Handle click on a segment to expand the search bar
@@ -110,43 +110,45 @@ export default function Navbar() {
     [],
   );
 
-  // Optimized scroll handler
+  // Optimized scroll handler with debounce
   const handleScroll = useCallback(() => {
     if (typeof window === "undefined" || displaySearch) return;
 
     const currentScrollY = window.scrollY;
 
-    requestAnimationFrame(() => {
-      // Set scrolled state for navbar height and search box size (reduces after 20px scroll)
-      // Only reduce if search is not expanded
-      if (!isSearchExpanded) {
-        setIsScrolled(currentScrollY > 20);
-      }
+    // Set scrolled state for navbar height and search box size (reduces after 20px scroll)
+    // Only reduce if search is not expanded
+    if (!isSearchExpanded) {
+      setIsScrolled(currentScrollY > 20);
+    }
 
-      // Handle mobile nav visibility (hides after 50px scroll down)
-      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
-        setIsMobileNavVisible(false);
-      } else if (currentScrollY < lastScrollY.current) {
-        setIsMobileNavVisible(true);
-      }
+    // Handle mobile nav visibility - only hide when scrolling down significantly
+    if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+      setIsMobileNavVisible(false);
+    } else if (currentScrollY < lastScrollY.current) {
+      setIsMobileNavVisible(true);
+    }
 
-      lastScrollY.current = currentScrollY;
-    });
+    lastScrollY.current = currentScrollY;
   }, [displaySearch, isSearchExpanded]);
 
-  // Throttled scroll effect
+  // Throttled scroll effect with cleanup
   useEffect(() => {
-    const throttledScroll = () => {
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current);
+    let ticking = false;
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
       }
-      scrollTimeout.current = setTimeout(handleScroll, 10);
     };
 
-    window.addEventListener("scroll", throttledScroll, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      window.removeEventListener("scroll", throttledScroll);
-      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      window.removeEventListener("scroll", onScroll);
     };
   }, [handleScroll]);
 
@@ -491,16 +493,20 @@ export default function Navbar() {
     } bg-main rounded-full flex items-center justify-center hover:ring-1 ring-main hover:bg-main/95 hover:text-main-50 cursor-pointer`;
   }, [isScrolled, isSearchExpanded, isTutorsPage, selected]);
 
-  // Mobile navigation links - fixed to ensure they're clickable when visible
+  // Mobile navigation links - with height transition for navbar resizing
   const mobileNavClasses = useMemo(() => {
-    return `md:hidden w-full px-6 transition-all duration-300 ease-in-out ${
-      isScrolled && !isSearchExpanded && !displaySearch
-        ? "py-0 h-0 opacity-0"
-        : "py-1 h-auto opacity-100"
-    } ${
-      !displaySearch && isMobileNavVisible ? "visible" : "invisible"
-    } overflow-hidden`;
-  }, [displaySearch, isMobileNavVisible, isScrolled, isSearchExpanded]);
+    // Always hidden when search is open
+    if (displaySearch) {
+      return "md:hidden hidden";
+    }
+
+    // When not in search mode, control visibility with height transition
+    return `md:hidden w-full px-6 transition-all duration-300 overflow-hidden ${
+      isMobileNavVisible
+        ? "opacity-100 py-1 max-h-20"
+        : "opacity-0 py-0 max-h-0 pointer-events-none"
+    }`;
+  }, [displaySearch, isMobileNavVisible]);
 
   // Logo and hamburger remain the same size
   const logoClasses = "logo flex items-center gap-0 cursor-pointer select-none";
@@ -678,7 +684,7 @@ export default function Navbar() {
             </div>
           </nav>
 
-          {/* Mobile Navigation Links - Fixed to be clickable when visible */}
+          {/* Mobile Navigation Links - with height transition for navbar resizing */}
           <div ref={mobileNavRef} className={mobileNavClasses}>
             <ul className="flex justify-center items-center gap-6 w-full">
               <li>
