@@ -6,6 +6,16 @@ import { toast } from "react-hot-toast";
 import paymentApi from "@/lib/api/payment";
 import { Loader2 } from "lucide-react";
 
+interface PaymentResponse {
+  success: boolean;
+  data?: {
+    authorization_url: string;
+    reference: string;
+    access_code?: string;
+  };
+  message?: string;
+}
+
 interface PaystackPaymentProps {
   amount: number;
   email: string;
@@ -32,8 +42,8 @@ export default function PaystackPayment({
     setProcessing(true);
 
     try {
-      // Initialize payment with Paystack
-      const response = await paymentApi.initializePayment({
+      // Initialize payment with Paystack - add type assertion
+      const response = (await paymentApi.initializePayment({
         amount,
         currency: "KES",
         email,
@@ -42,7 +52,7 @@ export default function PaystackPayment({
           payment_type: "tutor_onboarding",
           application_id: applicationId,
         },
-      });
+      })) as PaymentResponse;
 
       if (response.success && response.data) {
         const { authorization_url, reference } = response.data;
