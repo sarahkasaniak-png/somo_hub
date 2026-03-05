@@ -96,15 +96,22 @@ export default function Navbar() {
       if (typeof window !== "undefined") {
         const currentScrollY = window.scrollY;
 
+        // Don't hide if search panel is open
+        if (displaySearch) {
+          setShowMobileNav(true);
+          setNavbarHeight("auto");
+          return;
+        }
+
         // Scroll down - hide mobile nav and reduce navbar height
         if (currentScrollY > lastScrollY && currentScrollY > 50) {
           setShowMobileNav(false);
-          setNavbarHeight("60px"); // Reduced height when scrolling down
+          setNavbarHeight("60px");
         }
         // Scroll up - show mobile nav and restore navbar height
         else {
           setShowMobileNav(true);
-          setNavbarHeight("auto"); // Full height when scrolling up
+          setNavbarHeight("auto");
         }
 
         setLastScrollY(currentScrollY);
@@ -118,7 +125,7 @@ export default function Navbar() {
         window.removeEventListener("scroll", controlNavbar);
       };
     }
-  }, [lastScrollY]);
+  }, [lastScrollY, displaySearch]);
 
   // Filter handlers for sessions
   const handleCategoryChange = (category: string) => {
@@ -596,57 +603,59 @@ export default function Navbar() {
             </div>
           </nav>
 
-          {/* Mobile Navigation Links with hide/show on scroll */}
-          <div
-            className={`
-              md:hidden w-full px-6 py-1
-              transition-all duration-300 ease-in-out
-              ${showMobileNav ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full h-0 py-0"}
-              overflow-hidden
-            `}
-          >
-            <ul className="flex justify-center items-center gap-6 w-full">
-              <li>
-                <Link
-                  href="/"
-                  className={`flex flex-col items-center gap-0.5 ${
-                    pathname === "/"
-                      ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
-                      : ""
-                  }`}
-                >
-                  <Home className="w-5 h-5 text-gray-800" />
-                  <span className="text-[12px] text-zinc-600">Home</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/sessions"
-                  className={`flex flex-col items-center gap-0.5 ${
-                    pathname === "/sessions"
-                      ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
-                      : ""
-                  }`}
-                >
-                  <BookOpenCheck className="w-5 h-5 text-gray-800" />
-                  <span className="text-[12px] text-zinc-600">Tuition</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/tutors"
-                  className={`flex flex-col items-center gap-0.5 ${
-                    pathname === "/tutors"
-                      ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
-                      : ""
-                  }`}
-                >
-                  <UserRound className="w-5 h-5 text-gray-800" />
-                  <span className="text-[12px] text-zinc-600">Tutors</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {/* Mobile Navigation Links - only show when search is not active */}
+          {!displaySearch && (
+            <div
+              className={`
+                md:hidden w-full px-6 py-1
+                transition-all duration-300 ease-in-out
+                ${showMobileNav ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full h-0 py-0"}
+                overflow-hidden
+              `}
+            >
+              <ul className="flex justify-center items-center gap-6 w-full">
+                <li>
+                  <Link
+                    href="/"
+                    className={`flex flex-col items-center gap-0.5 ${
+                      pathname === "/"
+                        ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
+                        : ""
+                    }`}
+                  >
+                    <Home className="w-5 h-5 text-gray-800" />
+                    <span className="text-[12px] text-zinc-600">Home</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/sessions"
+                    className={`flex flex-col items-center gap-0.5 ${
+                      pathname === "/sessions"
+                        ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
+                        : ""
+                    }`}
+                  >
+                    <BookOpenCheck className="w-5 h-5 text-gray-800" />
+                    <span className="text-[12px] text-zinc-600">Tuition</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/tutors"
+                    className={`flex flex-col items-center gap-0.5 ${
+                      pathname === "/tutors"
+                        ? "border-b-2 border-b-zinc-400 border-main pb-0.5"
+                        : ""
+                    }`}
+                  >
+                    <UserRound className="w-5 h-5 text-gray-800" />
+                    <span className="text-[12px] text-zinc-600">Tutors</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
 
           <div
             className={`dropdown-menu z-20 ${!showHamburgerNav && "hidden"}`}
