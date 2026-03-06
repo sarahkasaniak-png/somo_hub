@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
 
 export default function PaymentVerifier() {
   const router = useRouter();
@@ -30,7 +31,12 @@ export default function PaymentVerifier() {
       }
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Wait a bit for webhook to process
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        // Optionally verify with your backend
+        // const verifyResponse = await fetch(`/api/payments/verify/${reference}`);
+        // const data = await verifyResponse.json();
 
         if (paymentType === "session_enrollment" && sessionId) {
           router.push(`/tuitions/${sessionId}?reference=${reference}`);
@@ -42,11 +48,13 @@ export default function PaymentVerifier() {
           router.push(`/dashboard?reference=${reference}`);
         }
 
+        // Clean up session storage
         sessionStorage.removeItem("pending_session_id");
         sessionStorage.removeItem("pending_application_id");
         sessionStorage.removeItem("pending_payment_type");
         sessionStorage.removeItem("pending_payment_reference");
       } catch (error) {
+        console.error("Error during payment verification:", error);
         setStatus("failed");
         setMessage("Failed to verify payment");
       }

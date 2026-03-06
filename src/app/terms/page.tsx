@@ -507,7 +507,7 @@ export default function TermsPage() {
             <p className="font-medium">SomoHub Limited</p>
             <p className="text-sm text-gray-600">Nairobi, Kenya</p>
             <p className="text-sm text-gray-600">Email: legal@somohub.com</p>
-            <p className="text-sm text-gray-600">Phone: +254 700 000 000</p>
+            {/* <p className="text-sm text-gray-600">Phone: +254 700 000 000</p> */}
           </div>
         </div>
       ),

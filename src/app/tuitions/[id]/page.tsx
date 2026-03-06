@@ -347,34 +347,43 @@ export default function TuitionDetailPage() {
       setEnrolling(true);
       toast.loading("Verifying payment...", { id: "payment-verification" });
 
+      // Add a small delay to allow webhook to process
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       // Verify payment on backend
       const verifyResponse = await paymentApi.verifyPayment(reference);
 
-      if (verifyResponse.success && verifyResponse.data?.status === "success") {
-        // Payment successful, proceed with enrollment
-        const enrollResponse = await tuitionApi.enrollInSession(
-          sessionId,
-          reference,
-        );
-
-        if (enrollResponse.success) {
-          toast.success(
-            "Payment successful! You are now enrolled in the session.",
-            {
-              id: "payment-verification",
-            },
+      if (verifyResponse.success) {
+        if (verifyResponse.data?.status === "success") {
+          // Payment successful, proceed with enrollment
+          const enrollResponse = await tuitionApi.enrollInSession(
+            sessionId,
+            reference,
           );
-          fetchSessionDetails(); // Refresh to update enrollment status
 
-          // Clean up URL
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname,
-          );
+          if (enrollResponse.success) {
+            toast.success(
+              "Payment successful! You are now enrolled in the session.",
+              {
+                id: "payment-verification",
+              },
+            );
+            fetchSessionDetails(); // Refresh to update enrollment status
+
+            // Clean up URL
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname,
+            );
+          }
+        } else {
+          toast.error("Payment verification failed. Please contact support.", {
+            id: "payment-verification",
+          });
         }
       } else {
-        toast.error("Payment verification failed. Please contact support.", {
+        toast.error(verifyResponse.message || "Failed to verify payment", {
           id: "payment-verification",
         });
       }
