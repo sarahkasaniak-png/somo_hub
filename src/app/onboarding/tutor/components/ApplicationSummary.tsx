@@ -69,19 +69,12 @@ export default function ApplicationSummary({
       const verifyResponse = await paymentApi.verifyPayment(reference);
 
       if (verifyResponse.success && verifyResponse.data?.status === "success") {
-        toast.success(
-          "Payment successful! Your application has been submitted.",
-          {
-            id: "payment-verification",
-            duration: 5000,
-          },
-        );
+        toast.success("Payment verified! Submitting your application...", {
+          id: "payment-verification",
+        });
 
-        // Wait a moment for the user to see the success message
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Redirect to status page
-        router.push("/onboarding/tutor/status");
+        // Submit application with payment reference
+        await onSubmit(reference, "paystack");
 
         // Clean up URL
         window.history.replaceState(
