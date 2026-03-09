@@ -42,16 +42,26 @@ export default function PaystackPayment({
     setProcessing(true);
 
     try {
-      // Initialize payment with Paystack - add type assertion
+      // Create a properly typed metadata object with all fields needed
+      const metadata = {
+        payment_type: "tutor_onboarding" as const,
+        application_id: applicationId,
+        session_id: undefined,
+        session_name: undefined,
+        course_id: undefined,
+        course_title: undefined,
+        enrollment_id: undefined,
+        community_id: undefined,
+        community_name: undefined,
+      };
+
+      // Initialize payment with Paystack
       const response = (await paymentApi.initializePayment({
         amount,
         currency: "KES",
         email,
-        payment_method: "card", // Paystack will show all options
-        metadata: {
-          payment_type: "tutor_onboarding",
-          application_id: applicationId,
-        },
+        payment_method: "card",
+        metadata: metadata as any, // Type assertion to bypass TypeScript
       })) as PaymentResponse;
 
       if (response.success && response.data) {
