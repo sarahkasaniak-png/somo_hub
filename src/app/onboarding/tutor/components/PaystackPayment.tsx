@@ -33,6 +33,8 @@ export default function PaystackPayment({
 }: PaystackPaymentProps) {
   const [processing, setProcessing] = useState(false);
 
+  // src/app/onboarding/tutor/components/PaystackPayment.tsx
+
   const handlePayment = async () => {
     if (!email) {
       toast.error("Please enter your email address");
@@ -42,17 +44,13 @@ export default function PaystackPayment({
     setProcessing(true);
 
     try {
-      // Create a properly typed metadata object with all fields needed
+      // Create metadata with only allowed fields
       const metadata = {
-        payment_type: "tutor_onboarding" as const,
-        application_id: applicationId,
-        session_id: undefined,
-        session_name: undefined,
-        course_id: undefined,
-        course_title: undefined,
-        enrollment_id: undefined,
-        community_id: undefined,
-        community_name: undefined,
+        payment_type: "tutor_onboarding",
+        session_id: applicationId, // Use session_id to store application ID
+        session_name: applicationId
+          ? `Tutor Application #${applicationId}`
+          : undefined,
       };
 
       // Initialize payment with Paystack
@@ -61,13 +59,13 @@ export default function PaystackPayment({
         currency: "KES",
         email,
         payment_method: "card",
-        metadata: metadata as any, // Type assertion to bypass TypeScript
+        metadata: metadata as any,
       })) as PaymentResponse;
 
       if (response.success && response.data) {
         const { authorization_url, reference } = response.data;
 
-        // Store reference in session storage to verify after redirect
+        // Store reference in session storage
         sessionStorage.setItem("pending_payment_reference", reference);
         sessionStorage.setItem("pending_payment_type", "tutor_onboarding");
         if (applicationId) {
