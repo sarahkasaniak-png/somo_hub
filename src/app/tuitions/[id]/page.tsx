@@ -40,6 +40,7 @@ interface PaymentInitResponse {
   data?: {
     authorization_url: string;
     reference: string;
+    payment_id: number | string;
   };
   message?: string;
 }
@@ -81,7 +82,6 @@ const PaymentModal = ({
   const initializePaystackPayment = async () => {
     setProcessing(true);
     try {
-      // Initialize payment on backend - Paystack handles all payment methods
       const response = (await paymentApi.initializePayment({
         amount,
         currency,
@@ -96,14 +96,14 @@ const PaymentModal = ({
       })) as PaymentInitResponse;
 
       if (response.success && response.data) {
-        const { authorization_url, reference } = response.data;
+        const { authorization_url, reference, payment_id } = response.data;
 
-        // Store reference in session storage to verify after redirect
+        // Store both reference and payment_id in session storage
         sessionStorage.setItem("pending_payment_reference", reference);
+        sessionStorage.setItem("pending_payment_id", payment_id.toString());
         sessionStorage.setItem("pending_session_id", sessionId.toString());
         sessionStorage.setItem("pending_payment_type", "session_enrollment");
 
-        // Redirect to Paystack - Paystack shows appropriate UI for selected method
         window.location.href = authorization_url;
       } else {
         toast.error(response.message || "Failed to initialize payment");

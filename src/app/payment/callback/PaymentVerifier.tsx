@@ -23,6 +23,14 @@ export default function PaymentVerifier() {
       const sessionId = sessionStorage.getItem("pending_session_id");
       const applicationId = sessionStorage.getItem("pending_application_id");
       const paymentType = sessionStorage.getItem("pending_payment_type");
+      const paymentId = sessionStorage.getItem("pending_payment_id");
+
+      console.log("🔍 Payment callback:", {
+        reference,
+        sessionId,
+        paymentType,
+        paymentId,
+      });
 
       if (!reference) {
         setStatus("failed");
@@ -34,18 +42,48 @@ export default function PaymentVerifier() {
         // Wait a bit for webhook to process
         await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        // Optionally verify with your backend
-        // const verifyResponse = await fetch(`/api/payments/verify/${reference}`);
-        // const data = await verifyResponse.json();
+        // Verify with your backend
+        const verifyResponse = await fetch(
+          `/api/payments/verify/${reference}`,
+          {
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        );
 
-        if (paymentType === "session_enrollment" && sessionId) {
-          router.push(`/tuitions/${sessionId}?reference=${reference}`);
-        } else if (paymentType === "tutor_onboarding") {
-          router.push(`/onboarding/tutor?reference=${reference}`);
-        } else if (applicationId) {
-          router.push(`/onboarding/tutor?reference=${reference}`);
+        const verifyData = await verifyResponse.json();
+        console.log("📊 Verification response:", verifyData);
+
+        if (verifyData.success && verifyData.data?.status === "success") {
+          setStatus("success");
+
+          // Store payment ID for enrollment
+          if (verifyData.data.payment_id) {
+            sessionStorage.setItem(
+              "verified_payment_id",
+              verifyData.data.payment_id.toString(),
+            );
+          }
+
+          // Redirect based on payment type
+          setTimeout(() => {
+            if (paymentType === "session_enrollment" && sessionId) {
+              router.push(
+                `/tuitions/${sessionId}?payment_success=true&reference=${reference}`,
+              );
+            } else if (paymentType === "tutor_onboarding") {
+              router.push(`/onboarding/tutor?reference=${reference}`);
+            } else if (applicationId) {
+              router.push(`/onboarding/tutor?reference=${reference}`);
+            } else {
+              router.push(`/dashboard?reference=${reference}`);
+            }
+          }, 2000);
         } else {
-          router.push(`/dashboard?reference=${reference}`);
+          setStatus("failed");
+          setMessage(verifyData.message || "Payment verification failed");
         }
 
         // Clean up session storage
@@ -53,6 +91,7 @@ export default function PaymentVerifier() {
         sessionStorage.removeItem("pending_application_id");
         sessionStorage.removeItem("pending_payment_type");
         sessionStorage.removeItem("pending_payment_reference");
+        sessionStorage.removeItem("pending_payment_id");
       } catch (error) {
         console.error("Error during payment verification:", error);
         setStatus("failed");
