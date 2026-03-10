@@ -551,8 +551,7 @@ export default function TutorOnboarding() {
                 {steps[currentStep - 1]?.title}
               </p>
             </div>
-            {/* Continue/Review Button */}
-            // In TutorOnboarding.tsx - around line 400-420
+
             {/* Continue/Review Button */}
             <div className="w-1/4 md:w-1/4 text-right">
               {currentStep < 4 ? (
@@ -595,6 +594,9 @@ export default function TutorOnboarding() {
                 </button>
               ) : (
                 <button
+                  onClick={() => {
+                    alert("test data");
+                  }}
                   type="submit"
                   form="step-4-form" // Make sure this matches the form ID in Step4Experience
                   disabled={isLoading}
