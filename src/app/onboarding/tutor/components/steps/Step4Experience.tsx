@@ -1,5 +1,4 @@
-// src/app/onboarding/tutor/components/steps/Step3Experience.tsx
-"use client";
+// src/app/onboarding/tutor/components/steps/Step4Experience.tsx
 
 import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -28,19 +27,19 @@ const experienceSchema = z.object({
 
 type ExperienceFormData = z.infer<typeof experienceSchema>;
 
-interface Step3ExperienceProps {
+interface Step4ExperienceProps {
   initialData?: any;
   onNext: (data: ExperienceFormData) => void;
   onBack: () => void;
   isLoading: boolean;
 }
 
-export default function Step3Experience({
+export default function Step4Experience({
   initialData,
   onNext,
   onBack,
   isLoading,
-}: Step3ExperienceProps) {
+}: Step4ExperienceProps) {
   const [certificates, setCertificates] = useState<any[]>(
     initialData?.certificates || [],
   );
@@ -91,8 +90,6 @@ export default function Step3Experience({
     }
   }, [initialData, setValue]);
 
-  // In Step4Experience.tsx, update the handleFileUpload function:
-
   const handleFileUpload = async (fileType: string, url: string) => {
     if (fileType === "certificate") {
       const newCert = {
@@ -101,7 +98,6 @@ export default function Step3Experience({
         issued_date: new Date().toISOString().split("T")[0],
       };
 
-      // Ensure we're creating a proper object
       console.log("Creating new certificate:", newCert);
 
       // Create a new array with the certificate
@@ -115,6 +111,7 @@ export default function Step3Experience({
       append(newCert);
     }
   };
+
   const onSubmit = async (data: ExperienceFormData) => {
     if (isSubmitting || isLoading) return;
 
@@ -127,17 +124,18 @@ export default function Step3Experience({
           alert(
             "Please provide either TSC number or teaching experience years",
           );
+          setIsSubmitting(false);
           return;
         }
       }
 
       console.log("Submitting experience data:", data);
-      onNext(data);
+      await onNext(data);
     } catch (error) {
       console.error("Submission error:", error);
-    } finally {
       setIsSubmitting(false);
     }
+    // Note: isSubmitting will be reset by the parent component
   };
 
   // Check if form is ready for submission
@@ -165,7 +163,7 @@ export default function Step3Experience({
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-6"
-      id="step-4-form" // Changed to step 4
+      id="step-4-form"
     >
       <div>
         <h2 className="text-2xl font-semibold text-zinc-700">

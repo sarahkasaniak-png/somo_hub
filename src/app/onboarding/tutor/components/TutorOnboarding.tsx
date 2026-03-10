@@ -113,6 +113,9 @@ export default function TutorOnboarding() {
       if (response.success && response.data) {
         console.log("Backend response data:", response.data);
         setApplication(response.data);
+
+        // Update formData with the response data to keep everything in sync
+        setFormData(response.data);
       } else if (response.success) {
         // If backend doesn't return data, update local state
         const updatedApp = {
@@ -122,6 +125,7 @@ export default function TutorOnboarding() {
         };
         console.log("Updated local application state:", updatedApp);
         setApplication(updatedApp as ApplicationData);
+        setFormData(updatedApp);
       } else {
         throw new Error(response.message || "Failed to save step");
       }
@@ -538,7 +542,6 @@ export default function TutorOnboarding() {
                 </button>
               )}
             </div>
-
             {/* Step Number - Hidden on mobile (shown above), visible on desktop */}
             <div className="hidden md:block w-2/4 text-center">
               <p className="text-sm text-gray-600">
@@ -548,7 +551,8 @@ export default function TutorOnboarding() {
                 {steps[currentStep - 1]?.title}
               </p>
             </div>
-
+            {/* Continue/Review Button */}
+            // In TutorOnboarding.tsx - around line 400-420
             {/* Continue/Review Button */}
             <div className="w-1/4 md:w-1/4 text-right">
               {currentStep < 4 ? (
@@ -592,7 +596,7 @@ export default function TutorOnboarding() {
               ) : (
                 <button
                   type="submit"
-                  form={`step-4-form`}
+                  form="step-4-form" // Make sure this matches the form ID in Step4Experience
                   disabled={isLoading}
                   className="px-4 py-2.5 md:px-8 md:py-3 bg-main text-white font-semibold rounded-lg hover:bg-main focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base w-full md:w-auto"
                 >
