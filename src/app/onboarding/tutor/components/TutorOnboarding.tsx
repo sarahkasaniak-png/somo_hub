@@ -120,6 +120,7 @@ export default function TutorOnboarding() {
 
       const mergedData = { ...formData, ...stepData };
       setFormData(mergedData);
+      console.log("Merged form data:", mergedData);
 
       console.log("Calling saveStep with:", currentStep, stepData);
       const response: SaveStepResponse = await saveStep(currentStep, stepData);
@@ -129,6 +130,15 @@ export default function TutorOnboarding() {
         console.log("Setting application with response data:", response.data);
         setApplication(response.data);
         setFormData(response.data);
+
+        // Check if we're on step 4 and should show summary
+        if (currentStep === 4) {
+          console.log("🎯 Step 4 completed, setting showSummary to true");
+          setShowSummary(true);
+        } else {
+          console.log("Moving to next step:", currentStep + 1);
+          setCurrentStep(currentStep + 1);
+        }
       } else if (response.success) {
         const updatedApp = {
           ...(application || {}),
@@ -138,16 +148,19 @@ export default function TutorOnboarding() {
         console.log("Setting application with local data:", updatedApp);
         setApplication(updatedApp as ApplicationData);
         setFormData(updatedApp);
+
+        // Check if we're on step 4 and should show summary
+        if (currentStep === 4) {
+          console.log(
+            "🎯 Step 4 completed (local), setting showSummary to true",
+          );
+          setShowSummary(true);
+        } else {
+          console.log("Moving to next step:", currentStep + 1);
+          setCurrentStep(currentStep + 1);
+        }
       } else {
         throw new Error(response.message || "Failed to save step");
-      }
-
-      if (currentStep < 4) {
-        console.log("Moving to next step:", currentStep + 1);
-        setCurrentStep(currentStep + 1);
-      } else {
-        console.log("🎯 SHOWING SUMMARY - Setting showSummary to true");
-        setShowSummary(true);
       }
 
       toast.success("Progress saved");

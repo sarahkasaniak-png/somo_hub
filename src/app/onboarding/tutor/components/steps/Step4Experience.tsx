@@ -48,7 +48,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       watch,
       control,
       setValue,
-      formState: { errors, isValid },
+      formState: { errors, isValid, isDirty, isValidating },
     } = useForm<ExperienceFormData>({
       resolver: zodResolver(experienceSchema),
       mode: "onChange",
@@ -71,6 +71,27 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     const hasExperience = watch("has_teaching_experience");
     const tscNumber = watch("tsc_number");
     const experienceYears = watch("teaching_experience_years");
+
+    // Log form state for debugging
+    useEffect(() => {
+      console.log("📊 Step4 Form State:", {
+        isValid,
+        isDirty,
+        isValidating,
+        hasExperience,
+        tscNumber,
+        experienceYears,
+        errors: Object.keys(errors).length > 0 ? errors : "No errors",
+      });
+    }, [
+      isValid,
+      isDirty,
+      isValidating,
+      hasExperience,
+      tscNumber,
+      experienceYears,
+      errors,
+    ]);
 
     useEffect(() => {
       // Parse JSON if coming from initialData
@@ -110,14 +131,32 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     };
 
     const onSubmit = async (data: ExperienceFormData) => {
-      if (isSubmitting || isLoading) return;
+      console.log("📝 Step4 onSubmit called with data:", data);
+      console.log(
+        "Current state - isSubmitting:",
+        isSubmitting,
+        "isLoading:",
+        isLoading,
+      );
+
+      if (isSubmitting || isLoading) {
+        console.log("Submission blocked - already submitting");
+        return;
+      }
 
       try {
         setIsSubmitting(true);
+        console.log("Set isSubmitting to true");
 
         // Additional validation
         if (hasExperience) {
+          console.log("Has experience, checking validation:", {
+            tscNumber: tscNumber?.trim(),
+            experienceYears,
+          });
+
           if (!tscNumber?.trim() && !experienceYears) {
+            console.log("Validation failed - missing TSC or experience years");
             alert(
               "Please provide either TSC number or teaching experience years",
             );
@@ -126,13 +165,18 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
           }
         }
 
-        console.log("Submitting experience data:", data);
+        console.log("Calling onNext with data:", data);
         await onNext(data);
+        console.log("onNext completed successfully");
       } catch (error) {
         console.error("Submission error:", error);
         setIsSubmitting(false);
       }
       // Note: isSubmitting will be reset by the parent component
+    };
+
+    const onError = (errors: any) => {
+      console.log("❌ Form validation errors:", errors);
     };
 
     // Check if form is ready for submission
@@ -161,7 +205,12 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     return (
       <form
         ref={ref}
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={(e) => {
+          console.log("🔥 Form onSubmit event triggered");
+          console.log("Form validity:", isValid);
+          console.log("Form errors:", errors);
+          handleSubmit(onSubmit, onError)(e);
+        }}
         className="space-y-6"
         id="step-4-form"
       >
@@ -182,6 +231,10 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
               {...register("has_teaching_experience")}
               className="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
               disabled={isLoading || isSubmitting}
+              onChange={(e) => {
+                console.log("Checkbox changed:", e.target.checked);
+                register("has_teaching_experience").onChange(e);
+              }}
             />
             <label
               htmlFor="has_experience"
