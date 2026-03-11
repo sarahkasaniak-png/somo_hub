@@ -22,6 +22,7 @@ interface PaystackPaymentProps {
   onPaymentSuccess: (reference: string) => void;
   onPaymentError: (error: string) => void;
   applicationId?: number;
+  disabled?: boolean; // Add disabled prop to interface
 }
 
 export default function PaystackPayment({
@@ -30,14 +31,18 @@ export default function PaystackPayment({
   onPaymentSuccess,
   onPaymentError,
   applicationId,
+  disabled = false, // Default to false
 }: PaystackPaymentProps) {
   const [processing, setProcessing] = useState(false);
-
-  // src/app/onboarding/tutor/components/PaystackPayment.tsx
 
   const handlePayment = async () => {
     if (!email) {
       toast.error("Please enter your email address");
+      return;
+    }
+
+    if (disabled) {
+      toast.error("Please accept the Terms of Service to proceed");
       return;
     }
 
@@ -88,12 +93,16 @@ export default function PaystackPayment({
     }
   };
 
+  const isButtonDisabled = processing || !email || disabled;
+
   return (
     <button
       type="button"
       onClick={handlePayment}
-      disabled={processing || !email}
-      className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+      disabled={isButtonDisabled}
+      className={`w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 ${
+        isButtonDisabled ? "cursor-not-allowed" : "cursor-pointer"
+      }`}
     >
       {processing ? (
         <>

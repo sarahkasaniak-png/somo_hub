@@ -11,6 +11,7 @@ import {
   formatApplicationForDisplay,
 } from "@/lib/api/tutor";
 import paymentApi from "@/lib/api/payment";
+import { useAuth } from "@/app/context/AuthContext";
 
 // Helper function to safely parse JSON or return the value
 const safeParse = (data: any) => {
@@ -41,10 +42,24 @@ export default function ApplicationSummary({
   isLoading,
 }: ApplicationSummaryProps) {
   const router = useRouter();
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"paystack" | null>(null);
+  const { user } = useAuth(); // Get user from AuthContext
+  const [termsAccepted, setTermsAccepted] = useState(true); // Default to true
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
+  const [paymentButtonEnabled, setPaymentButtonEnabled] = useState(false);
+
+  // Get user email from AuthContext
+  const userEmail = user?.email || "";
+
+  // Check if payment button should be enabled
+  useEffect(() => {
+    const enabled = termsAccepted && !!userEmail && !paymentProcessing;
+    console.log("🔘 Payment button enabled:", enabled, {
+      termsAccepted,
+      userEmail: !!userEmail,
+      paymentProcessing,
+    });
+    setPaymentButtonEnabled(enabled);
+  }, [termsAccepted, userEmail, paymentProcessing]);
 
   // Format application data for display
   const formattedApp = formatApplicationForDisplay(application);
@@ -122,6 +137,19 @@ export default function ApplicationSummary({
       month: "long",
       day: "numeric",
     });
+  };
+
+  // Handle checkbox change
+  const handleTermsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    console.log("📝 Terms checkbox changed:", checked);
+    setTermsAccepted(checked);
+    if (!checked) {
+      toast.error("You must accept the Terms of Service to proceed", {
+        id: "terms-warning",
+        duration: 3000,
+      });
+    }
   };
 
   return (
@@ -431,6 +459,39 @@ export default function ApplicationSummary({
           </div>
         </div>
 
+        {/* Terms and Conditions - Moved before payment */}
+        <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+          <div className="flex items-start">
+            <input
+              type="checkbox"
+              id="terms"
+              checked={termsAccepted}
+              onChange={handleTermsChange}
+              className="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-0.5"
+              disabled={paymentProcessing}
+            />
+            <label htmlFor="terms" className="ml-3 text-sm text-gray-700">
+              I agree to the{" "}
+              <a
+                href="/terms/tutor"
+                className="text-purple-600 hover:text-purple-800 font-medium underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Terms of Service
+              </a>{" "}
+              and confirm that all information provided is accurate. I
+              understand that false information may lead to application
+              rejection or account termination.
+            </label>
+          </div>
+          {!termsAccepted && (
+            <p className="text-sm text-red-600 mt-2 ml-8">
+              You must accept the Terms of Service to proceed with payment
+            </p>
+          )}
+        </div>
+
         {/* Application Fee */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
           <h3 className="text-lg font-semibold text-yellow-800 mb-4">
@@ -451,106 +512,67 @@ export default function ApplicationSummary({
             </div>
           </div>
 
-          {/* Payment Method Selection */}
+          {/* Payment Method - Paystack Only */}
           <div className="mt-6">
             <h4 className="text-lg font-medium text-gray-900 mb-4">
-              Select Payment Method
+              Payment Details
             </h4>
 
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("paystack")}
-                className={`p-4 border-2 rounded-lg transition-colors ${
-                  paymentMethod === "paystack"
-                    ? "border-purple-600 bg-purple-50"
-                    : "border-gray-300 hover:border-purple-400"
-                }`}
-              >
-                <div className="flex items-center">
-                  <div
-                    className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                      paymentMethod === "paystack"
-                        ? "border-purple-600 bg-purple-600"
-                        : "border-gray-400"
-                    }`}
-                  >
-                    {paymentMethod === "paystack" && (
-                      <div className="w-2 h-2 rounded-full bg-white"></div>
-                    )}
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium">Paystack</p>
-                    <p className="text-sm text-gray-500">
-                      Pay with Card, M-Pesa, or Bank Transfer
-                    </p>
-                  </div>
-                </div>
-              </button>
-            </div>
-
             {/* Payment Method Details */}
-            {paymentMethod === "paystack" && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address for Payment Receipt *
-                </label>
-                <input
-                  type="email"
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                  placeholder="you@example.com"
-                  disabled={paymentProcessing}
-                  required
-                />
-
-                <p className="text-xs text-gray-500 mt-2 mb-4">
-                  You'll be redirected to Paystack's secure payment page where
-                  you can pay with:
-                </p>
-                <ul className="text-xs text-gray-600 list-disc list-inside mb-4">
-                  <li>Credit/Debit Cards (Visa, Mastercard, Verve)</li>
-                  <li>M-Pesa (STK Push on your phone)</li>
-                  <li>Bank Transfer</li>
-                </ul>
-
-                <PaystackPayment
-                  amount={1160}
-                  email={userEmail}
-                  applicationId={application.id}
-                  onPaymentSuccess={handlePaymentSuccess}
-                  onPaymentError={handlePaymentError}
-                />
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center mb-4">
+                <div className="w-5 h-5 rounded-full border-2 border-purple-600 bg-purple-600 mr-3 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-white"></div>
+                </div>
+                <div>
+                  <p className="font-medium">Paystack</p>
+                  <p className="text-sm text-gray-500">
+                    Pay with Card, M-Pesa, or Bank Transfer
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Terms and Conditions */}
-        <div className="bg-gray-50 rounded-xl p-6">
-          <div className="flex items-start">
-            <input
-              type="checkbox"
-              id="terms"
-              checked={termsAccepted}
-              onChange={(e) => setTermsAccepted(e.target.checked)}
-              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1"
-              disabled={paymentProcessing}
-            />
-            <label htmlFor="terms" className="ml-3 text-sm text-gray-700">
-              I agree to the{" "}
-              <a
-                href="/terms/tutor"
-                className="text-purple-600 hover:text-purple-800 font-medium"
-                target="_blank"
-              >
-                Terms of Service
-              </a>{" "}
-              and confirm that all information provided is accurate. I
-              understand that false information may lead to application
-              rejection or account termination.
-            </label>
+              <p className="text-xs text-gray-500 mt-2 mb-4">
+                You'll be redirected to Paystack's secure payment page where you
+                can pay with:
+              </p>
+              <ul className="text-xs text-gray-600 list-disc list-inside mb-4">
+                <li>Credit/Debit Cards (Visa, Mastercard, Verve)</li>
+                <li>M-Pesa (STK Push on your phone)</li>
+                <li>Bank Transfer</li>
+              </ul>
+
+              {/* Email display */}
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">
+                    Payment receipt will be sent to:
+                  </span>{" "}
+                  {userEmail || "No email available"}
+                </p>
+              </div>
+
+              <PaystackPayment
+                amount={1160}
+                email={userEmail}
+                applicationId={application.id}
+                onPaymentSuccess={handlePaymentSuccess}
+                onPaymentError={handlePaymentError}
+                disabled={!paymentButtonEnabled}
+              />
+
+              {!termsAccepted && (
+                <p className="text-xs text-red-600 mt-2 text-center">
+                  Please accept the Terms of Service to enable payment
+                </p>
+              )}
+
+              {!userEmail && (
+                <p className="text-xs text-red-600 mt-2 text-center">
+                  Email address is required for payment
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -558,9 +580,7 @@ export default function ApplicationSummary({
       {/* Helper Text */}
       <div className="space-y-3 pt-4">
         <p className="text-xs text-gray-500 text-center">
-          {paymentMethod === "paystack" &&
-            "You'll be redirected to Paystack's secure payment page"}
-          {!paymentMethod && "Select a payment method above to continue"}
+          By proceeding with payment, you agree to our Terms of Service
         </p>
       </div>
     </div>
