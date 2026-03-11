@@ -1,7 +1,7 @@
 // src/app/onboarding/tutor/components/TutorOnboarding.tsx
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Step1TutorLevel from "./steps/Step1TutorLevel";
 import Step2PersonalInfo from "./steps/Step2PersonalInfo";
@@ -34,11 +34,6 @@ export default function TutorOnboarding() {
   const step3FormRef = useRef<HTMLFormElement>(null);
   const step4FormRef = useRef<HTMLFormElement>(null);
 
-  // CRITICAL: Prevent multiple submissions
-  const isSubmitting = useRef(false);
-  const hasCheckedExistingApp = useRef(false);
-  const hasProcessedPaymentReturn = useRef(false);
-
   const steps = [
     { number: 1, title: "Tutor Level & Category" },
     { number: 2, title: "Personal Information" },
@@ -46,11 +41,8 @@ export default function TutorOnboarding() {
     { number: 4, title: "Teaching Experience" },
   ];
 
-  // Handle payment callback when returning from Paystack
+  //useEffect to check for payment callback when returning from Paystack
   useEffect(() => {
-    // Prevent multiple executions
-    if (hasProcessedPaymentReturn.current) return;
-
     const queryParams = new URLSearchParams(window.location.search);
     const reference = queryParams.get("reference");
     const step = queryParams.get("step");
@@ -58,38 +50,52 @@ export default function TutorOnboarding() {
     console.log("🔍 TutorOnboarding - URL params:", { reference, step });
 
     // If we have a reference and we're on the summary step, show the summary with the reference
-    if (reference && step === "summary" && application && !showSummary) {
+    if (reference && step === "summary" && application) {
       console.log(
         "✅ Payment return detected, showing summary with reference:",
         reference,
       );
-      hasProcessedPaymentReturn.current = true;
       setShowSummary(true);
+      // The ApplicationSummary component will handle the verification
     }
-  }, [application, showSummary]);
+  }, [application]);
 
-  // Check existing application on mount - only once
   useEffect(() => {
-    if (!hasCheckedExistingApp.current) {
-      hasCheckedExistingApp.current = true;
-      checkExistingApplication();
-    }
+    checkExistingApplication();
   }, []);
 
-  // Debug logging - but don't let it cause re-renders
   useEffect(() => {
     console.log("=== TutorOnboarding State Debug ===");
     console.log("Current step:", currentStep);
     console.log("Show summary:", showSummary);
     console.log("Application data:", application);
-  }, [currentStep, showSummary, application]);
+    console.log("Application tutor_level:", application?.tutor_level);
+    console.log("Form data:", formData);
+  }, [application, currentStep, formData, showSummary]);
+
+  // Debug effect to check if form elements exist
+  useEffect(() => {
+    if (currentStep === 4) {
+      console.log("🔍 Step 4 is active, checking for form elements");
+      setTimeout(() => {
+        const form = document.getElementById("step-4-form");
+        console.log("Form element with id 'step-4-form' found:", !!form);
+        console.log("Form ref current:", step4FormRef.current);
+      }, 500);
+    }
+  }, [currentStep]);
 
   const checkExistingApplication = async () => {
     try {
       setIsLoading(true);
       const data = await loadApplication();
-
+      console.log(
+        "checkExistingApplication data:",
+        data.data.hasApplication,
+        data.data.application,
+      );
       if (data.data.hasApplication && data.data.application) {
+        console.log("Existing application found:", data.application);
         setApplication(data.data.application);
         setCurrentStep(data.data.application.current_step || 1);
         setFormData(data.data.application);
@@ -110,6 +116,7 @@ export default function TutorOnboarding() {
       } else {
         setCurrentStep(0);
       }
+      console.log("Loaded application data:", data);
     } catch (error) {
       console.error("Failed to load application:", error);
       toast.error("Failed to load application data");
@@ -118,181 +125,169 @@ export default function TutorOnboarding() {
     }
   };
 
-  const handleNext = useCallback(
-    async (stepData: any) => {
-      // CRITICAL: Prevent multiple submissions
-      if (isSubmitting.current) {
-        console.log("⏳ Submission already in progress, skipping...");
-        return;
-      }
+  const handleNext = async (stepData: any) => {
+    console.log(
+      "🚀 handleNext called with step:",
+      currentStep,
+      "data:",
+      stepData,
+    );
 
-      try {
-        isSubmitting.current = true;
-        setIsLoading(true);
+    try {
+      setIsLoading(true);
+      console.log("setIsLoading(true) called");
 
-        console.log(
-          "🚀 handleNext called with step:",
-          currentStep,
-          "data:",
-          stepData,
-        );
+      const mergedData = { ...formData, ...stepData };
+      setFormData(mergedData);
+      console.log("Merged form data:", mergedData);
 
-        const mergedData = { ...formData, ...stepData };
-        setFormData(mergedData);
+      console.log("Calling saveStep with:", currentStep, stepData);
+      const response: SaveStepResponse = await saveStep(currentStep, stepData);
+      console.log("saveStep response:", response);
 
-        const response: SaveStepResponse = await saveStep(
-          currentStep,
-          stepData,
-        );
+      if (response.success && response.data) {
+        console.log("Setting application with response data:", response.data);
+        setApplication(response.data);
+        setFormData(response.data);
 
-        if (response.success && response.data) {
-          setApplication(response.data);
-          setFormData(response.data);
-
-          if (currentStep === 4) {
-            console.log("🎯 Step 4 completed, setting showSummary to true");
-            setShowSummary(true);
-          } else {
-            setCurrentStep(currentStep + 1);
-          }
-
-          toast.success("Progress saved", { id: "progress-saved" });
-        } else if (response.success) {
-          const updatedApp = {
-            ...(application || {}),
-            ...stepData,
-            current_step: currentStep < 4 ? currentStep + 1 : currentStep,
-          };
-          setApplication(updatedApp as ApplicationData);
-          setFormData(updatedApp);
-
-          if (currentStep === 4) {
-            setShowSummary(true);
-          } else {
-            setCurrentStep(currentStep + 1);
-          }
-
-          toast.success("Progress saved", { id: "progress-saved" });
+        // Check if we're on step 4 and should show summary
+        if (currentStep === 4) {
+          console.log("🎯 Step 4 completed, setting showSummary to true");
+          setShowSummary(true);
         } else {
-          throw new Error(response.message || "Failed to save step");
+          console.log("Moving to next step:", currentStep + 1);
+          setCurrentStep(currentStep + 1);
         }
-      } catch (error: any) {
-        console.error("❌ Error in handleNext:", error);
-        toast.error(error.message || "Failed to save step", {
-          id: "step-error",
-        });
-      } finally {
-        console.log("Setting isLoading to false");
-        setIsLoading(false);
+      } else if (response.success) {
+        const updatedApp = {
+          ...(application || {}),
+          ...stepData,
+          current_step: currentStep < 4 ? currentStep + 1 : currentStep,
+        };
+        console.log("Setting application with local data:", updatedApp);
+        setApplication(updatedApp as ApplicationData);
+        setFormData(updatedApp);
 
-        // Reset submission flag after a delay to prevent rapid re-submissions
-        setTimeout(() => {
-          isSubmitting.current = false;
-        }, 1000);
+        // Check if we're on step 4 and should show summary
+        if (currentStep === 4) {
+          console.log(
+            "🎯 Step 4 completed (local), setting showSummary to true",
+          );
+          setShowSummary(true);
+        } else {
+          console.log("Moving to next step:", currentStep + 1);
+          setCurrentStep(currentStep + 1);
+        }
+      } else {
+        throw new Error(response.message || "Failed to save step");
       }
-    },
-    [currentStep, formData, application],
-  );
 
-  const handleBack = useCallback(() => {
+      toast.success("Progress saved");
+    } catch (error: any) {
+      console.error("❌ Error in handleNext:", error);
+      toast.error(error.message || "Failed to save step");
+    } finally {
+      console.log("Setting isLoading to false");
+      setIsLoading(false);
+    }
+  };
+
+  const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
-  }, [currentStep]);
+  };
 
-  const handleStartApplication = useCallback(() => {
+  const handleStartApplication = () => {
     setCurrentStep(1);
-  }, []);
+  };
 
   const handleSubmitApplication = async (
     paymentReference: string,
     paymentMethod: string,
   ) => {
-    if (isSubmitting.current) return;
-
     try {
-      isSubmitting.current = true;
       setIsLoading(true);
-
       const response = await submitApplication(paymentReference, paymentMethod);
 
       if (!response.success) {
         throw new Error(response.message || "Failed to submit application");
       }
 
-      toast.success("Application submitted successfully!", {
-        id: "app-submit",
-      });
+      toast.success("Application submitted successfully!");
       router.push("/onboarding/tutor/status");
     } catch (error: any) {
-      console.error("❌ Submit application error:", error);
-      toast.error(error.message || "Failed to submit application", {
-        id: "submit-error",
-      });
+      toast.error(error.message || "Failed to submit application");
       throw error;
     } finally {
       setIsLoading(false);
-      setTimeout(() => {
-        isSubmitting.current = false;
-      }, 1000);
     }
   };
 
-  const handleExit = useCallback(
-    (withSave = false) => {
-      if (withSave && application) {
-        toast.success("Your progress has been saved. You can continue later.", {
-          id: "exit-save",
-        });
-      }
-      router.push("/");
-    },
-    [application, router],
-  );
+  const handleExit = (withSave = false) => {
+    if (withSave && application) {
+      toast.success("Your progress has been saved. You can continue later.");
+    }
+    router.push("/");
+  };
 
-  const handleExitClick = useCallback(() => {
+  const handleExitClick = () => {
     if (application && Object.keys(application).length > 0) {
       setShowExitDialog(true);
     } else {
       handleExit();
     }
-  }, [application, handleExit]);
+  };
 
-  const handleFormSubmit = useCallback(
-    (data: any) => {
-      console.log("handleFormSubmit called with data:", data);
-      const mergedData = { ...formData, ...data };
-      setFormData(mergedData);
-      handleNext(data);
-    },
-    [formData, handleNext],
-  );
+  const handleFormSubmit = (data: any) => {
+    console.log("handleFormSubmit called with data:", data);
+    const mergedData = { ...formData, ...data };
+    setFormData(mergedData);
+    handleNext(data);
+  };
 
-  const handleContinueClick = useCallback(() => {
-    if (isSubmitting.current) {
-      console.log("⏳ Already submitting, ignoring click");
-      return;
-    }
-
+  // Direct handler for Continue/Review buttons
+  const handleContinueClick = () => {
     console.log("Continue/Review button clicked for step:", currentStep);
+    console.log("Step 4 ref current:", step4FormRef.current);
 
     if (currentStep === 1 && step1FormRef.current) {
+      console.log("Submitting step 1 form via ref");
       step1FormRef.current.requestSubmit();
     } else if (currentStep === 2 && step2FormRef.current) {
+      console.log("Submitting step 2 form via ref");
       step2FormRef.current.requestSubmit();
     } else if (currentStep === 3 && step3FormRef.current) {
+      console.log("Submitting step 3 form via ref");
       step3FormRef.current.requestSubmit();
     } else if (currentStep === 4) {
       if (step4FormRef.current) {
+        console.log("Submitting step 4 form via ref");
         step4FormRef.current.requestSubmit();
       } else {
+        console.log("Step 4 ref is null, trying ID-based submission");
         const form = document.getElementById("step-4-form") as HTMLFormElement;
-        if (form) form.requestSubmit();
+        if (form) {
+          console.log("Found form by ID, submitting");
+          form.requestSubmit();
+        } else {
+          console.error("Could not find step 4 form by ID either");
+        }
+      }
+    } else {
+      console.log("Form ref not found for step:", currentStep);
+      // Fallback to ID-based submission
+      const formId =
+        currentStep === 4 ? "step-4-form" : `step-${currentStep}-form`;
+      const form = document.getElementById(formId) as HTMLFormElement;
+      if (form) {
+        console.log("Found form by ID fallback, submitting");
+        form.requestSubmit();
       }
     }
-  }, [currentStep]);
+  };
 
-  if (isLoading && !application) {
+  if (isLoading) {
     return (
       <div className="fixed inset-0 bg-white flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-main"></div>
@@ -301,13 +296,17 @@ export default function TutorOnboarding() {
   }
 
   if (showSummary && application) {
+    console.log("Rendering ApplicationSummary with application:", application);
     return (
       <div className="fixed inset-0 bg-white overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 py-8">
           <ApplicationSummary
             application={application}
             onSubmit={handleSubmitApplication}
-            onEdit={() => setShowSummary(false)}
+            onEdit={() => {
+              console.log("Back to edit clicked");
+              setShowSummary(false);
+            }}
             isLoading={isLoading}
           />
         </div>
