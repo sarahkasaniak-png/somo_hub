@@ -7,6 +7,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import FileUpload from "../FileUpload";
 
+// Fix the certificates schema to be more flexible
+const certificateSchema = z.object({
+  name: z.string().optional().default(""),
+  url: z.string().url().optional().or(z.literal("")),
+  issued_date: z.string().optional(),
+});
+
 const experienceSchema = z.object({
   has_teaching_experience: z.boolean().default(false),
   tsc_number: z.string().optional().or(z.literal("")),
@@ -14,16 +21,7 @@ const experienceSchema = z.object({
   previous_institutions: z.array(z.string()).optional().default([]),
   professional_experience: z.string().max(1000).optional().or(z.literal("")),
   portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
-  certificates: z
-    .array(
-      z.object({
-        name: z.string(),
-        url: z.string().url(),
-        issued_date: z.string().optional(),
-      }),
-    )
-    .optional()
-    .default([]),
+  certificates: z.array(certificateSchema).optional().default([]),
 });
 
 type ExperienceFormData = z.infer<typeof experienceSchema>;
@@ -48,6 +46,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       watch,
       control,
       setValue,
+      trigger,
       formState: { errors, isValid, isDirty, isValidating },
     } = useForm<ExperienceFormData>({
       resolver: zodResolver(experienceSchema),
@@ -81,6 +80,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
         hasExperience,
         tscNumber,
         experienceYears,
+        certificatesCount: fields.length,
         errors: Object.keys(errors).length > 0 ? errors : "No errors",
       });
     }, [
@@ -91,6 +91,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       tscNumber,
       experienceYears,
       errors,
+      fields.length,
     ]);
 
     useEffect(() => {
@@ -123,11 +124,22 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
         setCertificates(updatedCertificates);
 
         // Update the form field
-        setValue("certificates", updatedCertificates, { shouldValidate: true });
+        setValue("certificates", updatedCertificates);
+
+        // Trigger validation after update
+        await trigger("certificates");
 
         // Append to field array
         append(newCert);
       }
+    };
+
+    const handleFileRemove = (index: number) => {
+      remove(index);
+      const updatedCertificates = certificates.filter((_, i) => i !== index);
+      setCertificates(updatedCertificates);
+      setValue("certificates", updatedCertificates);
+      trigger("certificates");
     };
 
     const onSubmit = async (data: ExperienceFormData) => {
@@ -165,8 +177,16 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
           }
         }
 
-        console.log("Calling onNext with data:", data);
-        await onNext(data);
+        // Clean up certificates data - remove empty certificates or those without URLs
+        const cleanedData = {
+          ...data,
+          certificates: (data.certificates || []).filter(
+            (cert: any) => cert.url && cert.url.trim() !== "",
+          ),
+        };
+
+        console.log("Calling onNext with cleaned data:", cleanedData);
+        await onNext(cleanedData);
         console.log("onNext completed successfully");
       } catch (error) {
         console.error("Submission error:", error);
@@ -365,12 +385,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        remove(index);
-                        setCertificates(
-                          certificates.filter((_, i) => i !== index),
-                        );
-                      }}
+                      onClick={() => handleFileRemove(index)}
                       className="text-red-600 hover:text-red-800 text-sm font-medium ml-4"
                       disabled={isLoading || isSubmitting}
                     >
