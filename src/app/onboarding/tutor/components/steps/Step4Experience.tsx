@@ -40,6 +40,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       Array.isArray(initialData?.certificates) ? initialData.certificates : [],
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isFormValid, setIsFormValid] = useState(false);
 
     const {
       register,
@@ -72,6 +73,23 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     const tscNumber = watch("tsc_number");
     const experienceYears = watch("teaching_experience_years");
 
+    // Update form validity state
+    useEffect(() => {
+      const checkFormValidity = () => {
+        const hasExperienceStatus = typeof hasExperience !== "undefined";
+
+        if (hasExperience) {
+          const hasExperienceDetails =
+            (tscNumber?.trim() ? true : false) || (experienceYears || 0) > 0;
+          setIsFormValid(hasExperienceStatus && hasExperienceDetails);
+        } else {
+          setIsFormValid(hasExperienceStatus);
+        }
+      };
+
+      checkFormValidity();
+    }, [hasExperience, tscNumber, experienceYears]);
+
     // Log certificate errors specifically
     useEffect(() => {
       if (errors.certificates) {
@@ -92,6 +110,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
         tscNumber,
         experienceYears,
         certificatesCount: fields.length,
+        isFormValid,
         errors:
           Object.keys(errors).length > 0 ? Object.keys(errors) : "No errors",
       });
@@ -104,6 +123,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       experienceYears,
       errors,
       fields.length,
+      isFormValid,
     ]);
 
     useEffect(() => {
@@ -205,13 +225,13 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
         console.log("Set isSubmitting to true");
 
         // Additional validation
-        if (hasExperience) {
+        if (data.has_teaching_experience) {
           console.log("Has experience, checking validation:", {
-            tscNumber: tscNumber?.trim(),
-            experienceYears,
+            tscNumber: data.tsc_number?.trim(),
+            experienceYears: data.teaching_experience_years,
           });
 
-          if (!tscNumber?.trim() && !experienceYears) {
+          if (!data.tsc_number?.trim() && !data.teaching_experience_years) {
             console.log("Validation failed - missing TSC or experience years");
             alert(
               "Please provide either TSC number or teaching experience years",
@@ -258,7 +278,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
 
       if (hasExperience) {
         const hasExperienceDetails =
-          tscNumber?.trim() || (experienceYears || 0) > 0;
+          (tscNumber?.trim() ? true : false) || (experienceYears || 0) > 0;
         return hasExperienceStatus && hasExperienceDetails;
       }
 
@@ -275,15 +295,35 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       setValue("previous_institutions", institutions);
     };
 
+    // Function to handle form submission with validation
+    const handleFormSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      console.log("🔥 handleFormSubmit called, isFormValid:", isFormValid);
+
+      if (isFormValid) {
+        console.log("Form is valid, submitting...");
+        handleSubmit(onSubmit, onError)(e);
+      } else {
+        console.log("Form is not valid, triggering validation...");
+        // Trigger validation to show errors
+        trigger().then(() => {
+          // Try submitting again after a short delay
+          setTimeout(() => {
+            if (isFormValid) {
+              console.log("Form became valid, submitting...");
+              handleSubmit(onSubmit, onError)(e);
+            } else {
+              console.log("Form still invalid");
+            }
+          }, 100);
+        });
+      }
+    };
+
     return (
       <form
         ref={ref}
-        onSubmit={(e) => {
-          console.log("🔥 Form onSubmit event triggered");
-          console.log("Form validity:", isValid);
-          console.log("Form errors:", errors);
-          handleSubmit(onSubmit, onError)(e);
-        }}
+        onSubmit={handleFormSubmit}
         className="space-y-6"
         id="step-4-form"
       >
@@ -301,7 +341,9 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
             <input
               type="checkbox"
               id="has_experience"
-              {...register("has_teaching_experience")}
+              {...register("has_teaching_experience", {
+                setValueAs: (value) => Boolean(value),
+              })}
               className="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
               disabled={isLoading || isSubmitting}
             />
