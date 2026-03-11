@@ -61,8 +61,6 @@ export default function TutorOnboarding() {
       setTimeout(() => {
         const form = document.getElementById("step-4-form");
         console.log("Form element with id 'step-4-form' found:", !!form);
-        const button = document.querySelector('button[form="step-4-form"]');
-        console.log("Button with form attribute found:", !!button);
       }, 500);
     }
   }, [currentStep]);
@@ -215,21 +213,26 @@ export default function TutorOnboarding() {
     handleNext(data);
   };
 
-  // Direct handler for Review button
-  const handleReviewClick = () => {
-    console.log("📝 Review button clicked directly");
+  // Direct handler for Continue/Review buttons
+  const handleContinueClick = () => {
+    console.log("Continue/Review button clicked for step:", currentStep);
 
-    if (currentStep === 4 && step4FormRef.current) {
-      console.log("Submitting step 4 form via ref");
+    if (currentStep === 1 && step1FormRef.current) {
+      step1FormRef.current.requestSubmit();
+    } else if (currentStep === 2 && step2FormRef.current) {
+      step2FormRef.current.requestSubmit();
+    } else if (currentStep === 3 && step3FormRef.current) {
+      step3FormRef.current.requestSubmit();
+    } else if (currentStep === 4 && step4FormRef.current) {
       step4FormRef.current.requestSubmit();
     } else {
-      console.log("Form ref not available, checking form ID");
-      const form = document.getElementById("step-4-form") as HTMLFormElement;
+      console.log("Form ref not found for step:", currentStep);
+      // Fallback to ID-based submission
+      const formId =
+        currentStep === 4 ? "step-4-form" : `step-${currentStep}-form`;
+      const form = document.getElementById(formId) as HTMLFormElement;
       if (form) {
-        console.log("Found form by ID, submitting");
         form.requestSubmit();
-      } else {
-        console.error("Could not find step 4 form");
       }
     }
   };
@@ -472,38 +475,41 @@ export default function TutorOnboarding() {
           <div className="bg-white p-6 md:p-8">
             {currentStep === 1 && (
               <Step1TutorLevel
-                ref={step1FormRef}
                 key={`step1-${application?.id}`}
                 initialData={application}
                 onNext={handleFormSubmit}
                 isLoading={isLoading}
+                ref={step1FormRef}
               />
             )}
             {currentStep === 2 && (
               <Step2PersonalInfo
-                ref={step2FormRef}
+                key={`step2-${application?.id}`}
                 initialData={application}
                 onNext={handleFormSubmit}
                 isLoading={isLoading}
+                ref={step2FormRef}
               />
             )}
             {currentStep === 3 && (
               <Step3Education
-                ref={step3FormRef}
+                key={`step3-${application?.id}`}
                 initialData={application}
                 onNext={handleFormSubmit}
                 onBack={handleBack}
                 isLoading={isLoading}
                 tutorLevel={formData?.tutor_level || application?.tutor_level}
+                ref={step3FormRef}
               />
             )}
             {currentStep === 4 && (
               <Step4Experience
-                ref={step4FormRef}
+                key={`step4-${application?.id}`}
                 initialData={application}
                 onNext={handleFormSubmit}
                 onBack={handleBack}
                 isLoading={isLoading}
+                ref={step4FormRef}
               />
             )}
           </div>
@@ -561,102 +567,54 @@ export default function TutorOnboarding() {
             </div>
 
             <div className="w-1/4 md:w-1/4 text-right">
-              {currentStep < 4 ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    console.log(
-                      "Continue button clicked for step:",
-                      currentStep,
-                    );
-                    const formRefs = {
-                      1: step1FormRef,
-                      2: step2FormRef,
-                      3: step3FormRef,
-                    };
-                    const formRef = formRefs[currentStep as 1 | 2 | 3];
-                    if (formRef.current) {
-                      formRef.current.requestSubmit();
-                    }
-                  }}
-                  disabled={isLoading}
-                  className="px-4 py-2.5 md:px-8 md:py-3 bg-main text-white font-semibold rounded-lg hover:bg-main focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base w-full md:w-auto"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center">
-                      <svg
-                        className="animate-spin h-4 w-4 md:h-5 md:w-5 mr-2 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      <span className="hidden md:inline">Saving...</span>
-                      <span className="md:hidden">Saving</span>
-                    </span>
-                  ) : (
-                    <>
-                      <span className="hidden md:inline">Continue</span>
-                      <span className="md:hidden">Next</span>
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    console.log("🎯 Review Application button clicked");
-                    handleReviewClick();
-                  }}
-                  disabled={isLoading}
-                  className="px-4 py-2.5 md:px-8 md:py-3 bg-main text-white font-semibold rounded-lg hover:bg-main focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base w-full md:w-auto"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center">
-                      <svg
-                        className="animate-spin h-4 w-4 md:h-5 md:w-5 mr-2 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      <span className="hidden md:inline">Saving...</span>
-                      <span className="md:hidden">Saving</span>
-                    </span>
-                  ) : (
-                    <>
-                      <span className="hidden md:inline">
-                        Review Application
-                      </span>
-                      <span className="md:hidden">Review</span>
-                    </>
-                  )}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleContinueClick}
+                disabled={isLoading}
+                className="px-4 py-2.5 md:px-8 md:py-3 bg-main text-white font-semibold rounded-lg hover:bg-main focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base w-full md:w-auto"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg
+                      className="animate-spin h-4 w-4 md:h-5 md:w-5 mr-2 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span className="hidden md:inline">Saving...</span>
+                    <span className="md:hidden">Saving</span>
+                  </span>
+                ) : (
+                  <>
+                    {currentStep < 4 ? (
+                      <>
+                        <span className="hidden md:inline">Continue</span>
+                        <span className="md:hidden">Next</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="hidden md:inline">
+                          Review Application
+                        </span>
+                        <span className="md:hidden">Review</span>
+                      </>
+                    )}
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

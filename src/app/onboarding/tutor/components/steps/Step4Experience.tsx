@@ -28,7 +28,7 @@ const experienceSchema = z.object({
 
 type ExperienceFormData = z.infer<typeof experienceSchema>;
 
-export interface Step4ExperienceProps {
+interface Step4ExperienceProps {
   initialData?: any;
   onNext: (data: ExperienceFormData) => void;
   onBack: () => void;

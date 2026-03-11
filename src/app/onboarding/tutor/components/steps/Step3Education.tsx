@@ -110,7 +110,7 @@ const createEducationSchema = (tutorLevel: string) => {
 
 type EducationFormData = z.infer<ReturnType<typeof createEducationSchema>>;
 
-export interface Step3EducationProps {
+interface Step3EducationProps {
   initialData?: any;
   onNext: (data: EducationFormData) => void;
   onBack: () => void;
