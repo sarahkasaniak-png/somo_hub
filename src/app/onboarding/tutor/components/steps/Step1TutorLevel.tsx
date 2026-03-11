@@ -38,7 +38,7 @@ const tutorLevelSchema = z
       return true;
     },
     {
-      message: "TSC number is required for school teachers",
+      message: "Teacher Service Number is required for school teachers",
       path: ["tsc_number"],
     },
   );
@@ -64,14 +64,20 @@ const tutorLevelOptions = [
     label: "Primary School Teacher",
     description: "Certified teacher teaching at primary & junior high level",
     icon: "👨‍🏫",
-    requirements: ["TSC number", "Teaching certificate"],
+    requirements: [
+      "Teacher Service Number (if registered)",
+      "Teaching certificate",
+    ],
   },
   {
     value: "senior_high_teacher",
     label: "High School Teacher",
     description: "Certified teacher teaching at high school level",
     icon: "👩‍🏫",
-    requirements: ["TSC number", "Teaching certificate"],
+    requirements: [
+      "Teacher Service Number (if registered)",
+      "Teaching certificate",
+    ],
   },
   {
     value: "university_lecturer",
@@ -293,7 +299,9 @@ const Step1TutorLevel = forwardRef<HTMLFormElement, Step1TutorLevelProps>(
           {requiresTSC && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                TSC Registration Number *
+                <span>Teacher Service Registration Number * </span>
+                <br />
+                <span>(enter "na" if not applicable) </span>
               </label>
               <input
                 type="text"
@@ -301,7 +309,7 @@ const Step1TutorLevel = forwardRef<HTMLFormElement, Step1TutorLevelProps>(
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent ${
                   errors.tsc_number ? "border-red-300" : "border-gray-300"
                 }`}
-                placeholder="Enter your TSC registration number"
+                placeholder="Enter your Teacher Service registration number"
                 disabled={isLoading || isSubmitting}
               />
               {errors.tsc_number && (

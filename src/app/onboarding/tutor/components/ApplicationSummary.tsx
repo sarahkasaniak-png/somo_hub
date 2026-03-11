@@ -226,7 +226,9 @@ export default function ApplicationSummary({
               </div>
               {application.tsc_number && (
                 <div>
-                  <p className="text-sm text-gray-500">TSC Number</p>
+                  <p className="text-sm text-gray-500">
+                    Teacher Service Number
+                  </p>
                   <p className="font-medium text-gray-900">
                     {application.tsc_number}
                   </p>
