@@ -7,13 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import FileUpload from "../FileUpload";
 
-// Fix the certificates schema to be more flexible
-const certificateSchema = z.object({
-  name: z.string().optional().default(""),
-  url: z.string().url().optional().or(z.literal("")),
-  issued_date: z.string().optional(),
-});
-
+// Simplified schema - make certificates completely permissive
 const experienceSchema = z.object({
   has_teaching_experience: z.boolean().default(false),
   tsc_number: z.string().optional().or(z.literal("")),
@@ -21,7 +15,7 @@ const experienceSchema = z.object({
   previous_institutions: z.array(z.string()).optional().default([]),
   professional_experience: z.string().max(1000).optional().or(z.literal("")),
   portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
-  certificates: z.array(certificateSchema).optional().default([]),
+  certificates: z.any().optional().default([]), // Accept anything
 });
 
 type ExperienceFormData = z.infer<typeof experienceSchema>;
@@ -71,6 +65,16 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     const tscNumber = watch("tsc_number");
     const experienceYears = watch("teaching_experience_years");
 
+    // Log certificate errors specifically
+    useEffect(() => {
+      if (errors.certificates) {
+        console.log(
+          "🔴 Certificates error details:",
+          JSON.stringify(errors.certificates, null, 2),
+        );
+      }
+    }, [errors.certificates]);
+
     // Log form state for debugging
     useEffect(() => {
       console.log("📊 Step4 Form State:", {
@@ -81,7 +85,8 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
         tscNumber,
         experienceYears,
         certificatesCount: fields.length,
-        errors: Object.keys(errors).length > 0 ? errors : "No errors",
+        errors:
+          Object.keys(errors).length > 0 ? Object.keys(errors) : "No errors",
       });
     }, [
       isValid,
@@ -181,7 +186,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
         const cleanedData = {
           ...data,
           certificates: (data.certificates || []).filter(
-            (cert: any) => cert.url && cert.url.trim() !== "",
+            (cert: any) => cert && cert.url && cert.url.trim() !== "",
           ),
         };
 
@@ -206,10 +211,10 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       if (hasExperience) {
         const hasExperienceDetails =
           tscNumber?.trim() || (experienceYears || 0) > 0;
-        return hasExperienceStatus && hasExperienceDetails && isValid;
+        return hasExperienceStatus && hasExperienceDetails;
       }
 
-      return hasExperienceStatus && isValid;
+      return hasExperienceStatus;
     };
 
     const handlePreviousInstitutionsChange = (
@@ -251,10 +256,6 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
               {...register("has_teaching_experience")}
               className="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
               disabled={isLoading || isSubmitting}
-              onChange={(e) => {
-                console.log("Checkbox changed:", e.target.checked);
-                register("has_teaching_experience").onChange(e);
-              }}
             />
             <label
               htmlFor="has_experience"
