@@ -7,6 +7,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import FileUpload from "../FileUpload";
 
+// Define the certificate type
+interface Certificate {
+  name: string;
+  url: string;
+  issued_date?: string;
+}
+
 // Simplified schema - make certificates completely permissive
 const experienceSchema = z.object({
   has_teaching_experience: z.boolean().default(false),
@@ -29,7 +36,7 @@ interface Step4ExperienceProps {
 
 const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
   ({ initialData, onNext, onBack, isLoading }, ref) => {
-    const [certificates, setCertificates] = useState<any[]>(
+    const [certificates, setCertificates] = useState<Certificate[]>(
       initialData?.certificates || [],
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,7 +123,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
 
     const handleFileUpload = async (fileType: string, url: string) => {
       if (fileType === "certificate") {
-        const newCert = {
+        const newCert: Certificate = {
           name: `Certificate ${certificates.length + 1}`,
           url,
           issued_date: new Date().toISOString().split("T")[0],
@@ -371,29 +378,33 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
 
             {fields.length > 0 && (
               <div className="mt-4 space-y-3">
-                {fields.map((field, index) => (
-                  <div
-                    key={field.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <span className="font-medium text-gray-700">
-                        {field.name || `Certificate ${index + 1}`}
-                      </span>
-                      <p className="text-sm text-gray-500 truncate">
-                        {field.url}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleFileRemove(index)}
-                      className="text-red-600 hover:text-red-800 text-sm font-medium ml-4"
-                      disabled={isLoading || isSubmitting}
+                {fields.map((field, index) => {
+                  // Cast field to any to access properties
+                  const fieldData = field as any;
+                  return (
+                    <div
+                      key={field.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                     >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex-1">
+                        <span className="font-medium text-gray-700">
+                          {fieldData.name || `Certificate ${index + 1}`}
+                        </span>
+                        <p className="text-sm text-gray-500 truncate">
+                          {fieldData.url}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleFileRemove(index)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium ml-4"
+                        disabled={isLoading || isSubmitting}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
