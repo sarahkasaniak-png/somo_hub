@@ -23,6 +23,17 @@ export default function StatusContent() {
   const initialLoadDone = useRef(false);
   const loadAttempts = useRef(0);
 
+  const hasShownPendingMessage = useRef(false);
+
+  // In your component, when you load the status:
+  useEffect(() => {
+    if (status === "pending" && !hasShownPendingMessage.current) {
+      hasShownPendingMessage.current = true;
+      // This is just for logging, not showing a toast
+      console.log("Application is pending");
+    }
+  }, [status]);
+
   // Load status function - memoized with useCallback
   const loadStatus = useCallback(async () => {
     // Prevent excessive retries

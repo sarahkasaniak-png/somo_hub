@@ -34,6 +34,9 @@ export default function TutorOnboarding() {
   const step3FormRef = useRef<HTMLFormElement>(null);
   const step4FormRef = useRef<HTMLFormElement>(null);
 
+  const hasShownPendingToast = useRef(false);
+  const hasRedirectedToStatus = useRef(false);
+
   // CRITICAL: Prevent multiple submissions
   const isSubmitting = useRef(false);
   const hasCheckedExistingApp = useRef(false);
@@ -88,31 +91,59 @@ export default function TutorOnboarding() {
     try {
       setIsLoading(true);
       const data = await loadApplication();
-
+      console.log(
+        "checkExistingApplication data:",
+        data.data.hasApplication,
+        data.data.application,
+      );
       if (data.data.hasApplication && data.data.application) {
+        console.log("Existing application found:", data.application);
         setApplication(data.data.application);
         setCurrentStep(data.data.application.current_step || 1);
         setFormData(data.data.application);
 
         if (data.data.application.application_status === "pending") {
-          toast.success(
-            "Your application is already submitted and pending review",
-          );
-          router.push("/onboarding/tutor/status");
+          // Only show toast once and redirect once
+          if (!hasShownPendingToast.current) {
+            hasShownPendingToast.current = true;
+            toast.success(
+              "Your application is already submitted and pending review",
+              { id: "pending-app-toast", duration: 3000 },
+            );
+          }
+
+          if (!hasRedirectedToStatus.current) {
+            hasRedirectedToStatus.current = true;
+            router.push("/onboarding/tutor/status");
+          }
           return;
         }
 
         if (data.data.application.application_status === "approved") {
-          toast.success("You are already an approved tutor!");
-          router.push("/tutor/dashboard");
+          if (!hasShownPendingToast.current) {
+            hasShownPendingToast.current = true;
+            toast.success("You are already an approved tutor!", {
+              id: "approved-toast",
+              duration: 3000,
+            });
+          }
+
+          if (!hasRedirectedToStatus.current) {
+            hasRedirectedToStatus.current = true;
+            router.push("/tutor/dashboard");
+          }
           return;
         }
       } else {
         setCurrentStep(0);
       }
+      console.log("Loaded application data:", data);
     } catch (error) {
       console.error("Failed to load application:", error);
-      toast.error("Failed to load application data");
+      toast.error("Failed to load application data", {
+        id: "load-error-toast",
+        duration: 3000,
+      });
     } finally {
       setIsLoading(false);
     }
