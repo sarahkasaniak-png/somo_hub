@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
+import paymentApi from "@/lib/api/payment";
 
 export default function PaymentVerifier() {
   const router = useRouter();
@@ -27,7 +28,6 @@ export default function PaymentVerifier() {
       console.log("🔍 PaymentVerifier - Reference:", reference);
       console.log("🔍 PaymentVerifier - Payment Type:", paymentType);
       console.log("🔍 PaymentVerifier - Application ID:", applicationId);
-      console.log("🔍 PaymentVerifier - Session ID:", sessionId);
 
       if (!reference) {
         setStatus("failed");
@@ -36,34 +36,70 @@ export default function PaymentVerifier() {
       }
 
       try {
-        // Show verifying state
         setStatus("verifying");
 
-        // Wait a bit for webhook to process
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        // Verify the payment with backend
+        console.log("🔍 Calling payment verification API...");
+        const verifyResponse = await paymentApi.verifyPayment(reference);
+        console.log("✅ Verification response:", verifyResponse);
 
-        // Determine redirect based on payment type
-        if (paymentType === "session_enrollment" && sessionId) {
-          // For session enrollment, go to the session page with reference
-          router.push(`/tuitions/${sessionId}?reference=${reference}`);
-        } else if (paymentType === "tutor_onboarding" || applicationId) {
-          // For tutor onboarding, go back to the application summary page with reference
-          // The ApplicationSummary component will handle the verification
-          router.push(`/onboarding/tutor?reference=${reference}&step=summary`);
+        if (
+          verifyResponse.success &&
+          verifyResponse.data?.status === "success"
+        ) {
+          setStatus("success");
+
+          // Show success message for 3 seconds before redirect
+          const timer = setInterval(() => {
+            setCountdown((prev) => {
+              if (prev <= 1) {
+                clearInterval(timer);
+
+                // Determine redirect based on payment type
+                if (paymentType === "session_enrollment" && sessionId) {
+                  // For session enrollment, go to the session page
+                  router.push(`/tuitions/${sessionId}`);
+                } else if (
+                  paymentType === "tutor_onboarding" ||
+                  applicationId
+                ) {
+                  // For tutor onboarding, go directly to status page
+                  router.push("/onboarding/tutor/status");
+                } else {
+                  router.push("/dashboard");
+                }
+
+                // Clean up session storage
+                sessionStorage.removeItem("pending_session_id");
+                sessionStorage.removeItem("pending_application_id");
+                sessionStorage.removeItem("pending_payment_type");
+                sessionStorage.removeItem("pending_payment_reference");
+              }
+              return prev - 1;
+            });
+          }, 1000);
+
+          return () => clearInterval(timer);
         } else {
-          router.push(`/dashboard?reference=${reference}`);
-        }
+          setStatus("failed");
+          setMessage(verifyResponse.message || "Payment verification failed");
 
-        // Clean up session storage after redirect
-        // (note: this might not execute if redirect happens immediately)
+          // Clean up session storage on failure
+          sessionStorage.removeItem("pending_session_id");
+          sessionStorage.removeItem("pending_application_id");
+          sessionStorage.removeItem("pending_payment_type");
+          sessionStorage.removeItem("pending_payment_reference");
+        }
+      } catch (error: any) {
+        console.error("Error during payment verification:", error);
+        setStatus("failed");
+        setMessage(error.message || "Failed to verify payment");
+
+        // Clean up session storage on error
         sessionStorage.removeItem("pending_session_id");
         sessionStorage.removeItem("pending_application_id");
         sessionStorage.removeItem("pending_payment_type");
         sessionStorage.removeItem("pending_payment_reference");
-      } catch (error) {
-        console.error("Error during payment verification:", error);
-        setStatus("failed");
-        setMessage("Failed to verify payment");
       }
     };
 
@@ -91,10 +127,18 @@ export default function PaymentVerifier() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
               Payment Successful!
             </h2>
-            <p className="text-gray-600 mb-6">
-              Your payment has been processed successfully. You will be
-              redirected shortly.
+            <p className="text-gray-600 mb-4">
+              Your payment has been processed successfully.
             </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Redirecting to status page in {countdown} seconds...
+            </p>
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+              <div
+                className="bg-green-500 h-2 rounded-full transition-all duration-1000"
+                style={{ width: `${((3 - countdown) / 3) * 100}%` }}
+              ></div>
+            </div>
           </>
         )}
 
@@ -108,12 +152,23 @@ export default function PaymentVerifier() {
               {message ||
                 "Your payment could not be processed. Please try again."}
             </p>
-            <Link
-              href="/sessions"
-              className="inline-block px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
-            >
-              Browse Sessions
-            </Link>
+            <div className="space-y-3">
+              <Link
+                href="/onboarding/tutor"
+                className="inline-block px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
+              >
+                Return to Application
+              </Link>
+              <p className="text-sm text-gray-500">
+                Need help?{" "}
+                <Link
+                  href="/contact"
+                  className="text-purple-600 hover:underline"
+                >
+                  Contact Support
+                </Link>
+              </p>
+            </div>
           </>
         )}
       </div>
