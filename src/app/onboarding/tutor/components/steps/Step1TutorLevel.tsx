@@ -361,7 +361,7 @@ const Step1TutorLevel = forwardRef<HTMLFormElement, Step1TutorLevelProps>(
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 Required: Select a tutor level
-                {requiresTSC && " + TSC number"}
+                {requiresTSC && " + Teacher Service Registration number"}
               </p>
             </div>
             <div className="text-sm text-gray-600">

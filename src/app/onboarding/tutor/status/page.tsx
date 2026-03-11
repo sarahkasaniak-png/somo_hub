@@ -1,10 +1,11 @@
 // src/app/onboarding/tutor/status/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getApplicationStatus, ApplicationData } from "@/lib/api/tutor";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
 
 type ApplicationStatus = "draft" | "pending" | "approved" | "rejected";
 
@@ -12,18 +13,65 @@ export default function ApplicationStatusPage() {
   const [status, setStatus] = useState<ApplicationStatus>("pending");
   const [isLoading, setIsLoading] = useState(true);
   const [application, setApplication] = useState<ApplicationData | null>(null);
+
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Use refs to track if we've already shown success toasts
+  const hasShownSuccessToast = useRef(false);
+  const hasLoadedData = useRef(false);
+  const fetchAttempts = useRef(0);
 
   useEffect(() => {
-    loadStatus();
-  }, []);
+    // Check for payment reference in URL (from successful payment)
+    const reference = searchParams.get("reference");
+
+    // Only show success toast once when the page first loads with a reference
+    if (reference && !hasShownSuccessToast.current) {
+      hasShownSuccessToast.current = true;
+
+      // Small delay to ensure the page is ready
+      setTimeout(() => {
+        toast.success(
+          "Payment successful! Your application has been submitted for review.",
+          {
+            id: "payment-success-status", // Unique ID to prevent duplicates
+            duration: 5000,
+            position: "top-center",
+          },
+        );
+      }, 100);
+    }
+
+    // Load status only once
+    if (!hasLoadedData.current) {
+      hasLoadedData.current = true;
+      loadStatus();
+    }
+
+    // Cleanup function
+    return () => {
+      // Optional: cleanup if needed
+    };
+  }, [searchParams]); // Only re-run if searchParams change
 
   const loadStatus = async () => {
+    // Prevent excessive retries
+    fetchAttempts.current += 1;
+
+    if (fetchAttempts.current > 3) {
+      console.log("Too many fetch attempts, stopping");
+      return;
+    }
+
     try {
       setIsLoading(true);
+      console.log("Loading application status...");
+
       const data = await getApplicationStatus();
 
       if (!data.hasApplication || !data.application) {
+        // No application found, redirect to onboarding
         router.push("/onboarding/tutor");
         return;
       }
@@ -32,11 +80,29 @@ export default function ApplicationStatusPage() {
       const appStatus = data.application
         .application_status as ApplicationStatus;
       setStatus(appStatus);
+
+      console.log("Application status loaded:", appStatus);
     } catch (error) {
       console.error("Failed to load status:", error);
+
+      // Show error toast only once
+      toast.error(
+        "Failed to load application status. Please refresh the page.",
+        {
+          id: "status-load-error",
+          duration: 5000,
+        },
+      );
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    hasLoadedData.current = false;
+    fetchAttempts.current = 0;
+    loadStatus();
   };
 
   const getStatusConfig = () => {
@@ -119,6 +185,12 @@ export default function ApplicationStatusPage() {
                   <div className="bg-purple-600 h-2.5 rounded-full w-1/2"></div>
                 </div>
                 <p className="text-sm text-gray-500">Review in progress...</p>
+                <button
+                  onClick={handleRefresh}
+                  className="mt-4 text-sm text-purple-600 hover:text-purple-800"
+                >
+                  Refresh Status
+                </button>
               </div>
             )}
 
@@ -169,7 +241,7 @@ export default function ApplicationStatusPage() {
                 <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center mr-4">
                   1
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 text-left">
                   <p className="font-medium text-gray-900">
                     Application Submitted
                   </p>
@@ -193,7 +265,7 @@ export default function ApplicationStatusPage() {
                 >
                   2
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 text-left">
                   <p className="font-medium text-gray-900">Under Review</p>
                   <p className="text-sm text-gray-500">
                     Our team is reviewing your application
@@ -211,14 +283,14 @@ export default function ApplicationStatusPage() {
                 >
                   3
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 text-left">
                   <p className="font-medium text-gray-900">Decision Made</p>
                   <p className="text-sm text-gray-500">
                     {status === "approved"
                       ? "Approved"
                       : status === "rejected"
-                      ? "Not Approved"
-                      : "Pending decision"}
+                        ? "Not Approved"
+                        : "Pending decision"}
                   </p>
                 </div>
               </div>

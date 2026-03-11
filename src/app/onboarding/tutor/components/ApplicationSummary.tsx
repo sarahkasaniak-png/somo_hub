@@ -524,7 +524,8 @@ export default function ApplicationSummary({
             <div>
               <p className="text-yellow-700">
                 An application fee of{" "}
-                <span className="font-bold">KES 1,160</span> is required
+                <span className="font-bold">KES 1,000 + 16% vat</span> is
+                required
               </p>
               <p className="text-sm text-yellow-600 mt-1">
                 This fee covers the cost of processing and verification
