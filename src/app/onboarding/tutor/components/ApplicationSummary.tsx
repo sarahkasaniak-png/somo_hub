@@ -81,19 +81,35 @@ export default function ApplicationSummary({
       toast.loading("Verifying payment...", { id: "payment-verification" });
 
       // Verify payment with backend
-      const verifyResponse = await paymentApi.verifyPayment(reference);
+      const verifyResponse = (await paymentApi.verifyPayment(reference)) as any;
 
       if (verifyResponse.success && verifyResponse.data?.status === "success") {
-        toast.success(
-          "Payment successful! Your application has been submitted.",
-          {
-            id: "payment-verification",
-            duration: 5000,
-          },
-        );
+        // Check if application was updated - using optional chaining
+        if (verifyResponse.data?.application_updated) {
+          toast.success(
+            "Payment successful! Your application has been submitted for review.",
+            {
+              id: "payment-verification",
+              duration: 5000,
+            },
+          );
+        } else {
+          toast.success(
+            "Payment successful! Your application is being processed.",
+            {
+              id: "payment-verification",
+              duration: 5000,
+            },
+          );
+        }
 
         // Wait a moment for the user to see the success message
         await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // Clear any pending payment data
+        sessionStorage.removeItem("pending_payment_reference");
+        sessionStorage.removeItem("pending_payment_type");
+        sessionStorage.removeItem("pending_application_id");
 
         // Redirect to status page
         router.push("/onboarding/tutor/status");

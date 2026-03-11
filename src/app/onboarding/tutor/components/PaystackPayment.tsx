@@ -22,7 +22,7 @@ interface PaystackPaymentProps {
   onPaymentSuccess: (reference: string) => void;
   onPaymentError: (error: string) => void;
   applicationId?: number;
-  disabled?: boolean; // Add disabled prop to interface
+  disabled?: boolean;
 }
 
 export default function PaystackPayment({
@@ -31,7 +31,7 @@ export default function PaystackPayment({
   onPaymentSuccess,
   onPaymentError,
   applicationId,
-  disabled = false, // Default to false
+  disabled = false,
 }: PaystackPaymentProps) {
   const [processing, setProcessing] = useState(false);
 
@@ -49,11 +49,11 @@ export default function PaystackPayment({
     setProcessing(true);
 
     try {
-      // Create metadata with only allowed fields
+      // Create metadata with application_id (not session_id)
       const metadata = {
         payment_type: "tutor_onboarding",
-        session_id: applicationId, // Use session_id to store application ID
-        session_name: applicationId
+        application_id: applicationId, // Use application_id directly
+        application_name: applicationId
           ? `Tutor Application #${applicationId}`
           : undefined,
       };

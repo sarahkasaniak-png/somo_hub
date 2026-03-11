@@ -1,5 +1,11 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -90,6 +96,27 @@ export default function Navbar() {
     await logout();
     router.push("/"); // Redirect to home after logout
   };
+
+  // Handle dropdown item click - closes dropdown after navigation
+  const handleDropdownItemClick = useCallback((callback: () => void) => {
+    return (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      callback();
+      setShowHamburgerNav(false);
+    };
+  }, []);
+
+  const handleProtectedNavigation = useCallback(
+    (path: string) => {
+      if (!user) {
+        setIsLoginOpen(true);
+      } else {
+        router.push(path);
+      }
+    },
+    [user, router],
+  );
 
   return (
     <>
@@ -197,20 +224,28 @@ export default function Navbar() {
           >
             <div className="w-full flex flex-col ">
               {user && (
-                <div className=" pb-2 border-b-2 border-zinc-200 flex flex-col justify-start items-start">
-                  <div className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2  pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100">
-                    <MessageSquare size={18} />
-                    <span className="text-[14px] font-sans text-zinc-700">
-                      Messages
-                    </span>
-                  </div>
-                  <div className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2  pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100">
+                <div className="pb-2 border-b-2 border-zinc-200 flex flex-col justify-start items-start">
+                  <div
+                    className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2 pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100"
+                    onClick={handleDropdownItemClick(() => {
+                      user?.roles?.includes("tutor")
+                        ? handleProtectedNavigation("/tutor/profile")
+                        : handleProtectedNavigation("/student/profile");
+                    })}
+                  >
                     <CircleUserRound size={18} />
                     <span className="text-[14px] font-sans text-zinc-700">
                       Profile
                     </span>
                   </div>
-                  <div className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2  pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100">
+                  <div
+                    className="w-full font-medium text-zinc-700 flex justify-start items-center gap-2 pb-2 pt-2 px-2 cursor-pointer hover:bg-zinc-100"
+                    onClick={handleDropdownItemClick(() => {
+                      user?.roles?.includes("tutor")
+                        ? handleProtectedNavigation("/tutor/sessions")
+                        : handleProtectedNavigation("/student/schedule");
+                    })}
+                  >
                     <MonitorCloud size={18} />
                     <span className="text-[14px] font-sans text-zinc-700">
                       My Classes
@@ -218,30 +253,66 @@ export default function Navbar() {
                   </div>
                 </div>
               )}
-              <div className="font-medium text-zinc-700 flex justify-start items-center gap-2 border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100">
+              <div
+                className="font-medium text-zinc-700 flex justify-start items-center gap-2 border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
+                onClick={handleDropdownItemClick(() => {
+                  router.push("/help/tutor");
+                })}
+              >
                 <MessageCircleQuestionMark size={18} />
                 <span className="text-[14px] font-san">Help & Support</span>
               </div>
+              <div
+                className="font-medium text-zinc-700 flex justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
+                onClick={handleDropdownItemClick(() => {
+                  router.push("/tutors");
+                })}
+              >
+                <div className="font-medium text-zinc-700 flex flex-col justify-start items-start">
+                  <span className="text-[14px] font-sans text-zinc-700 leading-tight tracking-normal">
+                    Tutors
+                  </span>
+                  <span className="text-zinc-500 text-[13px]">
+                    Verified tutors with qualified academic background
+                  </span>
+                </div>
+                <User2 size={30} />
+              </div>
+              <div
+                className="font-medium text-zinc-700 flex justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
+                onClick={handleDropdownItemClick(() => {
+                  router.push("/sessions");
+                })}
+              >
+                <div className="font-medium text-zinc-700 flex flex-col justify-start items-start">
+                  <span className="text-[14px] font-sans text-zinc-700 leading-tight tracking-normal">
+                    Tuition & Sessions
+                  </span>
+                  <span className="text-zinc-500 text-[13px]">
+                    Sessions managed virtually within the app
+                  </span>
+                </div>
+                <BookOpenCheck size={30} />
+              </div>
               {!user?.roles?.includes("tutor") && (
                 <div
-                  className="font-medium text-zinc-700 flex  justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
-                  onClick={() => router.push("/onboarding/tutor")}
+                  className="font-medium text-zinc-700 flex justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
+                  onClick={handleDropdownItemClick(() => {
+                    handleProtectedNavigation("/onboarding/tutor");
+                  })}
                 >
-                  <div className="font-medium text-zinc-700 flex flex-col justify-start items-start ">
-                    <span
-                      className="text-[14px] font-sans   text-zinc-700 leading-tight font-sans tracking-normal"
-                      onClick={() => router.push("/onboarding/tutor")}
-                    >
+                  <div className="font-medium text-zinc-700 flex flex-col justify-start items-start">
+                    <span className="text-[14px] font-sans text-zinc-700 leading-tight tracking-normal">
                       Become a Tutor
                     </span>
-                    <span className="text-zinc-500 text-[13px] ">
+                    <span className="text-zinc-500 text-[13px]">
                       It's easy to start and earn an extra income
                     </span>
                   </div>
                   <Presentation size={30} />
                 </div>
               )}
-              <div
+              {/* <div
                 className="font-medium text-zinc-700 flex  justify-between items-center border-b-2 border-zinc-200 pb-4 pt-4 px-2 cursor-pointer hover:bg-zinc-100"
                 onClick={() => router.push("/onboarding/community")}
               >
@@ -255,7 +326,7 @@ export default function Navbar() {
                   </span>
                 </div>
                 <School className="w-14 h-" />
-              </div>
+              </div> */}
               <div
                 onClick={() => {
                   if (!user) {
