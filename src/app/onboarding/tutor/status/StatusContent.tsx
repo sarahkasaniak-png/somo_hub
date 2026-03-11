@@ -1,7 +1,7 @@
 // src/app/onboarding/tutor/status/StatusContent.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getApplicationStatus, ApplicationData } from "@/lib/api/tutor";
 import Link from "next/link";
@@ -20,40 +20,18 @@ export default function StatusContent() {
   const hasShownSuccessToast = useRef(false);
   const hasLoadedData = useRef(false);
   const hasCleanedUrl = useRef(false);
+  const initialLoadDone = useRef(false);
+  const loadAttempts = useRef(0);
 
-  useEffect(() => {
-    // Check for payment reference in URL (from successful payment)
-    const reference = searchParams.get("reference");
-
-    // Only show success toast ONCE when the page first loads with a reference
-    if (reference && !hasShownSuccessToast.current) {
-      hasShownSuccessToast.current = true;
-
-      // Show the toast with a unique ID
-      toast.success(
-        "Payment successful! Your application has been submitted for review.",
-        {
-          id: "status-page-success",
-          duration: 3000,
-        },
-      );
-
-      // Clean up the URL by removing the reference parameter (only once)
-      if (!hasCleanedUrl.current) {
-        hasCleanedUrl.current = true;
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, newUrl);
-      }
+  // Load status function - memoized with useCallback
+  const loadStatus = useCallback(async () => {
+    // Prevent excessive retries
+    loadAttempts.current += 1;
+    if (loadAttempts.current > 3) {
+      console.log("Too many load attempts, stopping");
+      return;
     }
 
-    // Load status only once
-    if (!hasLoadedData.current) {
-      hasLoadedData.current = true;
-      loadStatus();
-    }
-  }, [searchParams]); // Only re-run if searchParams change
-
-  const loadStatus = async () => {
     try {
       setIsLoading(true);
       const data = await getApplicationStatus();
@@ -79,13 +57,55 @@ export default function StatusContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
+
+  // Handle payment reference and initial load
+  useEffect(() => {
+    // Prevent multiple executions
+    if (initialLoadDone.current) {
+      return;
+    }
+
+    const reference = searchParams.get("reference");
+
+    // Only show success toast ONCE when the page first loads with a reference
+    if (reference && !hasShownSuccessToast.current) {
+      hasShownSuccessToast.current = true;
+
+      // Show the toast with a unique ID
+      toast.success(
+        "Payment successful! Your application has been submitted for review.",
+        {
+          id: "status-page-success",
+          duration: 3000,
+        },
+      );
+
+      // Clean up the URL by removing the reference parameter (only once)
+      if (!hasCleanedUrl.current) {
+        hasCleanedUrl.current = true;
+        // Use setTimeout to avoid interfering with the current render cycle
+        setTimeout(() => {
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        }, 100);
+      }
+    }
+
+    // Load status only once
+    if (!hasLoadedData.current) {
+      hasLoadedData.current = true;
+      initialLoadDone.current = true;
+      loadStatus();
+    }
+  }, [searchParams, loadStatus]); // Include loadStatus in dependencies
 
   // Manual refresh function
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     hasLoadedData.current = false;
+    loadAttempts.current = 0; // Reset attempts on manual refresh
     loadStatus();
-  };
+  }, [loadStatus]);
 
   const getStatusConfig = () => {
     switch (status) {

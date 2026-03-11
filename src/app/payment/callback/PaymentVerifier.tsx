@@ -1,7 +1,7 @@
 // src/app/payment/callback/PaymentVerifier.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
@@ -15,15 +15,36 @@ export default function PaymentVerifier() {
   );
   const [message, setMessage] = useState("");
   const [countdown, setCountdown] = useState(3);
+  const [redirectTarget, setRedirectTarget] = useState<string>("status");
+
+  // Use refs to prevent multiple executions
+  const verificationStarted = useRef<boolean>(false);
+  const hasRedirected = useRef<boolean>(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const verifyPayment = async () => {
+      // Prevent multiple verification attempts
+      if (verificationStarted.current) {
+        console.log("⏳ Verification already in progress, skipping...");
+        return;
+      }
+
+      verificationStarted.current = true;
+
       const reference =
         searchParams.get("reference") || searchParams.get("trxref");
 
       const sessionId = sessionStorage.getItem("pending_session_id");
       const applicationId = sessionStorage.getItem("pending_application_id");
       const paymentType = sessionStorage.getItem("pending_payment_type");
+
+      // Set redirect target for display
+      if (paymentType === "session_enrollment") {
+        setRedirectTarget("session");
+      } else {
+        setRedirectTarget("status");
+      }
 
       console.log("🔍 PaymentVerifier - Reference:", reference);
       console.log("🔍 PaymentVerifier - Payment Type:", paymentType);
@@ -49,11 +70,26 @@ export default function PaymentVerifier() {
         ) {
           setStatus("success");
 
-          // Show success message for 3 seconds before redirect
+          // Clean up session storage immediately
+          sessionStorage.removeItem("pending_session_id");
+          sessionStorage.removeItem("pending_application_id");
+          sessionStorage.removeItem("pending_payment_type");
+          sessionStorage.removeItem("pending_payment_reference");
+
+          // Start countdown for redirect
+          let count = 3;
+          setCountdown(count);
+
           const timer = setInterval(() => {
-            setCountdown((prev) => {
-              if (prev <= 1) {
-                clearInterval(timer);
+            count -= 1;
+            setCountdown(count);
+
+            if (count <= 0) {
+              clearInterval(timer);
+
+              // Prevent multiple redirects
+              if (!hasRedirected.current) {
+                hasRedirected.current = true;
 
                 // Determine redirect based on payment type
                 if (paymentType === "session_enrollment" && sessionId) {
@@ -68,18 +104,11 @@ export default function PaymentVerifier() {
                 } else {
                   router.push("/dashboard");
                 }
-
-                // Clean up session storage
-                sessionStorage.removeItem("pending_session_id");
-                sessionStorage.removeItem("pending_application_id");
-                sessionStorage.removeItem("pending_payment_type");
-                sessionStorage.removeItem("pending_payment_reference");
               }
-              return prev - 1;
-            });
+            }
           }, 1000);
 
-          return () => clearInterval(timer);
+          timerRef.current = timer;
         } else {
           setStatus("failed");
           setMessage(verifyResponse.message || "Payment verification failed");
@@ -104,6 +133,13 @@ export default function PaymentVerifier() {
     };
 
     verifyPayment();
+
+    // Cleanup function
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
   }, [searchParams, router]);
 
   return (
@@ -131,7 +167,7 @@ export default function PaymentVerifier() {
               Your payment has been processed successfully.
             </p>
             <p className="text-sm text-gray-500 mb-6">
-              Redirecting to status page in {countdown} seconds...
+              Redirecting to {redirectTarget} page in {countdown} seconds...
             </p>
             <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
               <div
