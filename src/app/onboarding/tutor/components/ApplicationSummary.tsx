@@ -10,7 +10,7 @@ import {
   getEducationLevelDisplay,
   formatApplicationForDisplay,
 } from "@/lib/api/tutor";
-import paymentApi from "@/lib/api/payment";
+import paymentApi, { VerifyPaymentResponse } from "@/lib/api/payment";
 import { useAuth } from "@/app/context/AuthContext";
 
 // Helper function to safely parse JSON or return the value
@@ -42,8 +42,8 @@ export default function ApplicationSummary({
   isLoading,
 }: ApplicationSummaryProps) {
   const router = useRouter();
-  const { user } = useAuth(); // Get user from AuthContext
-  const [termsAccepted, setTermsAccepted] = useState(true); // Default to true
+  const { user } = useAuth();
+  const [termsAccepted, setTermsAccepted] = useState(true);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentButtonEnabled, setPaymentButtonEnabled] = useState(false);
 
@@ -81,11 +81,25 @@ export default function ApplicationSummary({
       toast.loading("Verifying payment...", { id: "payment-verification" });
 
       // Verify payment with backend
-      const verifyResponse = (await paymentApi.verifyPayment(reference)) as any;
+      const verifyResponse = await paymentApi.verifyPayment(reference);
+
+      console.log("📦 Payment verification response:", verifyResponse);
 
       if (verifyResponse.success && verifyResponse.data?.status === "success") {
-        // Check if application was updated - using optional chaining
-        if (verifyResponse.data?.application_updated) {
+        // Check if application was updated
+        if (verifyResponse.data.application) {
+          console.log(
+            "✅ Application updated:",
+            verifyResponse.data.application,
+          );
+          toast.success(
+            "Payment successful! Your application has been submitted for review.",
+            {
+              id: "payment-verification",
+              duration: 5000,
+            },
+          );
+        } else if (verifyResponse.data.application_updated) {
           toast.success(
             "Payment successful! Your application has been submitted for review.",
             {
@@ -126,6 +140,7 @@ export default function ApplicationSummary({
         });
       }
     } catch (error: any) {
+      console.error("❌ Payment verification error:", error);
       toast.error(error.message || "Failed to verify payment", {
         id: "payment-verification",
       });
@@ -135,8 +150,6 @@ export default function ApplicationSummary({
   };
 
   const handlePaymentSuccess = async (reference: string) => {
-    // This will be called after Paystack redirect
-    // The actual verification happens in the useEffect above
     console.log("Payment successful with reference:", reference);
   };
 
@@ -193,7 +206,7 @@ export default function ApplicationSummary({
           </svg>
           Back to Edit
         </button>
-        <div className="w-20"></div> {/* Spacer for alignment */}
+        <div className="w-20"></div>
       </div>
 
       <div>
@@ -475,7 +488,7 @@ export default function ApplicationSummary({
           </div>
         </div>
 
-        {/* Terms and Conditions - Moved before payment */}
+        {/* Terms and Conditions */}
         <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
           <div className="flex items-start">
             <input
@@ -534,7 +547,6 @@ export default function ApplicationSummary({
               Payment Details
             </h4>
 
-            {/* Payment Method Details */}
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <div className="flex items-center mb-4">
                 <div className="w-5 h-5 rounded-full border-2 border-purple-600 bg-purple-600 mr-3 flex items-center justify-center">

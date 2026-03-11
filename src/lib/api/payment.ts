@@ -18,13 +18,28 @@ export interface InitializePaymentData {
   };
 }
 
+// Application data returned in payment verification
+export interface ApplicationData {
+  id: number;
+  application_status: string;
+  payment_status: string;
+  payment_reference: string | null;
+}
+
 export interface VerifyPaymentResponse {
   success: boolean;
   data?: {
     status: 'success' | 'failed' | 'pending';
     reference: string;
     amount: number;
+    currency: string;
+    payment_type: string;
+    paid_at?: string;
     metadata: any;
+    // Add these fields for application update status
+    application?: ApplicationData;
+    application_updated?: boolean;
+    application_status?: string;
   };
   message?: string;
 }
