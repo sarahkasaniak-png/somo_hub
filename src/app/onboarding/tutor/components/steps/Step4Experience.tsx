@@ -37,7 +37,7 @@ interface Step4ExperienceProps {
 const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
   ({ initialData, onNext, onBack, isLoading }, ref) => {
     const [certificates, setCertificates] = useState<Certificate[]>(
-      initialData?.certificates || [],
+      Array.isArray(initialData?.certificates) ? initialData.certificates : [],
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -119,6 +119,22 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
           console.error("Error parsing previous_institutions:", error);
         }
       }
+
+      // Parse certificates if they come as string
+      if (
+        initialData?.certificates &&
+        typeof initialData.certificates === "string"
+      ) {
+        try {
+          const parsed = JSON.parse(initialData.certificates);
+          if (Array.isArray(parsed)) {
+            setCertificates(parsed);
+            setValue("certificates", parsed);
+          }
+        } catch (error) {
+          console.error("Error parsing certificates:", error);
+        }
+      }
     }, [initialData, setValue]);
 
     const handleFileUpload = async (fileType: string, url: string) => {
@@ -152,6 +168,22 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       setCertificates(updatedCertificates);
       setValue("certificates", updatedCertificates);
       trigger("certificates");
+    };
+
+    // Helper function to ensure certificates is an array
+    const ensureCertificatesArray = (certs: any): any[] => {
+      if (Array.isArray(certs)) {
+        return certs;
+      }
+      if (typeof certs === "string") {
+        try {
+          const parsed = JSON.parse(certs);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
     };
 
     const onSubmit = async (data: ExperienceFormData) => {
@@ -189,12 +221,21 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
           }
         }
 
+        // Ensure certificates is an array before filtering
+        const certificatesArray = ensureCertificatesArray(data.certificates);
+        console.log("Certificates array after ensure:", certificatesArray);
+
         // Clean up certificates data - remove empty certificates or those without URLs
         const cleanedData = {
           ...data,
-          certificates: (data.certificates || []).filter(
+          has_teaching_experience: Boolean(data.has_teaching_experience), // Ensure boolean
+          certificates: certificatesArray.filter(
             (cert: any) => cert && cert.url && cert.url.trim() !== "",
           ),
+          // Ensure previous_institutions is an array
+          previous_institutions: Array.isArray(data.previous_institutions)
+            ? data.previous_institutions
+            : [],
         };
 
         console.log("Calling onNext with cleaned data:", cleanedData);
