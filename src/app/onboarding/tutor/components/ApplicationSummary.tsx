@@ -99,14 +99,6 @@ export default function ApplicationSummary({
               duration: 5000,
             },
           );
-        } else if (verifyResponse.data.application_updated) {
-          toast.success(
-            "Payment successful! Your application has been submitted for review.",
-            {
-              id: "payment-verification",
-              duration: 5000,
-            },
-          );
         } else {
           toast.success(
             "Payment successful! Your application is being processed.",

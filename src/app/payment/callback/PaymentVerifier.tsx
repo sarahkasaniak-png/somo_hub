@@ -24,6 +24,11 @@ export default function PaymentVerifier() {
       const applicationId = sessionStorage.getItem("pending_application_id");
       const paymentType = sessionStorage.getItem("pending_payment_type");
 
+      console.log("🔍 PaymentVerifier - Reference:", reference);
+      console.log("🔍 PaymentVerifier - Payment Type:", paymentType);
+      console.log("🔍 PaymentVerifier - Application ID:", applicationId);
+      console.log("🔍 PaymentVerifier - Session ID:", sessionId);
+
       if (!reference) {
         setStatus("failed");
         setMessage("No payment reference found");
@@ -31,44 +36,30 @@ export default function PaymentVerifier() {
       }
 
       try {
+        // Show verifying state
+        setStatus("verifying");
+
         // Wait a bit for webhook to process
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        // Optionally verify with your backend
-        // const verifyResponse = await fetch(`/api/payments/verify/${reference}`);
-        // const data = await verifyResponse.json();
+        // Determine redirect based on payment type
+        if (paymentType === "session_enrollment" && sessionId) {
+          // For session enrollment, go to the session page with reference
+          router.push(`/tuitions/${sessionId}?reference=${reference}`);
+        } else if (paymentType === "tutor_onboarding" || applicationId) {
+          // For tutor onboarding, go back to the application summary page with reference
+          // The ApplicationSummary component will handle the verification
+          router.push(`/onboarding/tutor?reference=${reference}&step=summary`);
+        } else {
+          router.push(`/dashboard?reference=${reference}`);
+        }
 
-        setStatus("success");
-        setMessage("Payment verified successfully!");
-
-        // Start countdown for redirect
-        const timer = setInterval(() => {
-          setCountdown((prev) => {
-            if (prev <= 1) {
-              clearInterval(timer);
-
-              // Redirect based on payment type
-              if (paymentType === "session_enrollment" && sessionId) {
-                router.push(`/tuitions/${sessionId}?reference=${reference}`);
-              } else if (paymentType === "tutor_onboarding") {
-                router.push(`/onboarding/tutor/status?reference=${reference}`);
-              } else if (applicationId) {
-                router.push(`/onboarding/tutor/status?reference=${reference}`);
-              } else {
-                router.push(`/dashboard?reference=${reference}`);
-              }
-
-              // Clean up session storage
-              sessionStorage.removeItem("pending_session_id");
-              sessionStorage.removeItem("pending_application_id");
-              sessionStorage.removeItem("pending_payment_type");
-              sessionStorage.removeItem("pending_payment_reference");
-            }
-            return prev - 1;
-          });
-        }, 1000);
-
-        return () => clearInterval(timer);
+        // Clean up session storage after redirect
+        // (note: this might not execute if redirect happens immediately)
+        sessionStorage.removeItem("pending_session_id");
+        sessionStorage.removeItem("pending_application_id");
+        sessionStorage.removeItem("pending_payment_type");
+        sessionStorage.removeItem("pending_payment_reference");
       } catch (error) {
         console.error("Error during payment verification:", error);
         setStatus("failed");
@@ -100,18 +91,10 @@ export default function PaymentVerifier() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
               Payment Successful!
             </h2>
-            <p className="text-gray-600 mb-4">
-              Your payment has been processed successfully.
+            <p className="text-gray-600 mb-6">
+              Your payment has been processed successfully. You will be
+              redirected shortly.
             </p>
-            <p className="text-sm text-gray-500 mb-6">
-              Redirecting in {countdown} seconds...
-            </p>
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-              <div
-                className="bg-green-500 h-2 rounded-full transition-all duration-1000"
-                style={{ width: `${((3 - countdown) / 3) * 100}%` }}
-              ></div>
-            </div>
           </>
         )}
 

@@ -54,10 +54,12 @@ export default function PaystackPayment({
         payment_type: "tutor_onboarding",
       };
 
-      // Only add application_id if it exists (this IS allowed in the schema)
+      // Only add application_id if it exists
       if (applicationId) {
         metadata.application_id = applicationId;
       }
+
+      console.log("🚀 Initializing payment with metadata:", metadata);
 
       // Initialize payment with Paystack
       const response = (await paymentApi.initializePayment({
@@ -67,6 +69,8 @@ export default function PaystackPayment({
         payment_method: "card",
         metadata,
       })) as PaymentResponse;
+
+      console.log("✅ Payment initialization response:", response);
 
       if (response.success && response.data) {
         const { authorization_url, reference } = response.data;
@@ -87,7 +91,7 @@ export default function PaystackPayment({
         throw new Error(response.message || "Failed to initialize payment");
       }
     } catch (error: any) {
-      console.error("Payment initialization error:", error);
+      console.error("❌ Payment initialization error:", error);
       onPaymentError(error.message || "Failed to initialize payment");
     } finally {
       setProcessing(false);

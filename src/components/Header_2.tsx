@@ -171,10 +171,11 @@ export default function Navbar() {
                     </span>
                   )}
                   <div
-                    className="hidden md:flex profile-pic h-10 w-10 rounded-full ring-1 ring-offset-neutral-50 text-zinc-50 bg-zinc-900 justify-center items-center text-[12px] cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push("/profile");
+                    className="hidden md:flex profile-pic h-10 w-10 rounded-full ring-1 ring-offset-neutral-50 text-zinc-50 bg-zinc-900 justify-center items-center cursor-pointer"
+                    onClick={() => {
+                      user.roles?.includes("tutor")
+                        ? router.push("/tutor")
+                        : router.push("/student");
                     }}
                   >
                     <User2 size={18} />

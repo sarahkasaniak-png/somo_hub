@@ -41,6 +41,25 @@ export default function TutorOnboarding() {
     { number: 4, title: "Teaching Experience" },
   ];
 
+  //useEffect to check for payment callback when returning from Paystack
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const reference = queryParams.get("reference");
+    const step = queryParams.get("step");
+
+    console.log("🔍 TutorOnboarding - URL params:", { reference, step });
+
+    // If we have a reference and we're on the summary step, show the summary with the reference
+    if (reference && step === "summary" && application) {
+      console.log(
+        "✅ Payment return detected, showing summary with reference:",
+        reference,
+      );
+      setShowSummary(true);
+      // The ApplicationSummary component will handle the verification
+    }
+  }, [application]);
+
   useEffect(() => {
     checkExistingApplication();
   }, []);
