@@ -61,6 +61,7 @@ export default function TutorOnboarding() {
       setTimeout(() => {
         const form = document.getElementById("step-4-form");
         console.log("Form element with id 'step-4-form' found:", !!form);
+        console.log("Form ref current:", step4FormRef.current);
       }, 500);
     }
   }, [currentStep]);
@@ -216,15 +217,31 @@ export default function TutorOnboarding() {
   // Direct handler for Continue/Review buttons
   const handleContinueClick = () => {
     console.log("Continue/Review button clicked for step:", currentStep);
+    console.log("Step 4 ref current:", step4FormRef.current);
 
     if (currentStep === 1 && step1FormRef.current) {
+      console.log("Submitting step 1 form via ref");
       step1FormRef.current.requestSubmit();
     } else if (currentStep === 2 && step2FormRef.current) {
+      console.log("Submitting step 2 form via ref");
       step2FormRef.current.requestSubmit();
     } else if (currentStep === 3 && step3FormRef.current) {
+      console.log("Submitting step 3 form via ref");
       step3FormRef.current.requestSubmit();
-    } else if (currentStep === 4 && step4FormRef.current) {
-      step4FormRef.current.requestSubmit();
+    } else if (currentStep === 4) {
+      if (step4FormRef.current) {
+        console.log("Submitting step 4 form via ref");
+        step4FormRef.current.requestSubmit();
+      } else {
+        console.log("Step 4 ref is null, trying ID-based submission");
+        const form = document.getElementById("step-4-form") as HTMLFormElement;
+        if (form) {
+          console.log("Found form by ID, submitting");
+          form.requestSubmit();
+        } else {
+          console.error("Could not find step 4 form by ID either");
+        }
+      }
     } else {
       console.log("Form ref not found for step:", currentStep);
       // Fallback to ID-based submission
@@ -232,6 +249,7 @@ export default function TutorOnboarding() {
         currentStep === 4 ? "step-4-form" : `step-${currentStep}-form`;
       const form = document.getElementById(formId) as HTMLFormElement;
       if (form) {
+        console.log("Found form by ID fallback, submitting");
         form.requestSubmit();
       }
     }
