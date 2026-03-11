@@ -49,14 +49,15 @@ export default function PaystackPayment({
     setProcessing(true);
 
     try {
-      // Create metadata with application_id (not session_id)
-      const metadata = {
+      // Create metadata with only allowed fields
+      const metadata: any = {
         payment_type: "tutor_onboarding",
-        application_id: applicationId, // Use application_id directly
-        application_name: applicationId
-          ? `Tutor Application #${applicationId}`
-          : undefined,
       };
+
+      // Only add application_id if it exists (this IS allowed in the schema)
+      if (applicationId) {
+        metadata.application_id = applicationId;
+      }
 
       // Initialize payment with Paystack
       const response = (await paymentApi.initializePayment({
@@ -64,7 +65,7 @@ export default function PaystackPayment({
         currency: "KES",
         email,
         payment_method: "card",
-        metadata: metadata as any,
+        metadata,
       })) as PaymentResponse;
 
       if (response.success && response.data) {
