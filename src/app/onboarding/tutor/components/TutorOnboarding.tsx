@@ -34,13 +34,15 @@ export default function TutorOnboarding() {
   const step3FormRef = useRef<HTMLFormElement>(null);
   const step4FormRef = useRef<HTMLFormElement>(null);
 
-  const hasShownPendingToast = useRef(false);
-  const hasRedirectedToStatus = useRef(false);
-
-  // CRITICAL: Prevent multiple submissions
-  const isSubmitting = useRef(false);
-  const hasCheckedExistingApp = useRef(false);
-  const hasProcessedPaymentReturn = useRef(false);
+  // CRITICAL: Prevent multiple submissions and duplicate toasts
+  const isSubmitting = useRef<boolean>(false);
+  const hasCheckedExistingApp = useRef<boolean>(false);
+  const hasProcessedPaymentReturn = useRef<boolean>(false);
+  const hasShownPendingToast = useRef<boolean>(false);
+  const hasRedirectedToStatus = useRef<boolean>(false);
+  const hasShownApprovedToast = useRef<boolean>(false);
+  const componentMounted = useRef<boolean>(true);
+  const effectExecuted = useRef<boolean>(false);
 
   const steps = [
     { number: 1, title: "Tutor Level & Category" },
@@ -71,13 +73,36 @@ export default function TutorOnboarding() {
     }
   }, [application, showSummary]);
 
-  // Check existing application on mount - only once
+  // Check existing application on mount - with multiple safeguards
   useEffect(() => {
-    if (!hasCheckedExistingApp.current) {
-      hasCheckedExistingApp.current = true;
-      checkExistingApplication();
+    // Prevent multiple executions with multiple safeguards
+    if (effectExecuted.current) {
+      console.log("useEffect already executed, skipping...");
+      return;
     }
-  }, []);
+
+    if (!componentMounted.current) {
+      console.log("Component not mounted, skipping...");
+      return;
+    }
+
+    if (hasCheckedExistingApp.current) {
+      console.log("hasCheckedExistingApp already true, skipping...");
+      return;
+    }
+
+    console.log("Running checkExistingApplication for the first time");
+    effectExecuted.current = true;
+    hasCheckedExistingApp.current = true;
+
+    checkExistingApplication();
+
+    // Cleanup function
+    return () => {
+      console.log("TutorOnboarding cleanup");
+      componentMounted.current = false;
+    };
+  }, []); // Empty dependency array - should run once
 
   // Debug logging - but don't let it cause re-renders
   useEffect(() => {
@@ -85,6 +110,7 @@ export default function TutorOnboarding() {
     console.log("Current step:", currentStep);
     console.log("Show summary:", showSummary);
     console.log("Application data:", application);
+    console.log("Application status:", application?.application_status);
   }, [currentStep, showSummary, application]);
 
   const checkExistingApplication = async () => {
@@ -96,56 +122,82 @@ export default function TutorOnboarding() {
         data.data.hasApplication,
         data.data.application,
       );
+
       if (data.data.hasApplication && data.data.application) {
         console.log("Existing application found:", data.application);
         setApplication(data.data.application);
         setCurrentStep(data.data.application.current_step || 1);
         setFormData(data.data.application);
 
+        // Handle pending applications - with multiple safeguards
         if (data.data.application.application_status === "pending") {
-          // Only show toast once and redirect once
-          if (!hasShownPendingToast.current) {
+          console.log("Application status is pending");
+
+          // Only show toast once with a unique ID
+          if (!hasShownPendingToast.current && componentMounted.current) {
             hasShownPendingToast.current = true;
+            console.log("Showing pending toast");
             toast.success(
               "Your application is already submitted and pending review",
-              { id: "pending-app-toast", duration: 3000 },
+              {
+                id: "pending-app-toast",
+                duration: 3000,
+              },
             );
           }
 
-          if (!hasRedirectedToStatus.current) {
+          // Only redirect once
+          if (!hasRedirectedToStatus.current && componentMounted.current) {
             hasRedirectedToStatus.current = true;
-            router.push("/onboarding/tutor/status");
+            console.log("Redirecting to status page");
+            // Use setTimeout to prevent redirect during render
+            setTimeout(() => {
+              if (componentMounted.current) {
+                router.push("/onboarding/tutor/status");
+              }
+            }, 100);
           }
           return;
         }
 
+        // Handle approved applications
         if (data.data.application.application_status === "approved") {
-          if (!hasShownPendingToast.current) {
-            hasShownPendingToast.current = true;
+          console.log("Application status is approved");
+
+          if (!hasShownApprovedToast.current && componentMounted.current) {
+            hasShownApprovedToast.current = true;
             toast.success("You are already an approved tutor!", {
               id: "approved-toast",
               duration: 3000,
             });
           }
 
-          if (!hasRedirectedToStatus.current) {
+          if (!hasRedirectedToStatus.current && componentMounted.current) {
             hasRedirectedToStatus.current = true;
-            router.push("/tutor/dashboard");
+            setTimeout(() => {
+              if (componentMounted.current) {
+                router.push("/tutor/dashboard");
+              }
+            }, 100);
           }
           return;
         }
       } else {
+        console.log("No existing application found, showing intro");
         setCurrentStep(0);
       }
       console.log("Loaded application data:", data);
     } catch (error) {
       console.error("Failed to load application:", error);
+      // Only show error toast once
       toast.error("Failed to load application data", {
         id: "load-error-toast",
         duration: 3000,
       });
     } finally {
-      setIsLoading(false);
+      if (componentMounted.current) {
+        setIsLoading(false);
+      }
     }
   };
 
