@@ -17,6 +17,25 @@
 //   );
 // }
 // src/app/onboarding/tutor/status/page.tsx
+// "use client";
+
+// import { useEffect } from "react";
+// import { useRouter } from "next/navigation";
+
+// export default function StatusRedirectPage() {
+//   const router = useRouter();
+
+//   useEffect(() => {
+//     // Immediately redirect to home page
+//     router.push("/");
+//   }, [router]);
+
+//   return (
+//     <div className="min-h-screen flex items-center justify-center">
+//       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+//     </div>
+//   );
+// }
 // src/app/onboarding/tutor/status/page.tsx
 "use client";
 
@@ -48,32 +67,65 @@ export default function ApplicationStatusPage() {
   const [application, setApplication] = useState<ApplicationData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Use refs to prevent multiple loads
+  // CRITICAL: Use multiple refs to prevent any chance of loops
   const hasLoadedData = useRef<boolean>(false);
   const loadAttempts = useRef<number>(0);
+  const isMounted = useRef<boolean>(true);
+  const hasShownErrorToast = useRef<boolean>(false);
+  const effectExecuted = useRef<boolean>(false);
 
+  // Cleanup on unmount
   useEffect(() => {
-    // Load status only once
-    if (!hasLoadedData.current) {
-      hasLoadedData.current = true;
-      loadStatus();
-    }
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
+
+  // Load data only once with multiple safeguards
+  useEffect(() => {
+    // Prevent multiple executions
+    if (effectExecuted.current) {
+      console.log("useEffect already executed, skipping...");
+      return;
+    }
+
+    if (!isMounted.current) {
+      console.log("Component not mounted, skipping...");
+      return;
+    }
+
+    if (hasLoadedData.current) {
+      console.log("Data already loaded, skipping...");
+      return;
+    }
+
+    console.log("Loading application status for the first time");
+    effectExecuted.current = true;
+    hasLoadedData.current = true;
+
+    loadStatus();
+  }, []); // Empty dependency array - should run once
 
   const loadStatus = async () => {
     // Prevent excessive retries
     loadAttempts.current += 1;
     if (loadAttempts.current > 3) {
-      setError("Unable to load application status after multiple attempts.");
-      setIsLoading(false);
+      if (isMounted.current) {
+        setError("Unable to load application status after multiple attempts.");
+        setIsLoading(false);
+      }
       return;
     }
 
     try {
-      setIsLoading(true);
-      setError(null);
+      if (isMounted.current) {
+        setIsLoading(true);
+        setError(null);
+      }
 
       const data = await getApplicationStatus();
+
+      if (!isMounted.current) return;
 
       if (!data.hasApplication || !data.application) {
         // No application found, redirect to onboarding
@@ -85,16 +137,32 @@ export default function ApplicationStatusPage() {
       setStatus(data.application.application_status as ApplicationStatus);
     } catch (error) {
       console.error("Failed to load status:", error);
-      setError("Failed to load application status. Please refresh the page.");
 
-      // Show error toast only once
-      toast.error("Failed to load application status", {
-        id: "status-load-error",
-        duration: 5000,
-      });
+      if (isMounted.current) {
+        setError("Failed to load application status. Please refresh the page.");
+
+        // Show error toast only once
+        if (!hasShownErrorToast.current) {
+          hasShownErrorToast.current = true;
+          toast.error("Failed to load application status", {
+            id: "status-load-error",
+            duration: 5000,
+          });
+        }
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
+  };
+
+  const handleRefresh = () => {
+    // Reset refs to allow reload
+    hasLoadedData.current = false;
+    effectExecuted.current = false;
+    loadAttempts.current = 0;
+    loadStatus();
   };
 
   const getStatusIcon = () => {
@@ -235,7 +303,7 @@ export default function ApplicationStatusPage() {
           <p className="text-gray-600 mb-6">{error}</p>
           <div className="space-y-3">
             <button
-              onClick={loadStatus}
+              onClick={handleRefresh}
               className="w-full px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
@@ -442,7 +510,7 @@ export default function ApplicationStatusPage() {
 
               {(status === "pending" || status === "under_review") && (
                 <button
-                  onClick={loadStatus}
+                  onClick={handleRefresh}
                   className="flex-1 px-6 py-3 border border-purple-600 text-purple-600 font-semibold rounded-xl hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
                 >
                   <RefreshCw className="w-4 h-4" />
