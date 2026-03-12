@@ -69,7 +69,7 @@ export default function CreateSessionContent() {
     description: "",
     batch_name: "",
     session_type: "group" as "one_on_one" | "group",
-    max_students: 10,
+    max_students: 25,
     start_date: "",
     end_date: "",
     fee_amount: 0,
@@ -452,7 +452,7 @@ export default function CreateSessionContent() {
                 value={formData.max_students}
                 onChange={handleChange}
                 min="1"
-                max="100"
+                max="30"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
               />
               <p className="mt-1 text-xs text-gray-500">
@@ -462,14 +462,14 @@ export default function CreateSessionContent() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Session Fee ({formData.fee_currency})
+                Total Session/Tuition Fee ({formData.fee_currency})
               </label>
               <input
                 type="number"
                 name="fee_amount"
                 value={formData.fee_amount}
                 onChange={handleChange}
-                min="0"
+                min="500"
                 step="0.01"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
               />
