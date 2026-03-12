@@ -43,8 +43,8 @@ export default function CreateCoursePage() {
     classes_per_week: 1,
     class_duration_minutes: 80,
     mode: "virtual" as "virtual", // More specific type
-    max_students_per_session: 10, // Changed default to 10 (max 25)
-    total_price: 500, // Changed default to 500 (minimum)
+    max_students_per_session: 25, // Changed default to 10 (max 25)
+    total_price: 0, // Changed default to 500 (minimum)
     currency: "KES",
     thumbnail_url: "",
     syllabus_url: "",
