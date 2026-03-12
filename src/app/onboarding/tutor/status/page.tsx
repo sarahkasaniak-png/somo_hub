@@ -18,7 +18,7 @@
 // }
 
 // src / app / onboarding / tutor / status / page.tsx;
-("use client");
+"use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
