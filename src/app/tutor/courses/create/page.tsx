@@ -14,10 +14,11 @@ const levels = [
   { value: "adult", label: "Adult Education" },
 ];
 
+// Updated modes - only virtual is allowed now
 const modes = [
   { value: "virtual", label: "Virtual" },
-  { value: "in_person", label: "In-Person" },
-  { value: "hybrid", label: "Hybrid" },
+  // { value: "in_person", label: "In-Person" }, // Commented out
+  // { value: "hybrid", label: "Hybrid" }, // Commented out
 ];
 
 export default function CreateCoursePage() {
@@ -40,10 +41,10 @@ export default function CreateCoursePage() {
     level: "senior_high" as const,
     total_weeks: 4,
     classes_per_week: 1,
-    class_duration_minutes: 120,
-    mode: "virtual" as const,
-    max_students_per_session: 10,
-    total_price: 0,
+    class_duration_minutes: 80,
+    mode: "virtual" as "virtual", // More specific type
+    max_students_per_session: 10, // Changed default to 10 (max 25)
+    total_price: 500, // Changed default to 500 (minimum)
     currency: "KES",
     thumbnail_url: "",
     syllabus_url: "",
@@ -82,17 +83,27 @@ export default function CreateCoursePage() {
     >,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === "total_weeks" ||
-        name === "classes_per_week" ||
-        name === "class_duration_minutes" ||
-        name === "max_students_per_session" ||
-        name === "total_price"
-          ? Number(value)
-          : value,
-    }));
+
+    // For mode field, only allow "virtual"
+    if (name === "mode") {
+      // Force value to be "virtual" regardless of what's passed
+      setFormData((prev) => ({
+        ...prev,
+        mode: "virtual" as "virtual",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]:
+          name === "total_weeks" ||
+          name === "classes_per_week" ||
+          name === "class_duration_minutes" ||
+          name === "max_students_per_session" ||
+          name === "total_price"
+            ? Number(value)
+            : value,
+      }));
+    }
 
     // Clear error for this field
     clearFieldError(name);
@@ -187,9 +198,24 @@ export default function CreateCoursePage() {
       errors.subject = "Subject is required";
     }
 
-    // Price validation
-    if (formData.total_price < 0) {
-      errors.total_price = "Price cannot be negative";
+    // Price validation - Minimum 500
+    if (formData.total_price < 500) {
+      errors.total_price = "Total price must be at least 500 KES";
+    }
+
+    // Max students validation - Maximum 25
+    if (formData.max_students_per_session > 25) {
+      errors.max_students_per_session =
+        "Maximum students per session cannot exceed 25";
+    }
+    if (formData.max_students_per_session < 1) {
+      errors.max_students_per_session =
+        "Maximum students per session must be at least 1";
+    }
+
+    // Mode validation - Only virtual allowed
+    if (formData.mode !== "virtual") {
+      errors.mode = "Only virtual teaching mode is allowed";
     }
 
     // Curriculum validation
@@ -211,14 +237,18 @@ export default function CreateCoursePage() {
     return Object.keys(errors).length === 0;
   };
 
-  // Update the handleSubmit section around line 282
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Reset errors
     setApiError(null);
     setFieldErrors({});
+
+    // Force mode to be virtual before validation
+    setFormData((prev) => ({
+      ...prev,
+      mode: "virtual" as "virtual",
+    }));
 
     // Run validation first
     if (!validateForm()) {
@@ -241,12 +271,15 @@ export default function CreateCoursePage() {
         total_weeks: Number(formData.total_weeks) || 4,
         classes_per_week: Number(formData.classes_per_week) || 1,
         class_duration_minutes: Number(formData.class_duration_minutes) || 120,
-        mode: formData.mode,
+        mode: "virtual" as "virtual", // Cast to specific type
         max_students_per_session:
           Number(formData.max_students_per_session) || 10,
 
         // Pricing
-        total_price: Number(formData.total_price) || 0,
+        total_price:
+          Number(formData.total_price) >= 500
+            ? Number(formData.total_price)
+            : 500, // Ensure minimum 500
         currency: formData.currency || "KES",
 
         // Media
@@ -276,13 +309,11 @@ export default function CreateCoursePage() {
 
       const response = await tutorApi.createCourse(submissionData);
 
-      // ✅ FIXED: Check response structure
       if (response.success && response.data) {
         toast.success("Course created successfully!");
         console.log("course created:", response.data);
         router.push(`/tutor/courses/${response.data.id}`);
       } else {
-        // ✅ FIXED: response doesn't have message property
         const errorMessage = "Failed to create course";
         setApiError(errorMessage);
         toast.error(errorMessage);
@@ -424,7 +455,7 @@ export default function CreateCoursePage() {
                       ? "border-red-500 bg-red-50"
                       : "border-gray-300"
                   }`}
-                  placeholder="e.g., Calculus 101"
+                  placeholder="e.g., Mathematics for Senior High"
                 />
                 {/* Field error message */}
                 {(formErrors.title || fieldErrors.title) && (
@@ -508,7 +539,12 @@ export default function CreateCoursePage() {
                   name="mode"
                   value={formData.mode}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
+                  disabled
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-main focus:border-transparent bg-gray-100 ${
+                    formErrors.mode
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-300"
+                  }`}
                 >
                   {modes.map((mode) => (
                     <option key={mode.value} value={mode.value}>
@@ -516,18 +552,24 @@ export default function CreateCoursePage() {
                     </option>
                   ))}
                 </select>
+                {formErrors.mode && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.mode}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Only virtual teaching is available at this time
+                </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Total Price (KES)
+                  Total Price (KES) *
                 </label>
                 <input
                   type="number"
                   name="total_price"
                   value={formData.total_price}
                   onChange={handleChange}
-                  min="0"
+                  min="500"
                   step="0.01"
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-main focus:border-transparent ${
                     formErrors.total_price || fieldErrors.total_price
@@ -540,6 +582,9 @@ export default function CreateCoursePage() {
                     {formErrors.total_price || fieldErrors.total_price?.[0]}
                   </p>
                 )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Minimum price: 500 KES
+                </p>
               </div>
             </div>
           </div>
@@ -598,7 +643,7 @@ export default function CreateCoursePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Max Students per Session
+                  Max Students per Session *
                 </label>
                 <input
                   type="number"
@@ -606,9 +651,21 @@ export default function CreateCoursePage() {
                   value={formData.max_students_per_session}
                   onChange={handleChange}
                   min="1"
-                  max="100"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
+                  max="25"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-main focus:border-transparent ${
+                    formErrors.max_students_per_session
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-300"
+                  }`}
                 />
+                {formErrors.max_students_per_session && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {formErrors.max_students_per_session}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Maximum allowed: 25 students
+                </p>
               </div>
             </div>
           </div>
