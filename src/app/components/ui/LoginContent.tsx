@@ -409,14 +409,23 @@ export default function LoginContent({
 
   /* ================= REGISTRATION SUCCESS HANDLER ================= */
   const handleRegistrationSuccess = () => {
-    handleClose();
-    if (onSuccess) {
-      onSuccess();
-    } else if (redirectPath) {
-      router.push(redirectPath);
-    } else {
-      router.refresh();
-    }
+    // Reset to login step instead of closing
+    setStep(1);
+    setIsRegistering(false);
+    setRegistrationSuccess(false);
+    setEmail(email); // Keep the email pre-filled
+    setPassword("");
+    setConfirmPassword("");
+    setOtp(["", "", "", ""]);
+    setOtpSent(false);
+
+    // Focus on password input after a short delay
+    setTimeout(() => {
+      const passwordInput = document.getElementById(
+        "password",
+      ) as HTMLInputElement;
+      if (passwordInput) passwordInput.focus();
+    }, 100);
   };
 
   /* ================= RESET ON CLOSE ================= */
@@ -450,19 +459,22 @@ export default function LoginContent({
     <div className="login mb-20 w-full text-center">
       <div className="text-green-600 mb-6">
         <CheckCircle size={64} className="mx-auto mb-4" />
-        <h2 className="text-2xl font-semibold">Registration Successful!</h2>
+        <h2 className="text-2xl font-semibold">Email Verified Successfully!</h2>
       </div>
 
-      <p className="text-gray-600 mb-8">
-        Your account has been created and verified successfully. Welcome to
-        SomoHub!
+      <p className="text-gray-600 mb-4">
+        Your email has been verified and your account has been created.
+      </p>
+
+      <p className="text-gray-600 mb-8 font-medium">
+        Please login with your email and password to continue.
       </p>
 
       <button
         onClick={handleRegistrationSuccess}
         className="w-full bg-main text-white text-[17px] p-3 rounded-md hover:bg-main/95 hover:cursor-pointer transition"
       >
-        OK
+        Go to Login
       </button>
     </div>
   );
@@ -938,7 +950,7 @@ export default function LoginContent({
           setForgotPasswordFlow(false);
           setResetStep(1);
           setResetVerified(false);
-          setEmail("");
+          setEmail(forgotPasswordEmail || email);
           setPassword("");
           setNewPassword("");
           setConfirmNewPassword("");
@@ -951,7 +963,7 @@ export default function LoginContent({
         }}
         className="w-full bg-main text-white text-[17px] p-3 rounded-md hover:bg-main/95 hover:cursor-pointer transition"
       >
-        Back to Login
+        Go to Login
       </button>
     </div>
   );
@@ -1007,7 +1019,7 @@ export default function LoginContent({
         case 2:
           return "Verify Email";
         case 3:
-          return "Registration Complete";
+          return "Email Verified";
         default:
           return "Login or sign up";
       }
