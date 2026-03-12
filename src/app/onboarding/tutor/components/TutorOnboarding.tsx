@@ -38,11 +38,11 @@ export default function TutorOnboarding() {
   const isSubmitting = useRef<boolean>(false);
   const hasCheckedExistingApp = useRef<boolean>(false);
   const hasProcessedPaymentReturn = useRef<boolean>(false);
-  const hasShownStatusToast = useRef<boolean>(false);
-  const hasRedirected = useRef<boolean>(false);
+  const hasShownPendingToast = useRef<boolean>(false);
+  const hasRedirectedToStatus = useRef<boolean>(false);
+  const hasShownApprovedToast = useRef<boolean>(false);
   const componentMounted = useRef<boolean>(true);
   const effectExecuted = useRef<boolean>(false);
-  const redirectAttempted = useRef<boolean>(false); // Add this
 
   const steps = [
     { number: 1, title: "Tutor Level & Category" },
@@ -111,8 +111,6 @@ export default function TutorOnboarding() {
     console.log("Show summary:", showSummary);
     console.log("Application data:", application);
     console.log("Application status:", application?.application_status);
-    console.log("hasRedirected:", hasRedirected.current);
-    console.log("redirectAttempted:", redirectAttempted.current);
   }, [currentStep, showSummary, application]);
 
   const checkExistingApplication = async () => {
@@ -126,120 +124,65 @@ export default function TutorOnboarding() {
       );
 
       if (data.data.hasApplication && data.data.application) {
-        const appStatus = data.data.application.application_status;
-        console.log("Existing application found with status:", appStatus);
-
+        console.log("Existing application found:", data.application);
         setApplication(data.data.application);
+        setCurrentStep(data.data.application.current_step || 1);
         setFormData(data.data.application);
 
-        // Handle different application statuses - CRITICAL: Only redirect if not already redirected
-        switch (appStatus) {
-          case "pending":
-          case "under_review":
-            // Application is under review - redirect to status page
-            console.log(
-              `Application is ${appStatus}, redirecting to status page`,
+        // Handle pending applications - with multiple safeguards
+        if (data.data.application.application_status === "pending") {
+          console.log("Application status is pending");
+
+          // Only show toast once with a unique ID
+          if (!hasShownPendingToast.current && componentMounted.current) {
+            hasShownPendingToast.current = true;
+            console.log("Showing pending toast");
+            toast.success(
+              "Your application is already submitted and pending review",
+              {
+                id: "pending-app-toast",
+                duration: 3000,
+              },
             );
+          }
 
-            // Show toast only once
-            if (!hasShownStatusToast.current && componentMounted.current) {
-              hasShownStatusToast.current = true;
-              toast(
-                `Your application is ${appStatus === "pending" ? "pending" : "under review"}. You cannot edit it at this time.`,
-                {
-                  id: "status-info-toast",
-                  duration: 4000,
-                  icon: "ℹ️",
-                },
-              );
-            }
+          // Only redirect once
+          if (!hasRedirectedToStatus.current && componentMounted.current) {
+            hasRedirectedToStatus.current = true;
+            console.log("Redirecting to status page");
+            // Use setTimeout to prevent redirect during render
+            setTimeout(() => {
+              if (componentMounted.current) {
+                router.push("/onboarding/tutor/status");
+              }
+            }, 100);
+          }
+          return;
+        }
 
-            // Redirect only once and only if not already redirected
-            if (
-              !hasRedirected.current &&
-              !redirectAttempted.current &&
-              componentMounted.current
-            ) {
-              console.log("Setting redirect flags to true");
-              hasRedirected.current = true;
-              redirectAttempted.current = true;
+        // Handle approved applications
+        if (data.data.application.application_status === "approved") {
+          console.log("Application status is approved");
 
-              // Use a longer timeout to ensure state is updated
-              setTimeout(() => {
-                if (componentMounted.current) {
-                  console.log("Executing redirect to status page");
-                  router.push("/onboarding/tutor/status");
-                } else {
-                  console.log("Component unmounted, skipping redirect");
-                }
-              }, 500); // Increased timeout
-            } else {
-              console.log("Redirect already attempted or flagged, skipping:", {
-                hasRedirected: hasRedirected.current,
-                redirectAttempted: redirectAttempted.current,
-              });
-            }
+          if (!hasShownApprovedToast.current && componentMounted.current) {
+            hasShownApprovedToast.current = true;
+            toast.success("You are already an approved tutor!", {
+              id: "approved-toast",
+              duration: 3000,
+            });
+          }
 
-            // IMPORTANT: Return early to prevent further processing
-            setIsLoading(false);
-            return;
-
-          case "approved":
-            // Application approved - redirect to dashboard
-            console.log("Application is approved, redirecting to dashboard");
-            if (!hasShownStatusToast.current && componentMounted.current) {
-              hasShownStatusToast.current = true;
-              toast.success(
-                "Your application has been approved! Welcome to the tutor community!",
-                { id: "approved-toast", duration: 4000 },
-              );
-            }
-            if (
-              !hasRedirected.current &&
-              !redirectAttempted.current &&
-              componentMounted.current
-            ) {
-              hasRedirected.current = true;
-              redirectAttempted.current = true;
-              setTimeout(() => {
-                if (componentMounted.current) {
-                  router.push("/tutor/dashboard");
-                }
-              }, 500);
-            }
-            setIsLoading(false);
-            return;
-
-          case "rejected":
-            // Application rejected - show message and allow reapply
-            console.log("Application is rejected");
-            if (!hasShownStatusToast.current && componentMounted.current) {
-              hasShownStatusToast.current = true;
-              toast.error(
-                "Your application was not approved. You can submit a new application.",
-                { id: "rejected-toast", duration: 5000 },
-              );
-            }
-            // For rejected applications, we still show the onboarding but with a fresh start
-            setCurrentStep(0);
-            setApplication(null);
-            setFormData({});
-            setIsLoading(false);
-            return;
-
-          case "draft":
-            // Draft application - continue normally
-            console.log("Application is draft, continuing...");
-            setCurrentStep(data.data.application.current_step || 1);
-            break;
-
-          default:
-            // Unknown status - treat as draft
-            console.log("Unknown status, treating as draft");
-            setCurrentStep(data.data.application.current_step || 1);
+          if (!hasRedirectedToStatus.current && componentMounted.current) {
+            hasRedirectedToStatus.current = true;
+            setTimeout(() => {
+              if (componentMounted.current) {
+                router.push("/tutor/dashboard");
+              }
+            }, 100);
+          }
+          return;
         }
       } else {
-        // No application found, start from intro
         console.log("No existing application found, showing intro");
         setCurrentStep(0);
       }
@@ -263,18 +206,6 @@ export default function TutorOnboarding() {
       // CRITICAL: Prevent multiple submissions
       if (isSubmitting.current) {
         console.log("⏳ Submission already in progress, skipping...");
-        return;
-      }
-
-      // Check if application is in draft state before allowing submission
-      if (
-        application?.application_status &&
-        application.application_status !== "draft"
-      ) {
-        console.log("❌ Cannot submit - application is not in draft state");
-        toast.error("This application cannot be edited at this time.", {
-          id: "not-draft-error",
-        });
         return;
       }
 
@@ -362,18 +293,6 @@ export default function TutorOnboarding() {
   ) => {
     if (isSubmitting.current) return;
 
-    // Check if application is in draft state before allowing submission
-    if (
-      application?.application_status &&
-      application.application_status !== "draft"
-    ) {
-      console.log("❌ Cannot submit - application is not in draft state");
-      toast.error("This application cannot be submitted at this time.", {
-        id: "not-draft-error",
-      });
-      return;
-    }
-
     try {
       isSubmitting.current = true;
       setIsLoading(true);
@@ -387,13 +306,7 @@ export default function TutorOnboarding() {
       toast.success("Application submitted successfully!", {
         id: "app-submit",
       });
-
-      // Redirect to status page after successful submission
-      if (!hasRedirected.current && !redirectAttempted.current) {
-        hasRedirected.current = true;
-        redirectAttempted.current = true;
-        router.push("/onboarding/tutor/status");
-      }
+      router.push("/onboarding/tutor/status");
     } catch (error: any) {
       console.error("❌ Submit application error:", error);
       toast.error(error.message || "Failed to submit application", {
@@ -444,18 +357,6 @@ export default function TutorOnboarding() {
       return;
     }
 
-    // Check if application is in draft state before allowing continuation
-    if (
-      application?.application_status &&
-      application.application_status !== "draft"
-    ) {
-      console.log("❌ Cannot continue - application is not in draft state");
-      toast.error("This application cannot be edited at this time.", {
-        id: "not-draft-error",
-      });
-      return;
-    }
-
     console.log("Continue/Review button clicked for step:", currentStep);
 
     if (currentStep === 1 && step1FormRef.current) {
@@ -472,7 +373,7 @@ export default function TutorOnboarding() {
         if (form) form.requestSubmit();
       }
     }
-  }, [currentStep, application]);
+  }, [currentStep]);
 
   if (isLoading && !application) {
     return (
