@@ -8,7 +8,7 @@ export default function TutorOnboardingLayout({
   return (
     <>
       {children}
-      <Toaster
+      {/* <Toaster
         position="top-right"
         toastOptions={{
           duration: 4000,
@@ -31,7 +31,7 @@ export default function TutorOnboardingLayout({
             },
           },
         }}
-      />
+      /> */}
     </>
   );
 }
