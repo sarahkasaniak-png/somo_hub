@@ -120,7 +120,7 @@ export default function ApplicationStatusPage() {
         return {
           title: "Application Approved! 🎉",
           message:
-            "Congratulations! Your application has been approved. You can now access your tutor dashboard.",
+            "Congratulations! Your application has been approved. You can now access your tutor dashboard and start creating courses.",
           icon: (
             <svg
               className="w-16 h-16 text-green-500"
@@ -186,7 +186,6 @@ export default function ApplicationStatusPage() {
             </svg>
           ),
           color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-          showRefresh: true,
         };
       case "pending":
         return {
@@ -209,7 +208,6 @@ export default function ApplicationStatusPage() {
             </svg>
           ),
           color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-          showRefresh: true,
         };
       default:
         return {
@@ -244,12 +242,6 @@ export default function ApplicationStatusPage() {
     });
   };
 
-  const handleRefresh = () => {
-    // Reset the ref to allow reload
-    dataLoaded.current = false;
-    window.location.reload();
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white flex items-center justify-center">
@@ -282,12 +274,12 @@ export default function ApplicationStatusPage() {
           <p className="text-gray-600 mb-6">
             {error || "Unable to load application status"}
           </p>
-          <button
-            onClick={handleRefresh}
-            className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
+          <Link
+            href="/"
+            className="inline-block px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
           >
-            Try Again
-          </button>
+            Go Home
+          </Link>
         </div>
       </div>
     );
@@ -348,7 +340,7 @@ export default function ApplicationStatusPage() {
                 </h3>
                 <div className="space-y-2 text-sm">
                   <p>
-                    <span className="text-gray-500">Name:</span>{" "}
+                    <span className="text-gray-500">Full Name:</span>{" "}
                     <span className="font-medium">
                       {application.official_first_name}{" "}
                       {application.official_last_name}
@@ -415,15 +407,6 @@ export default function ApplicationStatusPage() {
                 >
                   {config.buttonText}
                 </Link>
-              )}
-
-              {(config as any).showRefresh && (
-                <button
-                  onClick={handleRefresh}
-                  className="flex-1 px-6 py-3 border border-purple-600 text-purple-600 font-semibold rounded-xl hover:bg-purple-50 transition-colors"
-                >
-                  Refresh Status
-                </button>
               )}
 
               <Link

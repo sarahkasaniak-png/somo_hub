@@ -42,6 +42,7 @@ export default function TutorOnboarding() {
   const hasRedirected = useRef<boolean>(false);
   const componentMounted = useRef<boolean>(true);
   const effectExecuted = useRef<boolean>(false);
+  const redirectAttempted = useRef<boolean>(false); // Add this
 
   const steps = [
     { number: 1, title: "Tutor Level & Category" },
@@ -110,6 +111,8 @@ export default function TutorOnboarding() {
     console.log("Show summary:", showSummary);
     console.log("Application data:", application);
     console.log("Application status:", application?.application_status);
+    console.log("hasRedirected:", hasRedirected.current);
+    console.log("redirectAttempted:", redirectAttempted.current);
   }, [currentStep, showSummary, application]);
 
   const checkExistingApplication = async () => {
@@ -129,7 +132,7 @@ export default function TutorOnboarding() {
         setApplication(data.data.application);
         setFormData(data.data.application);
 
-        // Handle different application statuses
+        // Handle different application statuses - CRITICAL: Only redirect if not already redirected
         switch (appStatus) {
           case "pending":
           case "under_review":
@@ -137,6 +140,8 @@ export default function TutorOnboarding() {
             console.log(
               `Application is ${appStatus}, redirecting to status page`,
             );
+
+            // Show toast only once
             if (!hasShownStatusToast.current && componentMounted.current) {
               hasShownStatusToast.current = true;
               toast(
@@ -144,18 +149,39 @@ export default function TutorOnboarding() {
                 {
                   id: "status-info-toast",
                   duration: 4000,
-                  icon: "ℹ️", // Optional: add an info icon
+                  icon: "ℹ️",
                 },
               );
             }
-            if (!hasRedirected.current && componentMounted.current) {
+
+            // Redirect only once and only if not already redirected
+            if (
+              !hasRedirected.current &&
+              !redirectAttempted.current &&
+              componentMounted.current
+            ) {
+              console.log("Setting redirect flags to true");
               hasRedirected.current = true;
+              redirectAttempted.current = true;
+
+              // Use a longer timeout to ensure state is updated
               setTimeout(() => {
                 if (componentMounted.current) {
+                  console.log("Executing redirect to status page");
                   router.push("/onboarding/tutor/status");
+                } else {
+                  console.log("Component unmounted, skipping redirect");
                 }
-              }, 100);
+              }, 500); // Increased timeout
+            } else {
+              console.log("Redirect already attempted or flagged, skipping:", {
+                hasRedirected: hasRedirected.current,
+                redirectAttempted: redirectAttempted.current,
+              });
             }
+
+            // IMPORTANT: Return early to prevent further processing
+            setIsLoading(false);
             return;
 
           case "approved":
@@ -168,14 +194,20 @@ export default function TutorOnboarding() {
                 { id: "approved-toast", duration: 4000 },
               );
             }
-            if (!hasRedirected.current && componentMounted.current) {
+            if (
+              !hasRedirected.current &&
+              !redirectAttempted.current &&
+              componentMounted.current
+            ) {
               hasRedirected.current = true;
+              redirectAttempted.current = true;
               setTimeout(() => {
                 if (componentMounted.current) {
                   router.push("/tutor/dashboard");
                 }
-              }, 100);
+              }, 500);
             }
+            setIsLoading(false);
             return;
 
           case "rejected":
@@ -357,8 +389,9 @@ export default function TutorOnboarding() {
       });
 
       // Redirect to status page after successful submission
-      if (!hasRedirected.current) {
+      if (!hasRedirected.current && !redirectAttempted.current) {
         hasRedirected.current = true;
+        redirectAttempted.current = true;
         router.push("/onboarding/tutor/status");
       }
     } catch (error: any) {

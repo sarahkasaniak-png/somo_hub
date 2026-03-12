@@ -125,6 +125,7 @@ export default function ApplicationSummary({
 
         // Redirect to home page
         router.push("/");
+        // router.push("/onboarding/tutor/status");
 
         // Clean up URL
         window.history.replaceState(
