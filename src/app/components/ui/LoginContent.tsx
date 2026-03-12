@@ -277,20 +277,32 @@ export default function LoginContent({
         // Verify reset OTP - use forgotPasswordEmail
         const emailToVerify = forgotPasswordEmail || email;
         const result = await authVerifyResetOtp(emailToVerify, code);
-        if (result.success) {
+        if (result && (result as any).success) {
           setResetVerified(true);
           setResetStep(3); // Move to new password step
         }
       } else {
         // Verify registration OTP - use registration email
         const result = await authVerifyOtp(email, code, "registration");
-        if (result && (result as any).verified === true) {
+
+        // Check if verification was successful
+        if (
+          result &&
+          ((result as any).verified === true ||
+            (result as any).success === true)
+        ) {
           // Registration OTP verified successfully
           setRegistrationSuccess(true);
           setStep(3); // Move to registration success step
+
+          // Clear OTP state
+          setOtp(["", "", "", ""]);
+        } else {
+          setErrorOtp((result as any)?.message || "Invalid or expired OTP");
         }
       }
     } catch (err: any) {
+      console.error("OTP verification error:", err);
       setErrorOtp(err.message || "Invalid or expired OTP");
     } finally {
       setLoading(false);
@@ -409,14 +421,25 @@ export default function LoginContent({
 
   /* ================= REGISTRATION SUCCESS HANDLER ================= */
   const handleRegistrationSuccess = () => {
-    handleClose();
-    if (onSuccess) {
-      onSuccess();
-    } else if (redirectPath) {
-      router.push(redirectPath);
-    } else {
-      router.refresh();
-    }
+    // Option 1: Close modal and redirect (current behavior)
+    // handleClose();
+    // if (onSuccess) {
+    //   onSuccess();
+    // } else if (redirectPath) {
+    //   router.push(redirectPath);
+    // } else {
+    //   router.refresh();
+    // }
+
+    // Option 2: Stay in modal and go to login (alternative)
+
+    setStep(1);
+    setRegistrationSuccess(false);
+    setIsRegistering(false);
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setOtp(["", "", "", ""]);
   };
 
   /* ================= RESET ON CLOSE ================= */

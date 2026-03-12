@@ -225,6 +225,8 @@ export interface AuthResponse {
   refresh_token?: string;
   expires_in?: number;
   status?: UserStatus;
+   verified?: boolean;
+  success?: boolean;
   message?: string;
 }
 

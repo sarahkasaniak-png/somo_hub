@@ -460,21 +460,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const data = (await authApi.verifyOtp(email, otp, purpose)) as any;
 
-      if (data?.verified || data?.user) {
-        if (purpose === "registration" && data?.user) {
-          const currentUser = data.user;
-          setUser(currentUser);
-
-          const status = await fetchUserStatus();
-          setUserStatus(status);
-
-          await fetchProfileData(currentUser, status);
-          return { user: currentUser, status };
-        } else if (purpose === "reset_password") {
+      if (purpose === "registration") {
+        // Check if verification was successful
+        if (data?.verified === true || data?.success === true) {
+          // Return a success response even if user is not returned
           return {
-            user: { id: "", email } as User,
+            verified: true,
+            success: true,
+            message: data.message || "Email verified successfully",
+          } as any; // Type assertion to avoid TypeScript error
+        }
+      } else if (purpose === "reset_password") {
+        if (data?.verified === true || data?.success === true) {
+          return {
+            success: true,
             message: data.message || "OTP verified",
-          };
+          } as any;
         }
       }
 
