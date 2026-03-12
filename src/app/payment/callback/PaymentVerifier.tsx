@@ -15,7 +15,6 @@ export default function PaymentVerifier() {
   );
   const [message, setMessage] = useState("");
   const [countdown, setCountdown] = useState(3);
-  const [redirectTarget, setRedirectTarget] = useState<string>("status");
 
   // Use refs to prevent multiple executions
   const verificationStarted = useRef<boolean>(false);
@@ -35,20 +34,7 @@ export default function PaymentVerifier() {
       const reference =
         searchParams.get("reference") || searchParams.get("trxref");
 
-      const sessionId = sessionStorage.getItem("pending_session_id");
-      const applicationId = sessionStorage.getItem("pending_application_id");
-      const paymentType = sessionStorage.getItem("pending_payment_type");
-
-      // Set redirect target for display
-      if (paymentType === "session_enrollment") {
-        setRedirectTarget("session");
-      } else {
-        setRedirectTarget("status");
-      }
-
       console.log("🔍 PaymentVerifier - Reference:", reference);
-      console.log("🔍 PaymentVerifier - Payment Type:", paymentType);
-      console.log("🔍 PaymentVerifier - Application ID:", applicationId);
 
       if (!reference) {
         setStatus("failed");
@@ -64,19 +50,20 @@ export default function PaymentVerifier() {
         const verifyResponse = await paymentApi.verifyPayment(reference);
         console.log("✅ Verification response:", verifyResponse);
 
+        // ONLY proceed if payment was successful
         if (
           verifyResponse.success &&
           verifyResponse.data?.status === "success"
         ) {
           setStatus("success");
 
-          // Clean up session storage immediately
+          // Clean up session storage
           sessionStorage.removeItem("pending_session_id");
           sessionStorage.removeItem("pending_application_id");
           sessionStorage.removeItem("pending_payment_type");
           sessionStorage.removeItem("pending_payment_reference");
 
-          // Start countdown for redirect
+          // Start countdown for redirect to home page
           let count = 3;
           setCountdown(count);
 
@@ -86,30 +73,20 @@ export default function PaymentVerifier() {
 
             if (count <= 0) {
               clearInterval(timer);
+              timerRef.current = null;
 
               // Prevent multiple redirects
               if (!hasRedirected.current) {
                 hasRedirected.current = true;
-
-                // Determine redirect based on payment type
-                if (paymentType === "session_enrollment" && sessionId) {
-                  // For session enrollment, go to the session page
-                  router.push(`/tuitions/${sessionId}`);
-                } else if (
-                  paymentType === "tutor_onboarding" ||
-                  applicationId
-                ) {
-                  // For tutor onboarding, go directly to status page
-                  router.push("/onboarding/tutor/status");
-                } else {
-                  router.push("/dashboard");
-                }
+                // Redirect to home page after successful payment
+                router.push("/");
               }
             }
           }, 1000);
 
           timerRef.current = timer;
         } else {
+          // Payment failed
           setStatus("failed");
           setMessage(verifyResponse.message || "Payment verification failed");
 
@@ -118,6 +95,11 @@ export default function PaymentVerifier() {
           sessionStorage.removeItem("pending_application_id");
           sessionStorage.removeItem("pending_payment_type");
           sessionStorage.removeItem("pending_payment_reference");
+
+          // Reset verification flag so user can try again
+          setTimeout(() => {
+            verificationStarted.current = false;
+          }, 5000);
         }
       } catch (error: any) {
         console.error("Error during payment verification:", error);
@@ -129,6 +111,11 @@ export default function PaymentVerifier() {
         sessionStorage.removeItem("pending_application_id");
         sessionStorage.removeItem("pending_payment_type");
         sessionStorage.removeItem("pending_payment_reference");
+
+        // Reset verification flag so user can try again
+        setTimeout(() => {
+          verificationStarted.current = false;
+        }, 5000);
       }
     };
 
@@ -138,6 +125,7 @@ export default function PaymentVerifier() {
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [searchParams, router]);
@@ -167,7 +155,7 @@ export default function PaymentVerifier() {
               Your payment has been processed successfully.
             </p>
             <p className="text-sm text-gray-500 mb-6">
-              Redirecting to {redirectTarget} page in {countdown} seconds...
+              Redirecting to home page in {countdown} seconds...
             </p>
             <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
               <div

@@ -1,7 +1,7 @@
 // src/app/onboarding/tutor/components/ApplicationSummary.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import PaystackPayment from "./PaystackPayment";
@@ -47,6 +47,9 @@ export default function ApplicationSummary({
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentButtonEnabled, setPaymentButtonEnabled] = useState(false);
 
+  // Add ref to prevent duplicate processing
+  const hasProcessedPayment = useRef<boolean>(false);
+
   // Get user email from AuthContext
   const userEmail = user?.email || "";
 
@@ -70,12 +73,20 @@ export default function ApplicationSummary({
     const reference = queryParams.get("reference");
     const trxref = queryParams.get("trxref");
 
-    if (reference || trxref) {
+    if ((reference || trxref) && !hasProcessedPayment.current) {
       handlePaymentCallback(reference || trxref || "");
     }
   }, []);
 
   const handlePaymentCallback = async (reference: string) => {
+    // Prevent duplicate processing
+    if (hasProcessedPayment.current) {
+      console.log("⏳ Payment already being processed, skipping...");
+      return;
+    }
+
+    hasProcessedPayment.current = true;
+
     try {
       setPaymentProcessing(true);
       toast.loading("Verifying payment...", { id: "payment-verification" });
@@ -85,40 +96,35 @@ export default function ApplicationSummary({
 
       console.log("📦 Payment verification response:", verifyResponse);
 
+      // ONLY proceed if payment was successful
       if (verifyResponse.success && verifyResponse.data?.status === "success") {
-        // Check if application was updated
+        // Check if application was updated (optional logging)
         if (verifyResponse.data.application) {
           console.log(
             "✅ Application updated:",
             verifyResponse.data.application,
           );
-          toast.success(
-            "Payment successful! Your application has been submitted for review.",
-            {
-              id: "payment-verification",
-              duration: 5000,
-            },
-          );
-        } else {
-          toast.success(
-            "Payment successful! Your application is being processed.",
-            {
-              id: "payment-verification",
-              duration: 5000,
-            },
-          );
         }
 
-        // Wait a moment for the user to see the success message
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Show success message
+        toast.success(
+          "Payment successful! Your application has been submitted for review.",
+          {
+            id: "payment-success",
+            duration: 5000,
+          },
+        );
 
         // Clear any pending payment data
         sessionStorage.removeItem("pending_payment_reference");
         sessionStorage.removeItem("pending_payment_type");
         sessionStorage.removeItem("pending_application_id");
 
-        // Redirect to status page
-        router.push("/onboarding/tutor/status");
+        // Wait a moment for the user to see the success message
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        // Redirect to home page
+        router.push("/");
 
         // Clean up URL
         window.history.replaceState(
@@ -127,15 +133,24 @@ export default function ApplicationSummary({
           window.location.pathname,
         );
       } else {
+        // Payment failed
         toast.error("Payment verification failed. Please contact support.", {
           id: "payment-verification",
         });
+        // Reset the ref so user can try again
+        setTimeout(() => {
+          hasProcessedPayment.current = false;
+        }, 5000);
       }
     } catch (error: any) {
       console.error("❌ Payment verification error:", error);
       toast.error(error.message || "Failed to verify payment", {
         id: "payment-verification",
       });
+      // Reset the ref so user can try again
+      setTimeout(() => {
+        hasProcessedPayment.current = false;
+      }, 5000);
     } finally {
       setPaymentProcessing(false);
     }
