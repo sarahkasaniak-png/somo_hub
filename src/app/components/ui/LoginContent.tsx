@@ -262,35 +262,71 @@ export default function LoginContent({
   };
 
   /* ================= OTP VERIFICATION ================= */
+  // src/app/components/ui/LoginContent.tsx
+
+  // Update the OTP verification function (around line 214)
   const handleVerifyOtp = async (otpValue?: string) => {
     const code = otpValue || otp.join("");
+    console.log("Verifying OTP:", {
+      code,
+      step,
+      forgotPasswordFlow,
+      resetStep,
+    });
+
     if (code.length !== 4) {
       setErrorOtp("Please enter the 4-digit code.");
       return;
     }
 
     setLoading(true);
-    setErrorOtp("");
+    setErrorOtp(""); // Clear any previous errors
 
     try {
       if (forgotPasswordFlow && resetStep === 2) {
         // Verify reset OTP - use forgotPasswordEmail
         const emailToVerify = forgotPasswordEmail || email;
+        console.log("Verifying reset OTP for:", emailToVerify);
         const result = await authVerifyResetOtp(emailToVerify, code);
-        if (result.success) {
+        console.log("Reset OTP verification result:", result);
+
+        if (result && (result as any).success === true) {
           setResetVerified(true);
           setResetStep(3); // Move to new password step
+          setOtp(["", "", "", ""]); // Clear OTP
+          setErrorOtp(""); // Ensure error is cleared
+        } else {
+          setErrorOtp((result as any)?.message || "Invalid OTP");
         }
       } else {
         // Verify registration OTP - use registration email
-        const result = await authVerifyOtp(email, code, "registration");
-        if (result && (result as any).verified === true) {
-          // Registration OTP verified successfully
-          setRegistrationSuccess(true);
-          setStep(3); // Move to registration success step
+        console.log("Verifying registration OTP for:", email);
+        const result = (await authVerifyOtp(
+          email,
+          code,
+          "registration",
+        )) as any;
+        console.log("Registration OTP verification result:", result);
+
+        // Check the response structure
+        if (result) {
+          if (result.verified === true || result.success === true) {
+            // Registration OTP verified successfully
+            console.log("OTP verified successfully!");
+            setRegistrationSuccess(true);
+            setStep(3); // Move to registration success step
+            setOtp(["", "", "", ""]); // Clear OTP
+            setErrorOtp(""); // Ensure error is cleared
+          } else {
+            // Verification returned false but no error thrown
+            setErrorOtp(result.message || "Invalid verification code");
+          }
+        } else {
+          setErrorOtp("Invalid response from server");
         }
       }
     } catch (err: any) {
+      console.error("OTP verification error caught:", err);
       setErrorOtp(err.message || "Invalid or expired OTP");
     } finally {
       setLoading(false);
@@ -413,7 +449,7 @@ export default function LoginContent({
     setStep(1);
     setIsRegistering(false);
     setRegistrationSuccess(false);
-    setEmail(email); // Keep the email pre-filled
+    // Keep the email pre-filled
     setPassword("");
     setConfirmPassword("");
     setOtp(["", "", "", ""]);
