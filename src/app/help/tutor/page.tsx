@@ -844,11 +844,11 @@ export default function TutorHelpPage() {
       answer:
         "If you cancel a class, that week's payment may be adjusted. It's best to reschedule rather than cancel to ensure you receive full weekly payment. Communicate with your students and admin if issues arise.",
     },
-    {
-      question: "Can I teach in multiple communities?",
-      answer:
-        "Yes, you can join multiple communities and create courses for each one if you're an approved member. Your memberships are tracked with appropriate roles.",
-    },
+    // {
+    //   question: "Can I teach in multiple communities?",
+    //   answer:
+    //     "Yes, you can join multiple communities and create courses for each one if you're an approved member. Your memberships are tracked with appropriate roles.",
+    // },
   ];
 
   const filteredSections = helpSections
