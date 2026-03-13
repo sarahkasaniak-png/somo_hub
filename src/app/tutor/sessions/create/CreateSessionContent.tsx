@@ -284,7 +284,11 @@ export default function CreateSessionContent() {
           {/* Course Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Course *
+              <span>Select Course *</span>
+              <br />
+              <span className="text-xs text-zinc-700">
+                Only Published Courses are displayed
+              </span>
             </label>
 
             {courseId ? (
