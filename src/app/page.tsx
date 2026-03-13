@@ -65,19 +65,19 @@ export default function HomePage() {
       if (groupRes.status === "fulfilled" && groupRes.value.success) {
         console.log("group res", groupRes);
         setGroupSessions(groupRes.value.data?.sessions || []);
-        setHasMoreGroup((groupRes.value.data?.sessions || []).length === 8);
+        setHasMoreGroup((groupRes.value.data?.sessions || []).length === 10);
       }
 
       if (oneOnOneRes.status === "fulfilled" && oneOnOneRes.value.success) {
         setOneOnOneSessions(oneOnOneRes.value.data?.sessions || []);
         setHasMoreOneOnOne(
-          (oneOnOneRes.value.data?.sessions || []).length === 8,
+          (oneOnOneRes.value.data?.sessions || []).length === 10,
         );
       }
 
       if (tutorsRes.status === "fulfilled" && tutorsRes.value.success) {
         setFeaturedTutors(tutorsRes.value.data?.tutors || []);
-        setHasMoreTutors((tutorsRes.value.data?.tutors || []).length === 8);
+        setHasMoreTutors((tutorsRes.value.data?.tutors || []).length === 10);
       }
 
       if (
@@ -102,7 +102,7 @@ export default function HomePage() {
       const nextPage = groupPage + 1;
       const response = await tuitionApi.getGroupSessions({
         page: nextPage,
-        limit: 8,
+        limit: 10,
       });
 
       if (response.success && response.data?.sessions) {
@@ -112,7 +112,7 @@ export default function HomePage() {
         if (sessions.length > 0) {
           setGroupSessions((prev) => [...prev, ...sessions]);
           setGroupPage(nextPage);
-          setHasMoreGroup(sessions.length === 8);
+          setHasMoreGroup(sessions.length === 10);
         } else {
           setHasMoreGroup(false);
         }
@@ -127,7 +127,7 @@ export default function HomePage() {
       const nextPage = oneOnOnePage + 1;
       const response = await tuitionApi.getOneOnOneSessions({
         page: nextPage,
-        limit: 8,
+        limit: 10,
       });
 
       if (response.success && response.data?.sessions) {
@@ -136,7 +136,7 @@ export default function HomePage() {
         if (sessions.length > 0) {
           setOneOnOneSessions((prev) => [...prev, ...sessions]);
           setOneOnOnePage(nextPage);
-          setHasMoreOneOnOne(sessions.length === 8);
+          setHasMoreOneOnOne(sessions.length === 10);
         } else {
           setHasMoreOneOnOne(false);
         }
