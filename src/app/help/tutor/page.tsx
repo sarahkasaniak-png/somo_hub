@@ -148,7 +148,7 @@ export default function TutorHelpPage() {
             "Step 2: Provide your personal information and upload National ID photos (front and back)",
             "Step 3: Add your education details (highest education level: high school, diploma, bachelor's, master's, PhD) and upload relevant certificates",
             "Step 4: Document your teaching experience (years of experience, previous institutions)",
-            "Pay the application fee (KES 10.00) to complete your submission",
+            "Pay the application fee (KES 1,160) to complete your submission",
             "Wait for admin approval (usually within 24-48 hours)",
           ],
           tips: [
@@ -203,7 +203,7 @@ export default function TutorHelpPage() {
             "Courses are the foundation of your tutoring business. Here's how to create one.",
           steps: [
             "Go to Tutor Dashboard → Courses → Create New Course",
-            "Enter course title (e.g., 'KCSE Mathematics Revision')",
+            "Enter course title (e.g., 'Mathematics for High School')",
             "Write a detailed description of what students will learn",
             "Select subject (e.g., Mathematics, Physics, Computer Studies) and level (primary, junior high, senior high, university, adult)",
             "Set course duration: total weeks and classes per week",
@@ -214,7 +214,7 @@ export default function TutorHelpPage() {
             "Add prerequisites and learning outcomes",
             "Create curriculum with weekly topics",
             "Upload thumbnail and syllabus (optional)",
-            "Save as draft or publish immediately",
+            "Save as draft or publish immediately (You can only add tuition/sessions for courses you have published)",
           ],
           tips: [
             "Use descriptive titles that include the subject and level",
@@ -225,7 +225,7 @@ export default function TutorHelpPage() {
           warning:
             "Courses may require admin approval before they can be published, especially for new tutors.",
           example:
-            "Advanced Calculus for KCSE - 8 weeks, 1 class/week, 90 min classes, KES 8,000",
+            "August Grade 4 Mathematics - 4 weeks, 2 class/week, 90 min classes, KES 8,000",
           link: "/tutor/courses/create",
         },
         {
@@ -267,7 +267,7 @@ export default function TutorHelpPage() {
             "Sessions are specific instances of your courses with fixed dates and times.",
           steps: [
             "Go to a course and click 'Create Session'",
-            "Name your session (e.g., 'March 2026 Intake')",
+            "Name your session (e.g., 'April Grade 4 Maths')",
             "Add description and batch name (optional)",
             "Choose session type: one-on-one or group",
             "Set maximum number of students (group sessions) or 1 for one-on-one",
