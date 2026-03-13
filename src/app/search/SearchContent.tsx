@@ -255,7 +255,7 @@ export default function SearchContent() {
             </div>
             <div className="flex items-center gap-1">
               <Timer className="w-3 h-3" />
-              <span>{duration * classesPerWeek}min</span>
+              <span>{Math.floor(duration * classesPerWeek)}min</span>
             </div>
           </div>
 
@@ -364,7 +364,7 @@ export default function SearchContent() {
               </div>
               <div className="flex items-center gap-1">
                 <Timer className="w-3 h-3" />
-                <span>{duration * classesPerWeek}min total</span>
+                <span>{Math.floor(duration * classesPerWeek)}min total</span>
               </div>
               <div className="flex items-center gap-1">
                 <Users className="w-3 h-3" />
