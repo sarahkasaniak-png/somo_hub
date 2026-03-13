@@ -56,10 +56,10 @@ export default function HomePage() {
 
       const [groupRes, oneOnOneRes, tutorsRes, communitiesRes] =
         await Promise.allSettled([
-          tuitionApi.getGroupSessions({ limit: 8 }),
-          tuitionApi.getOneOnOneSessions({ limit: 8 }),
-          tuitionApi.getFeaturedTutors(8),
-          tuitionApi.getCommunities({ limit: 8 }),
+          tuitionApi.getGroupSessions({ limit: 10 }),
+          tuitionApi.getOneOnOneSessions({ limit: 10 }),
+          tuitionApi.getFeaturedTutors(10),
+          tuitionApi.getCommunities({ limit: 10 }),
         ]);
 
       if (groupRes.status === "fulfilled" && groupRes.value.success) {
@@ -102,7 +102,7 @@ export default function HomePage() {
       const nextPage = groupPage + 1;
       const response = await tuitionApi.getGroupSessions({
         page: nextPage,
-        limit: 8,
+        limit: 10,
       });
 
       if (response.success && response.data?.sessions) {
@@ -112,7 +112,7 @@ export default function HomePage() {
         if (sessions.length > 0) {
           setGroupSessions((prev) => [...prev, ...sessions]);
           setGroupPage(nextPage);
-          setHasMoreGroup(sessions.length === 8);
+          setHasMoreGroup(sessions.length > 10);
         } else {
           setHasMoreGroup(false);
         }
@@ -127,7 +127,7 @@ export default function HomePage() {
       const nextPage = oneOnOnePage + 1;
       const response = await tuitionApi.getOneOnOneSessions({
         page: nextPage,
-        limit: 8,
+        limit: 10,
       });
 
       if (response.success && response.data?.sessions) {
@@ -286,7 +286,7 @@ export default function HomePage() {
             </div>
             <div className="flex items-center gap-1">
               <Timer className="w-3 h-3" />
-              <span>{duration * classesPerWeek}min</span>
+              <span>{Math.floor(duration * classesPerWeek)}min</span>
             </div>
           </div>
 
