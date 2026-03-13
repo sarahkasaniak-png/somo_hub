@@ -112,7 +112,7 @@ export default function HomePage() {
         if (sessions.length > 0) {
           setGroupSessions((prev) => [...prev, ...sessions]);
           setGroupPage(nextPage);
-          setHasMoreGroup(sessions.length > 10);
+          setHasMoreGroup(sessions.length === 10);
         } else {
           setHasMoreGroup(false);
         }
