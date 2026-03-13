@@ -102,7 +102,7 @@ export default function HomePage() {
       const nextPage = groupPage + 1;
       const response = await tuitionApi.getGroupSessions({
         page: nextPage,
-        limit: 10,
+        limit: 8,
       });
 
       if (response.success && response.data?.sessions) {
@@ -112,7 +112,7 @@ export default function HomePage() {
         if (sessions.length > 0) {
           setGroupSessions((prev) => [...prev, ...sessions]);
           setGroupPage(nextPage);
-          setHasMoreGroup(sessions.length === 10);
+          setHasMoreGroup(sessions.length === 8);
         } else {
           setHasMoreGroup(false);
         }
@@ -127,7 +127,7 @@ export default function HomePage() {
       const nextPage = oneOnOnePage + 1;
       const response = await tuitionApi.getOneOnOneSessions({
         page: nextPage,
-        limit: 10,
+        limit: 8,
       });
 
       if (response.success && response.data?.sessions) {
