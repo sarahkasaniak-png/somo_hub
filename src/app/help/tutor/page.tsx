@@ -921,7 +921,7 @@ export default function TutorHelpPage() {
 
         {/* Role Tabs */}
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-8">
+          {/* <nav className="flex space-x-8">
             <button
               onClick={() => setActiveTab("all")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -962,7 +962,7 @@ export default function TutorHelpPage() {
             >
               For Students
             </button>
-          </nav>
+          </nav> */}
         </div>
 
         {/* Help Sections */}
