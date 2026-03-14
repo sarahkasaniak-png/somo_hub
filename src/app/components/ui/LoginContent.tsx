@@ -22,6 +22,7 @@ import {
   CheckCircle,
   Mail,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { getPostLoginRedirect } from "@/lib/utils/redirectLogic";
@@ -47,7 +48,7 @@ export default function LoginContent({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [step, setStep] = useState(1); // 1: Login/Register, 2: OTP, 3: Registration Success
+  const [step, setStep] = useState(1); // 1: Login/Register, 2: OTP, 3: Registration Success, 4: Unverified User
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -73,6 +74,7 @@ export default function LoginContent({
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [otpSent, setOtpSent] = useState(false); // Track if OTP has been sent
+  const [unverifiedEmail, setUnverifiedEmail] = useState(""); // Store email for unverified users
 
   const {
     passwordLogin: authPasswordLogin,
@@ -137,6 +139,7 @@ export default function LoginContent({
     setNewPassword("");
     setConfirmNewPassword("");
     setForgotPasswordEmail("");
+    setUnverifiedEmail("");
     setOtp(["", "", "", ""]);
     setErrorEmail("");
     setErrorPassword("");
@@ -195,7 +198,15 @@ export default function LoginContent({
         }
       }
     } catch (err: any) {
+      // Check if error is about unverified email
       if (
+        err.message?.toLowerCase().includes("verify") ||
+        err.message?.toLowerCase().includes("verified") ||
+        err.message?.toLowerCase().includes("please verify your email")
+      ) {
+        setUnverifiedEmail(email);
+        setStep(4); // Show unverified user flow
+      } else if (
         err.message?.includes("not found") ||
         err.message?.includes("invalid")
       ) {
@@ -273,7 +284,42 @@ export default function LoginContent({
     setErrorOtp("");
 
     try {
-      if (forgotPasswordFlow && resetStep === 2) {
+      if (step === 4) {
+        // Unverified user verification
+        const result = await authVerifyOtp(
+          unverifiedEmail,
+          code,
+          "registration",
+        );
+
+        if (
+          result &&
+          ((result as any).verified === true ||
+            (result as any).success === true)
+        ) {
+          // Verification successful - now login the user
+          const loginResult = await authPasswordLogin(
+            unverifiedEmail,
+            password,
+          );
+
+          if (loginResult?.user) {
+            handleClose();
+            if (onSuccess) {
+              onSuccess();
+            } else if (redirectPath) {
+              router.push(redirectPath);
+            } else {
+              setTimeout(() => {
+                const path = getPostLoginRedirect(loginResult.status || null);
+                router.push(path);
+              }, 100);
+            }
+          }
+        } else {
+          setErrorOtp((result as any)?.message || "Invalid or expired OTP");
+        }
+      } else if (forgotPasswordFlow && resetStep === 2) {
         // Verify reset OTP - use forgotPasswordEmail
         const emailToVerify = forgotPasswordEmail || email;
         const result = await authVerifyResetOtp(emailToVerify, code);
@@ -396,6 +442,25 @@ export default function LoginContent({
     }
   };
 
+  /* ================= SEND OTP FOR UNVERIFIED USER ================= */
+  const handleResendVerificationOtp = async () => {
+    setResendLoading(true);
+    setErrorOtp("");
+    setOtp(["", "", "", ""]);
+
+    try {
+      await authSendOtp(unverifiedEmail, "registration");
+      setOtpSent(true);
+      otpRefs[0].current?.focus();
+      // Show success message with spam notice
+      alert("OTP sent! Please check your inbox or spam folder.");
+    } catch (err: any) {
+      setErrorOtp(err.message || "Failed to send OTP");
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const handleResend = async () => {
     setResendLoading(true);
     setErrorOtp("");
@@ -421,18 +486,6 @@ export default function LoginContent({
 
   /* ================= REGISTRATION SUCCESS HANDLER ================= */
   const handleRegistrationSuccess = () => {
-    // Option 1: Close modal and redirect (current behavior)
-    // handleClose();
-    // if (onSuccess) {
-    //   onSuccess();
-    // } else if (redirectPath) {
-    //   router.push(redirectPath);
-    // } else {
-    //   router.refresh();
-    // }
-
-    // Option 2: Stay in modal and go to login (alternative)
-
     setStep(1);
     setRegistrationSuccess(false);
     setIsRegistering(false);
@@ -459,7 +512,7 @@ export default function LoginContent({
 
   /* ================= FOCUS OTP INPUTS ================= */
   useEffect(() => {
-    if (step === 2 || resetStep === 2) {
+    if (step === 2 || step === 4 || resetStep === 2) {
       setTimeout(() => {
         otpRefs[0].current?.focus();
       }, 100);
@@ -467,6 +520,112 @@ export default function LoginContent({
   }, [step, resetStep]);
 
   /* ================= RENDER FUNCTIONS ================= */
+
+  /* ---------- UNVERIFIED USER STEP ---------- */
+  const renderUnverifiedUser = () => (
+    <div className="login mb-20 w-full">
+      <div className="text-center mb-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 mb-4">
+          <AlertTriangle className="w-8 h-8 text-yellow-600" />
+        </div>
+        <h1 className="text-2xl font-semibold text-yellow-700 mb-2">
+          Email Not Verified
+        </h1>
+        <p className="text-gray-600">
+          Your account ({truncateEmail(unverifiedEmail)}) has not been verified
+          yet. Please verify your email to continue.
+        </p>
+      </div>
+
+      {/* Spam folder notice - show when OTP is sent */}
+      {otpSent && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm">
+          <p className="text-yellow-800 flex items-start gap-2">
+            <Mail className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <span>
+              <strong>Didn't receive the email?</strong> Please check your spam
+              folder and mark as "Not Spam" to ensure future emails reach your
+              inbox.
+            </span>
+          </p>
+        </div>
+      )}
+
+      <div className="flex gap-2 justify-center items-center mb-4">
+        {[0, 1, 2, 3].map((index) => (
+          <Input
+            key={index}
+            ref={otpRefs[index]}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={1}
+            value={otp[index]}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^0-9]/g, "");
+              const newOtp = [...otp];
+              newOtp[index] = value;
+              setOtp(newOtp);
+              if (value.length === 1 && index < 3) {
+                otpRefs[index + 1].current?.focus();
+              }
+              if (newOtp.join("").length === 4) {
+                handleVerifyOtp(newOtp.join(""));
+              }
+            }}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Backspace" &&
+                otp[index].length === 0 &&
+                index > 0
+              ) {
+                otpRefs[index - 1].current?.focus();
+              }
+            }}
+            className="w-12 h-12 text-center border-2 border-zinc-300 text-xl"
+          />
+        ))}
+      </div>
+
+      {errorOtp && (
+        <div className="w-full flex justify-start items-center gap-1 mb-4">
+          <CircleAlertIcon className="text-error-text w-5 h-5" />
+          <p className="text-start text-sm text-error-text font-semibold">
+            {errorOtp}
+          </p>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 mt-6">
+        <button
+          onClick={handleResendVerificationOtp}
+          disabled={resendLoading}
+          className="w-full bg-main text-white text-[17px] p-3 rounded-md hover:bg-main/95 hover:ring-1 ring-main/95 hover:cursor-pointer transition disabled:opacity-60"
+        >
+          {resendLoading ? (
+            <span className="flex items-center justify-center">
+              <Loader2 className="animate-spin w-5 h-5 mr-2" />
+              Sending OTP...
+            </span>
+          ) : (
+            "Resend Verification OTP"
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            setStep(1);
+            setOtp(["", "", "", ""]);
+            setErrorOtp("");
+            setOtpSent(false);
+          }}
+          className="w-full bg-gray-100 text-gray-700 text-[17px] p-3 rounded-md hover:bg-gray-200 hover:cursor-pointer transition"
+        >
+          Back to Login
+        </button>
+      </div>
+    </div>
+  );
 
   /* ---------- REGISTRATION SUCCESS STEP ---------- */
   const renderRegistrationSuccess = () => (
@@ -981,6 +1140,10 @@ export default function LoginContent({
 
   /* ================= DETERMINE CONTENT ================= */
   const renderContent = () => {
+    if (step === 4) {
+      return renderUnverifiedUser();
+    }
+
     if (forgotPasswordFlow) {
       switch (resetStep) {
         case 1: // Email input only for forgot password
@@ -1010,6 +1173,10 @@ export default function LoginContent({
 
   /* ================= GET DIALOG TITLE ================= */
   const getDialogTitle = () => {
+    if (step === 4) {
+      return "Verify Your Email";
+    }
+
     if (forgotPasswordFlow) {
       switch (resetStep) {
         case 1:
@@ -1039,7 +1206,13 @@ export default function LoginContent({
 
   /* ================= HANDLE BACK BUTTON ================= */
   const handleBack = () => {
-    if (forgotPasswordFlow) {
+    if (step === 4) {
+      setStep(1);
+      setOtp(["", "", "", ""]);
+      setErrorOtp("");
+      setOtpSent(false);
+      setUnverifiedEmail("");
+    } else if (forgotPasswordFlow) {
       if (resetStep === 2) {
         setResetStep(1);
       } else if (resetStep === 3) {
@@ -1059,6 +1232,7 @@ export default function LoginContent({
   };
 
   const showBackButton =
+    step === 4 ||
     (forgotPasswordFlow && resetStep > 1) ||
     (!forgotPasswordFlow && (step === 2 || step === 3));
 
