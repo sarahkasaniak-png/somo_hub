@@ -412,7 +412,7 @@ export default function StudentPaymentsPage() {
             View and manage all your payments and transactions
           </p>
         </div>
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -430,7 +430,7 @@ export default function StudentPaymentsPage() {
             <CreditCard className="w-4 h-4 mr-2" />
             Payment Methods
           </Link>
-        </div>
+        </div> */}
       </div>
 
       {/* Summary Cards */}
