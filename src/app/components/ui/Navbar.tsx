@@ -611,7 +611,7 @@ export default function Navbar() {
             <div className="flex justify-center items-center gap-3">
               {!user ? (
                 <span
-                  className="hidden md:flex justify-center items-center font-semibold cursor-pointer hover:bg-zinc-200 py-2 px-3 rounded-3xl"
+                  className=" md:flex justify-center items-center font-semibold cursor-pointer hover:bg-zinc-200 py-2 px-3 rounded-3xl"
                   onClick={() => handleProtectedNavigation("/onboarding/tutor")}
                 >
                   Become a Tutor
@@ -620,7 +620,7 @@ export default function Navbar() {
                 <>
                   {!user?.roles?.includes("tutor") && (
                     <span
-                      className="hidden md:flex justify-center items-center font-semibold cursor-pointer hover:bg-zinc-200 py-2 px-3 rounded-3xl"
+                      className=" md:flex justify-center items-center font-semibold cursor-pointer hover:bg-zinc-200 py-2 px-3 rounded-3xl"
                       onClick={() =>
                         handleProtectedNavigation("/onboarding/tutor")
                       }
