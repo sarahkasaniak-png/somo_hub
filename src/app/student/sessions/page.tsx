@@ -523,7 +523,7 @@ export default function StudentSessionsPage() {
               : "You haven't enrolled in any sessions yet. Browse our courses to get started!"}
           </p>
           <Link
-            href="/courses"
+            href="/"
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
             Browse Courses
