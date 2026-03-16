@@ -525,7 +525,7 @@ export default function StudentDashboard() {
               <RefreshCw className="w-5 h-5 text-gray-600" />
             </button>
             <Link
-              href="/courses"
+              href="/"
               className="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg shadow-purple-600/25"
             >
               <BookOpen className="w-4 h-4 mr-2" />
@@ -724,7 +724,7 @@ export default function StudentDashboard() {
                       You don't have any scheduled classes yet
                     </p>
                     <Link
-                      href="/courses"
+                      href="/"
                       className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                     >
                       Browse Courses
@@ -850,7 +850,7 @@ export default function StudentDashboard() {
                       Start your learning journey by enrolling in a course
                     </p>
                     <Link
-                      href="/courses"
+                      href="/"
                       className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                     >
                       Browse Courses
@@ -990,7 +990,7 @@ export default function StudentDashboard() {
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <Link
-                  href="/courses"
+                  href="/"
                   className="p-3 bg-blue-50 rounded-lg text-center hover:bg-blue-100 transition-colors"
                 >
                   <BookOpen className="w-5 h-5 mx-auto mb-1 text-blue-600" />
