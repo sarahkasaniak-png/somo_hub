@@ -1,7 +1,7 @@
 // src/app/contact/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import client from "@/lib/api/client";
 import {
@@ -17,22 +17,75 @@ import {
   CreditCard,
   Shield,
 } from "lucide-react";
+import { z } from "zod";
+
+// Create Zod schema matching the Joi validation
+const contactSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name cannot exceed 100 characters"),
+
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
+
+  subject: z
+    .string()
+    .min(1, "Subject is required")
+    .min(3, "Subject must be at least 3 characters")
+    .max(200, "Subject cannot exceed 200 characters"),
+
+  category: z.enum(
+    [
+      "general",
+      "support",
+      "tutor",
+      "community",
+      "payment",
+      "report",
+      "feedback",
+      "other",
+    ],
+    {
+      errorMap: () => ({ message: "Please select a valid category" }),
+    },
+  ),
+
+  message: z
+    .string()
+    .min(1, "Message is required")
+    .min(10, "Message must be at least 10 characters")
+    .max(5000, "Message cannot exceed 5000 characters"),
+});
+
+// Infer TypeScript type from schema
+type ContactFormData = z.infer<typeof contactSchema>;
 
 // Create a contact API interface
 interface ContactResponse {
   success: boolean;
   message?: string;
-  // add any other fields your API returns
 }
 
 // Create a contact API interface with proper typing
 const contactApi = {
-  sendMessage: (data: any): Promise<ContactResponse> =>
+  sendMessage: (data: ContactFormData): Promise<ContactResponse> =>
     client.post<ContactResponse>("/contact", data),
 };
 
+interface FormErrors {
+  name?: string[];
+  email?: string[];
+  subject?: string[];
+  category?: string[];
+  message?: string[];
+}
+
 export default function ContactPage() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ContactFormData>({
     name: "",
     email: "",
     subject: "",
@@ -40,11 +93,82 @@ export default function ContactPage() {
     message: "",
   });
 
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<
     "idle" | "success" | "error"
   >("idle");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Helper function to check if form has any errors
+  const hasErrors = () => {
+    return Object.values(errors).some(
+      (errorArray) => errorArray && errorArray.length > 0,
+    );
+  };
+
+  // Validate form whenever formData changes
+  useEffect(() => {
+    if (Object.keys(touched).length > 0) {
+      const formErrors = validateForm();
+      setErrors(formErrors);
+    }
+  }, [formData]);
+
+  const validateField = (name: keyof ContactFormData, value: string) => {
+    try {
+      const fieldSchema = contactSchema.shape[name];
+
+      if (name === "category") {
+        fieldSchema.parse(value);
+      } else {
+        fieldSchema.parse(value);
+      }
+      return undefined;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return error.errors.map((e) => e.message);
+      }
+      return ["Invalid value"];
+    }
+  };
+
+  const validateForm = () => {
+    try {
+      contactSchema.parse(formData);
+      return {};
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const formErrors: FormErrors = {};
+        error.errors.forEach((err) => {
+          const field = err.path[0] as keyof FormErrors;
+          if (!formErrors[field]) {
+            formErrors[field] = [];
+          }
+          formErrors[field]?.push(err.message);
+        });
+        return formErrors;
+      }
+      return {};
+    }
+  };
+
+  const handleBlur = (
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+
+    // Validate single field on blur
+    const fieldError = validateField(
+      name as keyof ContactFormData,
+      formData[name as keyof ContactFormData],
+    );
+    setErrors((prev) => ({ ...prev, [name]: fieldError }));
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -53,7 +177,8 @@ export default function ContactPage() {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
+
+    // Clear submit error when user starts typing
     if (submitStatus === "error") {
       setSubmitStatus("idle");
       setErrorMessage("");
@@ -62,6 +187,23 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Mark all fields as touched
+    const allTouched = Object.keys(formData).reduce(
+      (acc, key) => ({ ...acc, [key]: true }),
+      {},
+    );
+    setTouched(allTouched);
+
+    // Validate all fields
+    const formErrors = validateForm();
+    setErrors(formErrors);
+
+    // If there are errors, don't submit
+    if (Object.keys(formErrors).length > 0) {
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitStatus("idle");
     setErrorMessage("");
@@ -79,6 +221,8 @@ export default function ContactPage() {
           category: "general",
           message: "",
         });
+        setErrors({});
+        setTouched({});
       } else {
         throw new Error(response.message || "Failed to send message");
       }
@@ -93,6 +237,16 @@ export default function ContactPage() {
     }
   };
 
+  const getInputClassName = (fieldName: keyof FormErrors) => {
+    const baseClass =
+      "w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-colors";
+    const errorClass =
+      errors[fieldName] && errors[fieldName]?.length && touched[fieldName]
+        ? "border-red-500 bg-red-50"
+        : "border-gray-300";
+    return `${baseClass} ${errorClass}`;
+  };
+
   const categories = [
     { value: "general", label: "General Inquiry" },
     { value: "support", label: "Technical Support" },
@@ -104,25 +258,6 @@ export default function ContactPage() {
     { value: "other", label: "Other" },
   ];
 
-  const contactMethods = [
-    {
-      icon: <Mail className="w-5 h-5" />,
-      title: "Email",
-      details: "support@somohub.com",
-      subdetails: "info@somohub.com",
-      action: "mailto:support@somohub.com",
-      color: "purple",
-    },
-    {
-      icon: <Phone className="w-5 h-5" />,
-      title: "Phone",
-      details: "+254 700 000 000",
-      subdetails: "Mon-Fri, 8am-6pm EAT",
-      action: "tel:+254700000000",
-      color: "blue",
-    },
-  ];
-
   const faqs = [
     {
       icon: <GraduationCap className="w-4 h-4" />,
@@ -131,13 +266,6 @@ export default function ContactPage() {
         "Visit our Tutor Onboarding page and complete the application process. The onboarding fee is KES 1,160 (including VAT).",
       link: "/onboarding/tutor",
     },
-    // {
-    //   icon: <Users className="w-4 h-4" />,
-    //   question: "How do I join a community?",
-    //   answer:
-    //     "Communities are coming soon! Join our waitlist to be notified when the feature launches.",
-    //   link: "/community",
-    // },
     {
       icon: <CreditCard className="w-4 h-4" />,
       question: "Having payment issues?",
@@ -169,28 +297,6 @@ export default function ContactPage() {
           </p>
         </div>
 
-        {/* Contact Methods - 2 columns */}
-        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mb-12">
-          {contactMethods.map((method, index) => (
-            <a
-              key={index}
-              href={method.action}
-              className="bg-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all group"
-            >
-              <div
-                className={`w-12 h-12 bg-${method.color}-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-${method.color}-100 transition-colors`}
-              >
-                <div className={`text-${method.color}-600`}>{method.icon}</div>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                {method.title}
-              </h3>
-              <p className="text-gray-900 mb-1">{method.details}</p>
-              <p className="text-sm text-gray-500">{method.subdetails}</p>
-            </a>
-          ))}
-        </div> */}
-
         {/* Contact Form & Info */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
           {/* Form - Takes 2 columns */}
@@ -219,7 +325,7 @@ export default function ContactPage() {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                   {/* Name and Email Row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -235,11 +341,19 @@ export default function ContactPage() {
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-colors"
+                        className={getInputClassName("name")}
                         placeholder="John Doe"
                         disabled={isSubmitting}
                       />
+                      {errors.name &&
+                        errors.name.length > 0 &&
+                        touched.name && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.name[0]}
+                          </p>
+                        )}
                     </div>
 
                     <div>
@@ -255,11 +369,19 @@ export default function ContactPage() {
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-colors"
+                        className={getInputClassName("email")}
                         placeholder="john@example.com"
                         disabled={isSubmitting}
                       />
+                      {errors.email &&
+                        errors.email.length > 0 &&
+                        touched.email && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.email[0]}
+                          </p>
+                        )}
                     </div>
                   </div>
 
@@ -278,11 +400,19 @@ export default function ContactPage() {
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-colors"
+                        className={getInputClassName("subject")}
                         placeholder="What is this about?"
                         disabled={isSubmitting}
                       />
+                      {errors.subject &&
+                        errors.subject.length > 0 &&
+                        touched.subject && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.subject[0]}
+                          </p>
+                        )}
                     </div>
 
                     <div>
@@ -297,8 +427,9 @@ export default function ContactPage() {
                         name="category"
                         value={formData.category}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-colors bg-white"
+                        className={getInputClassName("category")}
                         disabled={isSubmitting}
                       >
                         {categories.map((cat) => (
@@ -307,6 +438,13 @@ export default function ContactPage() {
                           </option>
                         ))}
                       </select>
+                      {errors.category &&
+                        errors.category.length > 0 &&
+                        touched.category && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.category[0]}
+                          </p>
+                        )}
                     </div>
                   </div>
 
@@ -323,12 +461,20 @@ export default function ContactPage() {
                       name="message"
                       value={formData.message}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
                       rows={5}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-colors resize-none"
+                      className={getInputClassName("message")}
                       placeholder="How can we help you?"
                       disabled={isSubmitting}
                     />
+                    {errors.message &&
+                      errors.message.length > 0 &&
+                      touched.message && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.message[0]}
+                        </p>
+                      )}
                   </div>
 
                   {/* Submit Button */}
@@ -336,7 +482,7 @@ export default function ContactPage() {
                     <p className="text-xs text-gray-400">* Required fields</p>
                     <button
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || hasErrors()}
                       className="px-6 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       {isSubmitting ? (
@@ -372,7 +518,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Sidebar - Takes 1 column */}
+          {/* Sidebar - Takes 1 column (unchanged) */}
           <div className="lg:col-span-1 space-y-6">
             {/* Quick Help */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -390,15 +536,6 @@ export default function ContactPage() {
                     Visit our Help Center
                   </Link>
                 </li>
-                {/* <li>
-                  <Link
-                    href="/faq"
-                    className="text-sm text-gray-600 hover:text-purple-600 flex items-center gap-2"
-                  >
-                    <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                    Frequently Asked Questions
-                  </Link>
-                </li> */}
                 <li>
                   <Link
                     href="/onboarding/tutor"
