@@ -145,6 +145,14 @@ export default function TutorsContent() {
     }).format(amount);
   };
 
+  // Helper function to capitalize names properly
+  const capitalizeName = (firstName: string, lastName: string): string => {
+    const capitalize = (str: string) =>
+      str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
+
+    return `${capitalize(firstName)} ${capitalize(lastName)}`.trim();
+  };
+
   // Category display mapping
   const getCategoryDisplay = (category: string) => {
     const map: Record<string, string> = {
@@ -170,6 +178,8 @@ export default function TutorsContent() {
   };
 
   const TutorCard = ({ tutor }: { tutor: Tutor }) => {
+    const fullName = capitalizeName(tutor.first_name, tutor.last_name);
+
     return (
       <div
         onClick={() => router.push(`/tutors/${tutor.id}`)}
@@ -181,7 +191,7 @@ export default function TutorsContent() {
               {tutor.avatar_url ? (
                 <img
                   src={tutor.avatar_url}
-                  alt={`${tutor.first_name} ${tutor.last_name}`}
+                  alt={fullName}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -192,7 +202,7 @@ export default function TutorsContent() {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 group-hover:text-main transition-colors">
-                {tutor.first_name} {tutor.last_name}
+                {fullName}
               </h3>
               <p className="text-sm text-gray-500 line-clamp-1">
                 {tutor.headline || "Tutor"}

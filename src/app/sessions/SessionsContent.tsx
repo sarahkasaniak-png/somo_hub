@@ -1,4 +1,4 @@
-// src/app/sessions/page.tsx
+// src/app/sessions/SessionsContent.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -251,6 +251,17 @@ export default function SessionsContent() {
     const classesPerWeek = parseNumber(session.classes_per_week) || 1;
     const duration = parseNumber(session.class_duration_minutes) || 90;
 
+    // Helper function to capitalize names properly
+    const capitalizeName = (name: string): string => {
+      if (!name) return "";
+      return name
+        .split(" ")
+        .map(
+          (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+        )
+        .join(" ");
+    };
+
     const formatLevel = (level?: string) => {
       if (!level) return null;
       const levelMap: Record<string, string> = {
@@ -266,6 +277,10 @@ export default function SessionsContent() {
 
     const courseLevel = formatLevel(session.course_level);
 
+    // Capitalize tutor name and session name
+    const capitalizedTutorName = capitalizeName(session.tutor_name || "Tutor");
+    const capitalizedSessionName = capitalizeName(session.name);
+
     return (
       <div
         onClick={() => router.push(`/tuitions/${session.id}`)}
@@ -276,7 +291,7 @@ export default function SessionsContent() {
             {session.tutor_avatar ? (
               <img
                 src={session.tutor_avatar}
-                alt={session.tutor_name}
+                alt={capitalizedTutorName}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -288,7 +303,7 @@ export default function SessionsContent() {
 
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate">
-              {session.tutor_name || "Tutor"}
+              {capitalizedTutorName}
             </p>
             <div className="flex items-center gap-1 flex-wrap">
               <span
@@ -319,7 +334,7 @@ export default function SessionsContent() {
 
         <div className="p-3">
           <h3 className="font-semibold text-gray-800 text-sm line-clamp-1 mb-1">
-            {session.name}
+            {capitalizedSessionName}
           </h3>
 
           <p className="text-xs text-gray-500 line-clamp-2 mb-2">
@@ -365,6 +380,17 @@ export default function SessionsContent() {
     const classesPerWeek = parseNumber(session.classes_per_week) || 1;
     const duration = parseNumber(session.class_duration_minutes) || 90;
 
+    // Helper function to capitalize names properly
+    const capitalizeName = (name: string): string => {
+      if (!name) return "";
+      return name
+        .split(" ")
+        .map(
+          (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+        )
+        .join(" ");
+    };
+
     const formatLevel = (level?: string) => {
       if (!level) return null;
       const levelMap: Record<string, string> = {
@@ -380,6 +406,10 @@ export default function SessionsContent() {
 
     const courseLevel = formatLevel(session.course_level);
 
+    // Capitalize tutor name and session name
+    const capitalizedTutorName = capitalizeName(session.tutor_name || "Tutor");
+    const capitalizedSessionName = capitalizeName(session.name);
+
     return (
       <div
         onClick={() => router.push(`/tuitions/${session.id}`)}
@@ -390,7 +420,7 @@ export default function SessionsContent() {
             {session.tutor_avatar ? (
               <img
                 src={session.tutor_avatar}
-                alt={session.tutor_name}
+                alt={capitalizedTutorName}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -417,7 +447,7 @@ export default function SessionsContent() {
                 </span>
               )}
               <span className="text-sm font-medium text-gray-900">
-                {session.tutor_name || "Tutor"}
+                {capitalizedTutorName}
               </span>
               {tutorRating > 0 && (
                 <div className="flex items-center gap-0.5">
@@ -429,7 +459,9 @@ export default function SessionsContent() {
               )}
             </div>
 
-            <h3 className="font-semibold text-gray-800 mb-1">{session.name}</h3>
+            <h3 className="font-semibold text-gray-800 mb-1">
+              {capitalizedSessionName}
+            </h3>
 
             <p className="text-sm text-gray-500 line-clamp-1 mb-2">
               {session.course_title || session.description}

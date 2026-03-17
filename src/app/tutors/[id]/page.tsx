@@ -96,43 +96,66 @@ export default function TutorProfilePage() {
     }).format(amount);
   };
 
-  const SessionCard = ({ session }: { session: TutorSession }) => (
-    <div
-      onClick={() => router.push(`/tuitions/${session.id}`)}
-      className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all cursor-pointer"
-    >
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="font-semibold text-gray-900">{session.name}</h3>
-        <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${
-            session.session_type === "one_on_one"
-              ? "bg-purple-100 text-purple-700"
-              : "bg-blue-100 text-blue-700"
-          }`}
-        >
-          {session.session_type === "one_on_one" ? "1-on-1" : "Group"}
-        </span>
-      </div>
-      <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-        {session.course_title}
-      </p>
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-1 text-gray-500">
-          <Calendar className="w-4 h-4" />
-          <span>{new Date(session.start_date).toLocaleDateString()}</span>
-        </div>
-        <div className="flex items-center gap-1 text-gray-500">
-          <Users className="w-4 h-4" />
-          <span>
-            {session.current_enrollment}/{session.max_students}
+  // Helper function to capitalize names properly
+  const capitalizeName = (firstName: string, lastName: string): string => {
+    const capitalize = (str: string) =>
+      str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
+
+    return `${capitalize(firstName)} ${capitalize(lastName)}`.trim();
+  };
+
+  // Helper function to capitalize session names
+  const capitalizeSessionName = (name: string): string => {
+    if (!name) return "";
+    return name
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  const SessionCard = ({ session }: { session: TutorSession }) => {
+    const capitalizedSessionName = capitalizeSessionName(session.name);
+
+    return (
+      <div
+        onClick={() => router.push(`/tuitions/${session.id}`)}
+        className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all cursor-pointer"
+      >
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-semibold text-gray-900">
+            {capitalizedSessionName}
+          </h3>
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              session.session_type === "one_on_one"
+                ? "bg-purple-100 text-purple-700"
+                : "bg-blue-100 text-blue-700"
+            }`}
+          >
+            {session.session_type === "one_on_one" ? "1-on-1" : "Group"}
           </span>
         </div>
-        <span className="font-semibold text-gray-900">
-          {formatCurrency(session.fee_amount, session.fee_currency)}
-        </span>
+        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+          {session.course_title}
+        </p>
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-1 text-gray-500">
+            <Calendar className="w-4 h-4" />
+            <span>{new Date(session.start_date).toLocaleDateString()}</span>
+          </div>
+          <div className="flex items-center gap-1 text-gray-500">
+            <Users className="w-4 h-4" />
+            <span>
+              {session.current_enrollment}/{session.max_students}
+            </span>
+          </div>
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(session.fee_amount, session.fee_currency)}
+          </span>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -169,6 +192,8 @@ export default function TutorProfilePage() {
     );
   }
 
+  const fullName = capitalizeName(tutor.first_name, tutor.last_name);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -185,9 +210,7 @@ export default function TutorProfilePage() {
             Tutors
           </Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-900 font-medium truncate">
-            {tutor.first_name} {tutor.last_name}
-          </span>
+          <span className="text-gray-900 font-medium truncate">{fullName}</span>
         </div>
 
         {/* Profile Header */}
@@ -202,7 +225,7 @@ export default function TutorProfilePage() {
                 {tutor.avatar_url ? (
                   <img
                     src={tutor.avatar_url}
-                    alt={`${tutor.first_name} ${tutor.last_name}`}
+                    alt={fullName}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -215,7 +238,7 @@ export default function TutorProfilePage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h1 className="text-2xl font-semibold text-gray-900">
-                      {tutor.first_name} {tutor.last_name}
+                      {fullName}
                     </h1>
                     <p className="text-gray-500 mt-1">{tutor.headline}</p>
                   </div>

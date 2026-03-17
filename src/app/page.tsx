@@ -182,8 +182,6 @@ export default function HomePage() {
   };
 
   // Compact Session Card with prominent tutor avatar
-  // src/app/page.tsx - Update the SessionCard component
-
   const SessionCard = ({ session }: { session: TutorSession }) => {
     const tutorRating = parseRating(session.tutor_rating);
     const feeAmount = parseNumber(session.fee_amount);
@@ -191,6 +189,17 @@ export default function HomePage() {
     const maxStudents = parseNumber(session.max_students);
     const classesPerWeek = parseNumber(session.classes_per_week) || 1;
     const duration = parseNumber(session.class_duration_minutes) || 90;
+
+    // Helper function to capitalize names properly
+    const capitalizeName = (name: string): string => {
+      if (!name) return "";
+      return name
+        .split(" ")
+        .map(
+          (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+        )
+        .join(" ");
+    };
 
     // Format level for display
     const formatLevel = (level?: string) => {
@@ -210,6 +219,10 @@ export default function HomePage() {
 
     const courseLevel = formatLevel(session.course_level);
 
+    // Capitalize tutor name and session name
+    const capitalizedTutorName = capitalizeName(session.tutor_name || "Tutor");
+    const capitalizedSessionName = capitalizeName(session.name);
+
     return (
       <div
         onClick={() => router.push(`/tuitions/${session.id}`)}
@@ -222,7 +235,7 @@ export default function HomePage() {
             {session.tutor_avatar ? (
               <img
                 src={session.tutor_avatar}
-                alt={session.tutor_name}
+                alt={capitalizedTutorName}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -235,7 +248,7 @@ export default function HomePage() {
           {/* Tutor Name and Session Type */}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate">
-              {session.tutor_name || "Tutor"}
+              {capitalizedTutorName}
             </p>
             <div className="flex items-center gap-1 flex-wrap">
               <span
@@ -267,7 +280,7 @@ export default function HomePage() {
         {/* Session Content */}
         <div className="p-3">
           <h3 className="font-semibold text-gray-800 text-sm md:text-md line-clamp-1 mb-1">
-            {session.name}
+            {capitalizedSessionName}
           </h3>
 
           <p className="text-xs text-gray-500 line-clamp-2 mb-2">
@@ -314,6 +327,16 @@ export default function HomePage() {
     const tutorRating = parseRating(tutor.rating);
     const hourlyRate = parseNumber(tutor.hourly_rate);
 
+    // Helper function to capitalize names properly
+    const capitalizeName = (firstName: string, lastName: string): string => {
+      const capitalize = (str: string) =>
+        str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
+
+      return `${capitalize(firstName)} ${capitalize(lastName)}`.trim();
+    };
+
+    const fullName = capitalizeName(tutor.first_name, tutor.last_name);
+
     return (
       <div
         onClick={() => router.push(`/tutors/${tutor.id}`)}
@@ -326,7 +349,7 @@ export default function HomePage() {
               {tutor.avatar_url ? (
                 <img
                   src={tutor.avatar_url}
-                  alt={`${tutor.first_name} ${tutor.last_name}`}
+                  alt={fullName}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -339,7 +362,7 @@ export default function HomePage() {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-gray-900 group-hover:text-purple-600 transition-colors truncate">
-                {tutor.first_name} {tutor.last_name}
+                {fullName}
               </h3>
               <p className="text-xs text-gray-500 truncate">
                 {tutor.headline || "Tutor"}
