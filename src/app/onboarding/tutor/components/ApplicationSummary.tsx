@@ -540,15 +540,14 @@ export default function ApplicationSummary({
             <div>
               <p className="text-yellow-700">
                 An application fee of{" "}
-                <span className="font-bold">KES 1,000 + 16% vat</span> is
-                required
+                <span className="font-bold">KES 500t</span> is required
               </p>
               <p className="text-sm text-yellow-600 mt-1">
                 This fee covers the cost of processing and verification
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-yellow-800">KES 1,160</p>
+              <p className="text-2xl font-bold text-yellow-800">KES 500</p>
             </div>
           </div>
 
@@ -592,7 +591,7 @@ export default function ApplicationSummary({
               </div>
 
               <PaystackPayment
-                amount={1160}
+                amount={500}
                 email={userEmail}
                 applicationId={application.id}
                 onPaymentSuccess={handlePaymentSuccess}
