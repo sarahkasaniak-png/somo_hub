@@ -6,12 +6,10 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/app/context/AuthContext";
-import { useFavorites } from "@/app/context/FavoritesContext";
 import tuitionApi from "@/lib/api/tuition";
+import wishlistApi from "@/lib/api/wishlist";
 import paymentApi from "@/lib/api/payment";
 import { TutorSession } from "@/types/tuition.types";
-import FavoriteButton from "@/app/components/FavoriteButton";
-import ShareButton from "@/app/components/ShareButton";
 import Login from "@/app/components/ui/Login";
 import {
   Calendar,
@@ -33,6 +31,15 @@ import {
   CreditCard,
   Smartphone,
   Building,
+  Heart,
+  Share2,
+  Check,
+  Copy,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Mail as MailIcon,
+  Link2,
 } from "lucide-react";
 
 interface PaymentInitResponse {
@@ -43,6 +50,7 @@ interface PaymentInitResponse {
   };
   message?: string;
 }
+
 // Payment Modal Component
 const PaymentModal = ({
   isOpen,
@@ -81,7 +89,6 @@ const PaymentModal = ({
   const initializePaystackPayment = async () => {
     setProcessing(true);
     try {
-      // Initialize payment on backend - Paystack handles all payment methods
       const response = (await paymentApi.initializePayment({
         amount,
         currency,
@@ -98,12 +105,10 @@ const PaymentModal = ({
       if (response.success && response.data) {
         const { authorization_url, reference } = response.data;
 
-        // Store reference in session storage to verify after redirect
         sessionStorage.setItem("pending_payment_reference", reference);
         sessionStorage.setItem("pending_session_id", sessionId.toString());
         sessionStorage.setItem("pending_payment_type", "session_enrollment");
 
-        // Redirect to Paystack - Paystack shows appropriate UI for selected method
         window.location.href = authorization_url;
       } else {
         toast.error(response.message || "Failed to initialize payment");
@@ -133,7 +138,6 @@ const PaymentModal = ({
         </div>
 
         <div className="p-6">
-          {/* Amount */}
           <div className="mb-6 p-4 bg-purple-50 rounded-xl">
             <p className="text-sm text-purple-600 mb-1">Amount to Pay</p>
             <p className="text-2xl font-bold text-gray-900">
@@ -145,7 +149,6 @@ const PaymentModal = ({
             </p>
           </div>
 
-          {/* Payment Methods */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Select Payment Method
@@ -220,7 +223,6 @@ const PaymentModal = ({
             </div>
           </div>
 
-          {/* Contact Information */}
           <div className="space-y-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -256,7 +258,6 @@ const PaymentModal = ({
             )}
           </div>
 
-          {/* Payment Button */}
           <button
             onClick={initializePaystackPayment}
             disabled={
@@ -293,11 +294,186 @@ const PaymentModal = ({
   );
 };
 
+// Share Modal Component
+const ShareModal = ({
+  isOpen,
+  onClose,
+  title,
+  description,
+  sessionId,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  description?: string;
+  sessionId: number;
+}) => {
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  const getShareUrl = () => {
+    return `${window.location.origin}/tuitions/${sessionId}`;
+  };
+
+  const getShareTitle = () => {
+    return `${title} - Tuition on SomoHub`;
+  };
+
+  const getShareText = () => {
+    return `Check out this tuition: ${title} on SomoHub! ${description || "Join this session today."}`;
+  };
+
+  const shareOnSocial = (platform: string) => {
+    const url = getShareUrl();
+    const text = getShareText();
+    const title = getShareTitle();
+
+    let shareUrl = "";
+
+    switch (platform) {
+      case "facebook":
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        break;
+      case "twitter":
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        break;
+      case "linkedin":
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+        break;
+      case "email":
+        shareUrl = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text + "\n\n" + url)}`;
+        break;
+      case "whatsapp":
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(text + " " + url)}`;
+        break;
+      default:
+        return;
+    }
+
+    window.open(shareUrl, "_blank", "noopener,noreferrer,width=600,height=400");
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+      toast.success("Link copied to clipboard!");
+    } catch (err) {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6 relative animate-fadeIn">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          Share this tuition
+        </h3>
+        <p className="text-gray-500 mb-6">
+          Share this session with friends and classmates
+        </p>
+
+        <div className="mb-6">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 truncate">
+              {getShareUrl()}
+            </div>
+            <button
+              onClick={copyToClipboard}
+              className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              title="Copy link"
+            >
+              {copySuccess ? (
+                <Check className="w-5 h-5" />
+              ) : (
+                <Copy className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-5 gap-2">
+          <button
+            onClick={() => shareOnSocial("facebook")}
+            className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+              <Facebook className="w-5 h-5 text-blue-600" />
+            </div>
+            <span className="text-xs text-gray-600">Facebook</span>
+          </button>
+
+          <button
+            onClick={() => shareOnSocial("twitter")}
+            className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center group-hover:bg-sky-200 transition-colors">
+              <Twitter className="w-5 h-5 text-sky-600" />
+            </div>
+            <span className="text-xs text-gray-600">X</span>
+          </button>
+
+          <button
+            onClick={() => shareOnSocial("linkedin")}
+            className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+              <Linkedin className="w-5 h-5 text-blue-700" />
+            </div>
+            <span className="text-xs text-gray-600">LinkedIn</span>
+          </button>
+
+          <button
+            onClick={() => shareOnSocial("whatsapp")}
+            className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+              <svg
+                className="w-5 h-5 text-green-600"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.198-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+              </svg>
+            </div>
+            <span className="text-xs text-gray-600">WhatsApp</span>
+          </button>
+
+          <button
+            onClick={() => shareOnSocial("email")}
+            className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+              <MailIcon className="w-5 h-5 text-gray-600" />
+            </div>
+            <span className="text-xs text-gray-600">Email</span>
+          </button>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full mt-6 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function TuitionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { isFavorite } = useFavorites();
   const [session, setSession] = useState<TutorSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
@@ -313,6 +489,12 @@ export default function TuitionDetailPage() {
     amount: number;
     currency: string;
   } | null>(null);
+
+  // Love/Share states
+  const [isLoved, setIsLoved] = useState(false);
+  const [loveLoading, setLoveLoading] = useState(false);
+  const [loveCount, setLoveCount] = useState(0);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const ITEMS_PER_PAGE = 10;
   const sessionId = parseInt(params.id as string);
@@ -332,6 +514,8 @@ export default function TuitionDetailPage() {
   useEffect(() => {
     if (sessionId) {
       fetchSessionDetails();
+      checkIfLoved();
+      fetchLoveCount();
     }
   }, [sessionId]);
 
@@ -339,6 +523,8 @@ export default function TuitionDetailPage() {
   useEffect(() => {
     if (!authLoading && sessionId) {
       fetchSessionDetails();
+      checkIfLoved();
+      fetchLoveCount();
     }
   }, [authLoading, user?.uuid, sessionId]);
 
@@ -347,15 +533,12 @@ export default function TuitionDetailPage() {
       setEnrolling(true);
       toast.loading("Verifying payment...", { id: "payment-verification" });
 
-      // Add a small delay to allow webhook to process
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Verify payment on backend
       const verifyResponse = await paymentApi.verifyPayment(reference);
 
       if (verifyResponse.success) {
         if (verifyResponse.data?.status === "success") {
-          // Payment successful, proceed with enrollment
           const enrollResponse = await tuitionApi.enrollInSession(
             sessionId,
             reference,
@@ -368,9 +551,8 @@ export default function TuitionDetailPage() {
                 id: "payment-verification",
               },
             );
-            fetchSessionDetails(); // Refresh to update enrollment status
+            fetchSessionDetails();
 
-            // Clean up URL
             window.history.replaceState(
               {},
               document.title,
@@ -393,6 +575,76 @@ export default function TuitionDetailPage() {
       });
     } finally {
       setEnrolling(false);
+    }
+  };
+
+  // Check if session is in user's wishlist
+  const checkIfLoved = async () => {
+    if (!user) {
+      setIsLoved(false);
+      return;
+    }
+
+    try {
+      // FIXED: Use checkSession instead of checkTutor
+      const response = await wishlistApi.checkSession(sessionId);
+      if (response.data && typeof response.data.isLoved === "boolean") {
+        setIsLoved(response.data.isLoved);
+      } else {
+        setIsLoved(false);
+      }
+    } catch (error) {
+      console.error("Error checking wishlist status:", error);
+      setIsLoved(false);
+    }
+  };
+
+  // Fetch love count
+  const fetchLoveCount = async () => {
+    try {
+      // FIXED: Use getSessionLoveCount instead of getTutorLoveCount
+      const response = await wishlistApi.getSessionLoveCount(sessionId);
+      if (response.data && typeof response.data.count === "number") {
+        setLoveCount(response.data.count);
+      } else {
+        setLoveCount(0);
+      }
+    } catch (error) {
+      console.error("Error fetching love count:", error);
+      setLoveCount(0);
+    }
+  };
+
+  // Toggle love/favorite
+  const toggleLove = async () => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (!session) return;
+
+    try {
+      setLoveLoading(true);
+
+      if (isLoved) {
+        // FIXED: Use removeSession instead of removeTutor
+        await wishlistApi.removeSession(sessionId);
+        setIsLoved(false);
+        setLoveCount((prev) => Math.max(0, prev - 1));
+        toast.success("Removed from favorites");
+      } else {
+        // FIXED: Use addSession instead of addTutor
+        await wishlistApi.addSession(sessionId);
+        setIsLoved(true);
+        setLoveCount((prev) => prev + 1);
+        toast.success("Added to favorites");
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast.error("Failed to update favorites");
+    } finally {
+      setLoveLoading(false);
     }
   };
 
@@ -431,7 +683,6 @@ export default function TuitionDetailPage() {
       return;
     }
 
-    // Check enrollment eligibility if user is logged in
     if (user && (user.uuid || user.id)) {
       setCheckingEligibility(true);
 
@@ -439,12 +690,9 @@ export default function TuitionDetailPage() {
         const eligibilityRes =
           await tuitionApi.checkEnrollmentEligibility(sessionId);
 
-        console.log("eligibilityRes", eligibilityRes);
-
         if (eligibilityRes.success && eligibilityRes.data) {
           setEligibility(eligibilityRes.data);
         } else {
-          // Default eligibility if API fails
           setEligibility({
             canEnroll: true,
             reason: "You can proceed with enrollment",
@@ -457,7 +705,6 @@ export default function TuitionDetailPage() {
         }
       } catch (error) {
         console.error("Error checking eligibility:", error);
-        // If API fails, allow enrollment by default
         setEligibility({
           canEnroll: true,
           reason: "You can proceed with enrollment",
@@ -477,16 +724,13 @@ export default function TuitionDetailPage() {
 
   const handleEnrollClick = async () => {
     if (!user) {
-      // Open login modal instead of redirecting
       setShowLoginModal(true);
       return;
     }
 
-    // If payment is required, show payment modal
     if (eligibility?.requiresPayment && session) {
       setShowPaymentModal(true);
     } else {
-      // Free enrollment
       await handleFreeEnrollment();
     }
   };
@@ -514,8 +758,9 @@ export default function TuitionDetailPage() {
 
   const handleLoginSuccess = () => {
     setShowLoginModal(false);
-    // Re-fetch session details to update eligibility
     fetchSessionDetails();
+    checkIfLoved();
+    fetchLoveCount();
   };
 
   const formatCurrency = (amount: number, currency: string = "KES") => {
@@ -706,7 +951,6 @@ export default function TuitionDetailPage() {
           </div>
 
           <div className="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
-            {/* Summary */}
             <div className="mb-4 p-4 bg-purple-50 rounded-xl">
               <p className="text-sm text-purple-700">
                 <span className="font-medium">Total Classes:</span>{" "}
@@ -714,7 +958,6 @@ export default function TuitionDetailPage() {
               </p>
             </div>
 
-            {/* Schedule List */}
             <div className="space-y-4">
               <div className="flex items-center gap-4 text-sm text-gray-600 pb-2 border-b border-gray-200">
                 <span className="w-8 font-medium text-center">#</span>
@@ -750,7 +993,6 @@ export default function TuitionDetailPage() {
               })}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="mt-6 flex items-center justify-between">
                 <div className="text-sm text-gray-500">
@@ -840,7 +1082,6 @@ export default function TuitionDetailPage() {
     );
   };
 
-  // Show loading while auth is loading or session is loading
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -882,10 +1123,16 @@ export default function TuitionDetailPage() {
       <Login
         isLoginOpen={showLoginModal}
         setIsLoginOpen={setShowLoginModal}
-        // onSuccess={() => {
-        //   // Re-fetch session details after successful login
-        //   fetchSessionDetails();
-        // }}
+        onSuccess={handleLoginSuccess}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={session.name}
+        description={session.description || session.course_description}
+        sessionId={sessionId}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -957,14 +1204,39 @@ export default function TuitionDetailPage() {
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
-                  <FavoriteButton type="session" id={session.id} size="md" />
-                  <ShareButton
-                    title={session.name}
-                    description={
-                      session.description || session.course_description
-                    }
-                    size="md"
-                  />
+                  {/* Love/Favorite Button with count */}
+                  <div className="flex items-center">
+                    <button
+                      onClick={toggleLove}
+                      disabled={loveLoading}
+                      className={`p-2 border border-gray-200 rounded-l-lg hover:bg-gray-50 transition-colors ${
+                        isLoved ? "bg-red-50 border-red-200" : ""
+                      }`}
+                      title={
+                        isLoved ? "Remove from favorites" : "Add to favorites"
+                      }
+                    >
+                      {loveLoading ? (
+                        <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                      ) : isLoved ? (
+                        <Heart className="w-5 h-5 fill-red-500 text-red-500" />
+                      ) : (
+                        <Heart className="w-5 h-5 text-gray-400" />
+                      )}
+                    </button>
+                    <span className="px-3 py-2 border-t border-b border-r border-gray-200 rounded-r-lg bg-gray-50 text-sm font-medium text-gray-700">
+                      {loveCount}
+                    </span>
+                  </div>
+
+                  {/* Share Button */}
+                  <button
+                    onClick={() => setShowShareModal(true)}
+                    className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    title="Share this session"
+                  >
+                    <Share2 className="w-5 h-5 text-gray-400" />
+                  </button>
                 </div>
               </div>
 
@@ -1217,6 +1489,7 @@ export default function TuitionDetailPage() {
                   </span>
                 </div>
               </div>
+
               {/* Session Code */}
               <div
                 className="bg-transparent mt-14"
@@ -1228,23 +1501,6 @@ export default function TuitionDetailPage() {
                 </p>
               </div>
             </div>
-
-            {/* Session Code */}
-            {/* <div
-              className="bg-gray-50 rounded-2xl p-6 border border-gray-200 sticky"
-              style={{ top: "calc(4rem + 380px)" }}
-            >
-              <p className="text-xs text-gray-500 mb-1">Session Code</p>
-              <p className="font-mono text-lg font-semibold text-gray-900 break-all">
-                {session.session_code}
-              </p>
-            </div>
-            <div
-              className="text-xs text-gray-400 text-center sticky"
-              style={{ top: "calc(4rem + 500px)" }}
-            >
-              <p>Share this code with friends to join</p>
-            </div> */}
           </div>
         </div>
       </div>

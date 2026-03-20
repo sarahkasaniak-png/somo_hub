@@ -5,8 +5,11 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import { useAuth } from "@/app/context/AuthContext";
 import tuitionApi from "@/lib/api/tuition";
+import wishlistApi from "@/lib/api/wishlist";
 import { Tutor, TutorSession } from "@/types/tuition.types";
+import Login from "@/app/components/ui/Login";
 import {
   Star,
   MapPin,
@@ -45,11 +48,21 @@ import {
   Clock3,
   ExternalLink,
   Info,
+  HeartOff,
+  Check,
+  Copy,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Mail as MailIcon,
+  Link2,
+  X,
 } from "lucide-react";
 
 export default function TutorProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [tutor, setTutor] = useState<Tutor | null>(null);
   const [sessions, setSessions] = useState<TutorSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,34 +70,194 @@ export default function TutorProfilePage() {
     "about",
   );
 
+  // Love/Share states
+  const [isLoved, setIsLoved] = useState(false);
+  const [loveLoading, setLoveLoading] = useState(false);
+  const [loveCount, setLoveCount] = useState(0);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
   const tutorId = parseInt(params.id as string);
 
-  useEffect(() => {
-    if (tutorId) {
-      fetchTutorData();
-    }
-  }, [tutorId]);
+  // Single source of truth for loading all data
+  const loadAllData = async () => {
+    if (!tutorId) return;
 
-  const fetchTutorData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [tutorRes, sessionsRes] = await Promise.all([
-        tuitionApi.getTutorById(tutorId),
-        tuitionApi.getSessions({ tutor_id: tutorId, limit: 6 }),
-      ]);
+      // Load all data in parallel
+      const [tutorRes, sessionsRes, loveStatusRes, loveCountRes] =
+        await Promise.all([
+          tuitionApi.getTutorById(tutorId),
+          tuitionApi.getSessions({ tutor_id: tutorId, limit: 6 }),
+          user
+            ? wishlistApi.checkTutor(tutorId)
+            : Promise.resolve({ data: { isLoved: false } }),
+          wishlistApi.getTutorLoveCount(tutorId),
+        ]);
 
+      // Set tutor data
       if (tutorRes.success && tutorRes.data) {
         setTutor(tutorRes.data);
       }
 
+      // Set sessions
       if (sessionsRes.success && sessionsRes.data) {
         setSessions(sessionsRes.data.sessions || []);
       }
+
+      // Set love status - PRIORITIZE the direct check
+      if (user && loveStatusRes.data) {
+        const isLovedValue = loveStatusRes.data.isLoved === true;
+        console.log("Setting isLoved from direct check:", isLovedValue);
+        setIsLoved(isLovedValue);
+      }
+
+      // Set love count
+      if (loveCountRes.data && typeof loveCountRes.data.count === "number") {
+        console.log("Setting love count to:", loveCountRes.data.count);
+        setLoveCount(loveCountRes.data.count);
+      }
     } catch (error) {
-      console.error("Error fetching tutor:", error);
+      console.error("Error loading data:", error);
       toast.error("Failed to load tutor profile");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load data when component mounts or user changes
+  useEffect(() => {
+    loadAllData();
+  }, [tutorId, user?.uuid]); // Re-run when user changes
+
+  // Toggle love/favorite - now with confidence that state is correct
+  const toggleLove = async () => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (!tutor) return;
+
+    // Store current state for potential rollback
+    const wasLoved = isLoved;
+    const previousCount = loveCount;
+
+    // Optimistically update UI
+    setIsLoved(!wasLoved);
+    setLoveCount(wasLoved ? previousCount - 1 : previousCount + 1);
+    setLoveLoading(true);
+
+    try {
+      if (wasLoved) {
+        console.log("Removing from wishlist:", tutorId);
+        await wishlistApi.removeTutor(tutorId);
+        toast.success("Removed from favorites");
+      } else {
+        console.log("Adding to wishlist:", tutorId);
+        await wishlistApi.addTutor(tutorId);
+        toast.success("Added to favorites");
+      }
+    } catch (error: any) {
+      // Revert optimistic update on error
+      setIsLoved(wasLoved);
+      setLoveCount(previousCount);
+
+      console.error("Error toggling favorite:", error);
+
+      // If we get a duplicate error, it means the item IS in the wishlist
+      // So we should refresh the state to match server
+      if (
+        error?.code === "ER_DUP_ENTRY" ||
+        error?.sqlMessage?.includes("Duplicate entry")
+      ) {
+        toast.error("This tutor is already in your favorites");
+
+        // Refresh the actual state from server
+        try {
+          const [freshStatus, freshCount] = await Promise.all([
+            wishlistApi.checkTutor(tutorId),
+            wishlistApi.getTutorLoveCount(tutorId),
+          ]);
+
+          if (
+            freshStatus.data &&
+            typeof freshStatus.data.isLoved === "boolean"
+          ) {
+            setIsLoved(freshStatus.data.isLoved);
+          }
+
+          if (freshCount.data && typeof freshCount.data.count === "number") {
+            setLoveCount(freshCount.data.count);
+          }
+        } catch (refreshError) {
+          console.error("Error refreshing after error:", refreshError);
+        }
+      } else {
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update favorites",
+        );
+      }
+    } finally {
+      setLoveLoading(false);
+    }
+  };
+
+  // Share functionality
+  const getShareUrl = () => {
+    return `${window.location.origin}/tutors/${tutorId}`;
+  };
+
+  const getShareTitle = () => {
+    return `${fullName} - Tutor on SomoHub`;
+  };
+
+  const getShareText = () => {
+    return `Check out ${fullName} on SomoHub! ${tutor?.headline || "Experienced tutor"}`;
+  };
+
+  const shareOnSocial = (platform: string) => {
+    const url = getShareUrl();
+    const text = getShareText();
+    const title = getShareTitle();
+
+    let shareUrl = "";
+
+    switch (platform) {
+      case "facebook":
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        break;
+      case "twitter":
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        break;
+      case "linkedin":
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+        break;
+      case "email":
+        shareUrl = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text + "\n\n" + url)}`;
+        break;
+      case "whatsapp":
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(text + " " + url)}`;
+        break;
+      default:
+        return;
+    }
+
+    window.open(shareUrl, "_blank", "noopener,noreferrer,width=600,height=400");
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+      toast.success("Link copied to clipboard!");
+    } catch (err) {
+      toast.error("Failed to copy link");
     }
   };
 
@@ -157,7 +330,119 @@ export default function TutorProfilePage() {
     );
   };
 
-  if (loading) {
+  // Share Modal Component
+  const ShareModal = () => {
+    if (!showShareModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-md w-full p-6 relative animate-fadeIn">
+          <button
+            onClick={() => setShowShareModal(false)}
+            className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            Share this tutor
+          </h3>
+          <p className="text-gray-500 mb-6">
+            Share {fullName}&apos;s profile with friends and classmates
+          </p>
+
+          {/* Copy Link */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 truncate">
+                {getShareUrl()}
+              </div>
+              <button
+                onClick={copyToClipboard}
+                className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                title="Copy link"
+              >
+                {copySuccess ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  <Copy className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Social Share Buttons */}
+          <div className="grid grid-cols-5 gap-2">
+            <button
+              onClick={() => shareOnSocial("facebook")}
+              className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <Facebook className="w-5 h-5 text-blue-600" />
+              </div>
+              <span className="text-xs text-gray-600">Facebook</span>
+            </button>
+
+            <button
+              onClick={() => shareOnSocial("twitter")}
+              className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center group-hover:bg-sky-200 transition-colors">
+                <Twitter className="w-5 h-5 text-sky-600" />
+              </div>
+              <span className="text-xs text-gray-600">X</span>
+            </button>
+
+            <button
+              onClick={() => shareOnSocial("linkedin")}
+              className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <Linkedin className="w-5 h-5 text-blue-700" />
+              </div>
+              <span className="text-xs text-gray-600">LinkedIn</span>
+            </button>
+
+            <button
+              onClick={() => shareOnSocial("whatsapp")}
+              className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                <svg
+                  className="w-5 h-5 text-green-600"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.198-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                </svg>
+              </div>
+              <span className="text-xs text-gray-600">WhatsApp</span>
+            </button>
+
+            <button
+              onClick={() => shareOnSocial("email")}
+              className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                <MailIcon className="w-5 h-5 text-gray-600" />
+              </div>
+              <span className="text-xs text-gray-600">Email</span>
+            </button>
+          </div>
+
+          {/* Close button */}
+          <button
+            onClick={() => setShowShareModal(false)}
+            className="w-full mt-6 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="relative">
@@ -196,6 +481,19 @@ export default function TutorProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Login Modal */}
+      <Login
+        isLoginOpen={showLoginModal}
+        setIsLoginOpen={setShowLoginModal}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          loadAllData(); // Reload all data after login
+        }}
+      />
+
+      {/* Share Modal */}
+      <ShareModal />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
@@ -243,12 +541,38 @@ export default function TutorProfilePage() {
                     <p className="text-gray-500 mt-1">{tutor.headline}</p>
                   </div>
                   <div className="flex items-center gap-2 mt-3 sm:mt-0">
-                    {/* <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4" />
-                      Contact
-                    </button> */}
-                    <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                      <Heart className="w-5 h-5 text-gray-400" />
+                    {/* Love/Favorite Button with count */}
+                    <div className="flex items-center">
+                      <button
+                        onClick={toggleLove}
+                        disabled={loveLoading}
+                        className={`p-2 border border-gray-200 rounded-l-lg hover:bg-gray-50 transition-colors ${
+                          isLoved ? "bg-red-50 border-red-200" : ""
+                        }`}
+                        title={
+                          isLoved ? "Remove from favorites" : "Add to favorites"
+                        }
+                      >
+                        {loveLoading ? (
+                          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                        ) : isLoved ? (
+                          <Heart className="w-5 h-5 fill-red-500 text-red-500" />
+                        ) : (
+                          <Heart className="w-5 h-5 text-gray-400" />
+                        )}
+                      </button>
+                      <span className="px-3 py-2 border-t border-b border-r border-gray-200 rounded-r-lg bg-gray-50 text-sm font-medium text-gray-700">
+                        {loveCount}
+                      </span>
+                    </div>
+
+                    {/* Share Button */}
+                    <button
+                      onClick={() => setShowShareModal(true)}
+                      className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      title="Share this profile"
+                    >
+                      <Share2 className="w-5 h-5 text-gray-400" />
                     </button>
                   </div>
                 </div>
@@ -257,27 +581,6 @@ export default function TutorProfilePage() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 py-4 border-t border-gray-200">
-              {/* <div>
-                <p className="text-xs text-gray-500 mb-1">Rating</p>
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-semibold text-gray-900">
-                    {tutor.rating && parseInt(tutor.rating).toFixed(1)}
-                  </span>
-                </div>
-              </div> */}
-              {/* <div>
-                <p className="text-xs text-gray-500 mb-1">Students</p>
-                <p className="font-semibold text-gray-900">
-                  {tutor.total_students}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Sessions</p>
-                <p className="font-semibold text-gray-900">
-                  {tutor.total_sessions}
-                </p>
-              </div> */}
               <div>
                 <p className="text-xs text-gray-500 mb-1">Response Rate</p>
                 <p className="font-semibold text-gray-900">
@@ -289,6 +592,10 @@ export default function TutorProfilePage() {
                 <p className="font-semibold text-gray-900">
                   {formatCurrency(tutor.hourly_rate, tutor.currency)}
                 </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Favorites</p>
+                <p className="font-semibold text-gray-900">{loveCount}</p>
               </div>
             </div>
           </div>
@@ -430,32 +737,6 @@ export default function TutorProfilePage() {
 
           {/* Right Column - Info */}
           <div className="space-y-6">
-            {/* Contact Info */}
-            {/* <div className="bg-white rounded-xl p-6 border border-gray-200">
-              <h3 className="font-semibold text-gray-900 mb-4">
-                Contact Information
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <a
-                    href={`mailto:${tutor.email}`}
-                    className="text-gray-600 hover:text-purple-600"
-                  >
-                    {tutor.email}
-                  </a>
-                </div>
-                {tutor.response_time && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-600">
-                      Response time: {tutor.response_time}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div> */}
-
             {/* Expertise */}
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-4">Expertise</h3>
@@ -473,6 +754,40 @@ export default function TutorProfilePage() {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Share this profile card */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-4">
+                Share this profile
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => shareOnSocial("facebook")}
+                  className="flex-1 p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Facebook className="w-4 h-4" />
+                  <span className="text-sm">Share</span>
+                </button>
+                <button
+                  onClick={() => shareOnSocial("twitter")}
+                  className="flex-1 p-2 bg-sky-100 text-sky-600 rounded-lg hover:bg-sky-200 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Twitter className="w-4 h-4" />
+                  <span className="text-sm">Tweet</span>
+                </button>
+                <button
+                  onClick={copyToClipboard}
+                  className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  title="Copy link"
+                >
+                  {copySuccess ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Link2 className="w-4 h-4 text-gray-400" />
+                  )}
+                </button>
               </div>
             </div>
           </div>

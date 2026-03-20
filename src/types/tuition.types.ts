@@ -76,6 +76,8 @@ export interface Tutor {
     level_name: string;
     level_description: string;
   };
+  love_count?: number;           // Total number of users who love this tutor
+  is_loved_by_current_user?: boolean; // Whether the current user loves this tutor
 }
 
 export interface TutorSessionSchedule {

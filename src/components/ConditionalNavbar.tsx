@@ -9,8 +9,9 @@ export default function ConditionalNavbar() {
 
   // Don't show Navbar on these routes
   const hiddenRoutes = [
-    "/student",
+    "/student/",
     "/tutor/",
+    "/tutors/",
     "/community",
     "/communities",
     "/login",
