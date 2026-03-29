@@ -33,7 +33,7 @@ interface Tutor {
   avatar_url: string | null;
   bio: string;
   headline: string;
-  rating: number | null;
+  rating: number | string | null;
   total_sessions: number;
   total_students: number;
   response_rate: number;
@@ -68,6 +68,14 @@ interface TutorsResponse {
   };
 }
 
+// Helper function to safely get numeric rating
+const getNumericRating = (rating: number | string | null): number => {
+  if (rating === null || rating === undefined) return 0;
+  const numRating =
+    typeof rating === "string" ? parseFloat(rating) : Number(rating);
+  return isNaN(numRating) ? 0 : numRating;
+};
+
 export default function AdminTutorsPage() {
   const router = useRouter();
   const [tutors, setTutors] = useState<Tutor[]>([]);
@@ -101,10 +109,9 @@ export default function AdminTutorsPage() {
       );
 
       if (response.success && response.data) {
-        // Map the level_name from the API response
         const levels = response.data.map((level) => ({
           id: level.id,
-          name: level.level_name, // Use level_name from the API
+          name: level.level_name,
         }));
         setTutorLevels(levels);
       } else {
@@ -121,7 +128,6 @@ export default function AdminTutorsPage() {
       }
     } catch (error) {
       console.error("Error fetching tutor levels:", error);
-      // Fallback levels
       setTutorLevels([
         { id: 1, name: "College Student" },
         { id: 2, name: "Junior High Teacher" },
@@ -232,8 +238,9 @@ export default function AdminTutorsPage() {
     }
   };
 
-  const getRatingStars = (rating: number | null) => {
-    const safeRating = rating || 0;
+  const getRatingStars = (rating: number | string | null) => {
+    const safeRating = getNumericRating(rating);
+
     return (
       <div className="flex items-center">
         {[...Array(5)].map((_, i) => (
@@ -263,17 +270,11 @@ export default function AdminTutorsPage() {
     }).format(amount);
   };
 
-  const filteredTutors = tutors.filter(
-    (tutor) =>
-      tutor.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tutor.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tutor.email?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
   const averageRating =
     tutors.length > 0
       ? (
-          tutors.reduce((sum, t) => sum + (t.rating || 0), 0) / tutors.length
+          tutors.reduce((sum, t) => sum + getNumericRating(t.rating), 0) /
+          tutors.length
         ).toFixed(1)
       : "0.0";
 
@@ -473,7 +474,7 @@ export default function AdminTutorsPage() {
           <div className="flex items-center justify-center py-12">
             <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ) : filteredTutors.length === 0 ? (
+        ) : tutors.length === 0 ? (
           <div className="text-center py-12">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">No tutors found</p>
@@ -526,7 +527,7 @@ export default function AdminTutorsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredTutors.map((tutor) => (
+                {tutors.map((tutor) => (
                   <tr
                     key={tutor.id}
                     className="hover:bg-gray-50 cursor-pointer"
