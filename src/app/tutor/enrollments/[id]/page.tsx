@@ -87,24 +87,23 @@ interface EnrollmentDetail {
   };
   session: {
     id: number;
+    uuid: string;
     name: string;
+    description: string | null;
     session_code: string;
-    description: string | null; // Changed from 'string' to 'string | null'
+    session_type: string;
     start_date: string;
     end_date: string;
-    session_type: string;
     max_students: number;
     current_enrollment: number;
     fee_amount: number;
     fee_currency: string;
     status: string;
     enrollment_status: string;
-    course: {
-      id: number;
-      title: string;
-      subject: string;
-      level: string;
-    };
+    subject: string;
+    level: string;
+    curriculum_id?: number | null;
+    curriculum_level_id?: number | null;
   };
   payment_history?: Array<{
     id: number;
@@ -151,8 +150,8 @@ export default function EnrollmentDetailPage() {
   const fetchEnrollmentDetails = async () => {
     try {
       setLoading(true);
-      // You'll need to add this endpoint to your tutorApi
       const response = await tutorApi.getEnrollmentById(parseInt(enrollmentId));
+      console.log("API Response:", response);
       if (response.success) {
         setEnrollment(response.data);
       }
@@ -629,7 +628,7 @@ export default function EnrollmentDetailPage() {
                   </dl>
                 </div>
 
-                {/* Session Info */}
+                {/* Session Info - Updated without course reference */}
                 <div className="bg-gray-50 rounded-xl p-5">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-main" />
@@ -643,7 +642,7 @@ export default function EnrollmentDetailPage() {
                       </dt>
                       <dd className="font-medium text-gray-900">
                         <Link
-                          href={`/tutor/sessions/${enrollment.session.id}`}
+                          href={`/tutor/sessions/${enrollment.session.uuid || enrollment.session.id}`}
                           className="text-main hover:underline"
                         >
                           {enrollment.session.name}
@@ -653,15 +652,10 @@ export default function EnrollmentDetailPage() {
                     <div className="flex items-center justify-between py-2 border-b border-gray-200">
                       <dt className="flex items-center gap-2 text-gray-500">
                         <BookOpen className="w-4 h-4" />
-                        Course:
+                        Subject:
                       </dt>
                       <dd className="font-medium text-gray-900">
-                        <Link
-                          href={`/tutor/courses/${enrollment.session.course.id}`}
-                          className="text-main hover:underline"
-                        >
-                          {enrollment.session.course.title}
-                        </Link>
+                        {enrollment.session.subject || "Not specified"}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between py-2 border-b border-gray-200">
@@ -682,6 +676,15 @@ export default function EnrollmentDetailPage() {
                       <dd className="font-medium text-gray-900">
                         {enrollment.session.current_enrollment}/
                         {enrollment.session.max_students}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-200">
+                      <dt className="flex items-center gap-2 text-gray-500">
+                        <Target className="w-4 h-4" />
+                        Level:
+                      </dt>
+                      <dd className="font-medium text-gray-900">
+                        {enrollment.session.level || "Not specified"}
                       </dd>
                     </div>
                   </dl>
