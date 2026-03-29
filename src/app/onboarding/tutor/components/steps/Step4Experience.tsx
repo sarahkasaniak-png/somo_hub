@@ -23,33 +23,89 @@ const createExperienceSchema = (tutorLevel: string) => {
     "senior_high_teacher",
   ].includes(tutorLevel);
   const isUniversityStudent = tutorLevel === "college_student";
+  const isUniversityLecturer = tutorLevel === "university_lecturer";
+  const isSkilledProfessional = tutorLevel === "skilled_professional";
+  const isPrivateTutor = tutorLevel === "private_tutor";
 
   // Curriculum is REQUIRED for school teachers and university students
   const requiresCurriculum = isSchoolTeacher || isUniversityStudent;
 
-  return z.object({
-    has_teaching_experience: z.boolean().default(false),
-    tsc_number: z.string().optional().or(z.literal("")),
-    teaching_experience_years: z
-      .number()
-      .min(0)
-      .max(50)
-      .optional()
-      .or(z.null()),
-    previous_institutions: z.array(z.string()).optional().default([]),
-    professional_experience: z.string().max(1000).optional().or(z.literal("")),
-    portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
-    certificates: z.any().optional().default([]),
-    affiliate_code: z.string().max(100).optional().or(z.literal("")),
-    selected_curriculums: requiresCurriculum
-      ? z
-          .array(z.any())
-          .min(
-            1,
-            "Please select at least one curriculum you're qualified to teach",
-          )
-      : z.array(z.any()).optional().default([]),
-  });
+  // Curriculum is NOT available for professional and lecturer tutors
+  const curriculumNotAvailable = isSkilledProfessional || isUniversityLecturer;
+
+  // Curriculum is OPTIONAL for private tutors
+  const curriculumOptional = isPrivateTutor;
+
+  if (curriculumNotAvailable) {
+    // No curriculum validation - curriculum field not used
+    return z.object({
+      has_teaching_experience: z.boolean().default(false),
+      tsc_number: z.string().optional().or(z.literal("")),
+      teaching_experience_years: z
+        .number()
+        .min(0)
+        .max(50)
+        .optional()
+        .or(z.null()),
+      previous_institutions: z.array(z.string()).optional().default([]),
+      professional_experience: z
+        .string()
+        .max(1000)
+        .optional()
+        .or(z.literal("")),
+      portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
+      certificates: z.any().optional().default([]),
+      affiliate_code: z.string().max(100).optional().or(z.literal("")),
+    });
+  } else if (requiresCurriculum) {
+    return z.object({
+      has_teaching_experience: z.boolean().default(false),
+      tsc_number: z.string().optional().or(z.literal("")),
+      teaching_experience_years: z
+        .number()
+        .min(0)
+        .max(50)
+        .optional()
+        .or(z.null()),
+      previous_institutions: z.array(z.string()).optional().default([]),
+      professional_experience: z
+        .string()
+        .max(1000)
+        .optional()
+        .or(z.literal("")),
+      portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
+      certificates: z.any().optional().default([]),
+      affiliate_code: z.string().max(100).optional().or(z.literal("")),
+      selected_curriculums: z
+        .array(z.any())
+        .min(
+          1,
+          "Please select at least one curriculum you're qualified to teach",
+        ),
+    });
+  } else {
+    // Curriculum optional for private tutors
+    return z.object({
+      has_teaching_experience: z.boolean().default(false),
+      tsc_number: z.string().optional().or(z.literal("")),
+      teaching_experience_years: z
+        .number()
+        .min(0)
+        .max(50)
+        .optional()
+        .or(z.null()),
+      previous_institutions: z.array(z.string()).optional().default([]),
+      professional_experience: z
+        .string()
+        .max(1000)
+        .optional()
+        .or(z.literal("")),
+      portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
+      certificates: z.any().optional().default([]),
+      affiliate_code: z.string().max(100).optional().or(z.literal("")),
+      selected_curriculums: z.array(z.any()).optional().default([]),
+    });
+  }
 };
 
 type ExperienceFormData = z.infer<ReturnType<typeof createExperienceSchema>>;
@@ -86,11 +142,14 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     // Curriculum is REQUIRED for school teachers and university students
     const requiresCurriculum = isSchoolTeacher || isUniversityStudent;
 
-    // Curriculum is OPTIONAL for others
-    const curriculumOptional =
-      isUniversityLecturer || isPrivateTutor || isSkilledProfessional;
+    // Curriculum is NOT available for professional and lecturer tutors
+    const curriculumNotAvailable =
+      isSkilledProfessional || isUniversityLecturer;
 
-    // Show curriculum selector for all except maybe some special cases
+    // Curriculum is OPTIONAL for private tutors
+    const curriculumOptional = isPrivateTutor;
+
+    // Show curriculum selector only for those who need it
     const showCurriculum = requiresCurriculum || curriculumOptional;
 
     const schema = createExperienceSchema(actualTutorLevel);
@@ -161,19 +220,16 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       selectedCurriculums,
     ]);
 
-    // Handle curriculum selection - UPDATE THIS FUNCTION
+    // Handle curriculum selection
     const handleCurriculumChange = (curriculums: SelectedCurriculum[]) => {
       console.log("🎯 Curriculum selection changed:", curriculums);
-      // Set the value in react-hook-form
       setValue("selected_curriculums", curriculums, {
         shouldValidate: true,
         shouldDirty: true,
       });
 
-      // Force trigger validation after setting
       setTimeout(() => {
         trigger("selected_curriculums");
-        // Also trigger the overall form validation
         trigger();
       }, 50);
     };
@@ -279,21 +335,74 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     };
 
     const getCurriculumRequirementText = () => {
+      if (curriculumNotAvailable) {
+        return "";
+      }
+
       switch (actualTutorLevel) {
         case "college_student":
           return "Select the curriculum(s) you're qualified to teach. University students often tutor in KCSE, Cambridge, or IB based on their high school background.";
         case "junior_high_teacher":
         case "senior_high_teacher":
           return "Select the curriculum(s) you're qualified to teach (e.g., KCSE, Cambridge, IB, etc.). This is required for school teachers.";
-        case "university_lecturer":
-          return "Select the curriculum frameworks you're qualified to teach at university level (optional).";
         case "private_tutor":
-          return "Select the curriculum(s) you specialize in teaching (optional).";
-        case "skilled_professional":
-          return "If you teach specific curricula, select them here (optional).";
+          return "Select the curriculum(s) you specialize in teaching (optional). This helps students find you based on their curriculum needs.";
         default:
-          return "Select the curriculum(s) you're qualified to teach.";
+          return "";
       }
+    };
+
+    const getCurriculumSectionTitle = () => {
+      if (requiresCurriculum) {
+        return "Curriculum Qualifications *";
+      }
+      if (curriculumOptional) {
+        return "Curriculum Qualifications (Optional)";
+      }
+      return "";
+    };
+
+    // Render info for professional/lecturer tutors about why curriculum is not shown
+    const renderProfessionalInfo = () => {
+      if (!curriculumNotAvailable) return null;
+
+      return (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="w-5 h-5 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900">
+                {actualTutorLevel === "university_lecturer"
+                  ? "For University Lecturers"
+                  : "For Skilled Professionals"}
+              </h4>
+              <p className="text-sm text-gray-600 mt-1">
+                {actualTutorLevel === "university_lecturer"
+                  ? "As a university lecturer, you're recognized for your expertise in higher education. Students will find you based on your subject expertise and professional experience rather than specific school curricula."
+                  : "As a skilled professional, your expertise is recognized through your industry experience and professional background. Students will find you based on your skills and practical knowledge."}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                You can still specify your teaching subjects and rates in your
+                profile after registration.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
     };
 
     return (
@@ -332,6 +441,9 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
             </label>
           </div>
 
+          {/* Professional/Lecturer Info Message */}
+          {renderProfessionalInfo()}
+
           {/* Helpful info for university students */}
           {actualTutorLevel === "college_student" && (
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
@@ -367,7 +479,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
             </div>
           )}
 
-          {/* Curriculum Selection */}
+          {/* Curriculum Selection - Only for school teachers, university students, and private tutors */}
           {showCurriculum && (
             <div className="border-t border-gray-200 pt-4">
               <CurriculumSelector
@@ -377,9 +489,11 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
                 disabled={isLoading || isSubmitting}
                 required={requiresCurriculum}
               />
-              <p className="text-sm text-gray-500 mt-2">
-                {getCurriculumRequirementText()}
-              </p>
+              {getCurriculumRequirementText() && (
+                <p className="text-sm text-gray-500 mt-2">
+                  {getCurriculumRequirementText()}
+                </p>
+              )}
             </div>
           )}
 
@@ -475,7 +589,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
             </p>
           </div>
 
-          {/* Affiliate Code - Using affiliate_code field */}
+          {/* Affiliate Code */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Affiliate/Referral Code (Optional)
@@ -551,13 +665,11 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
                 {hasExperience && " + Either TSC number or experience years"}
                 {requiresCurriculum &&
                   " + Select at least one curriculum you're qualified to teach"}
-                {actualTutorLevel === "college_student" &&
-                  !requiresCurriculum && (
-                    <span className="block text-xs text-purple-600 mt-1">
-                      Tip: Adding your teaching curriculum helps students find
-                      you
-                    </span>
-                  )}
+                {curriculumOptional && !requiresCurriculum && (
+                  <span className="block text-xs text-purple-600 mt-1">
+                    Tip: Adding your teaching curriculum helps students find you
+                  </span>
+                )}
               </p>
             </div>
             <div className="text-sm text-gray-600">
