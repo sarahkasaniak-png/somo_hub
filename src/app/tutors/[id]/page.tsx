@@ -107,7 +107,7 @@ export default function TutorProfilePage() {
         setSessions(sessionsRes.data.sessions || []);
       }
 
-      // Set love status - PRIORITIZE the direct check
+      // Set love status
       if (user && loveStatusRes.data) {
         const isLovedValue = loveStatusRes.data.isLoved === true;
         console.log("Setting isLoved from direct check:", isLovedValue);
@@ -130,9 +130,9 @@ export default function TutorProfilePage() {
   // Load data when component mounts or user changes
   useEffect(() => {
     loadAllData();
-  }, [tutorId, user?.uuid]); // Re-run when user changes
+  }, [tutorId, user?.uuid]);
 
-  // Toggle love/favorite - now with confidence that state is correct
+  // Toggle love/favorite
   const toggleLove = async () => {
     if (!user) {
       setShowLoginModal(true);
@@ -141,67 +141,26 @@ export default function TutorProfilePage() {
 
     if (!tutor) return;
 
-    // Store current state for potential rollback
     const wasLoved = isLoved;
     const previousCount = loveCount;
 
-    // Optimistically update UI
     setIsLoved(!wasLoved);
     setLoveCount(wasLoved ? previousCount - 1 : previousCount + 1);
     setLoveLoading(true);
 
     try {
       if (wasLoved) {
-        console.log("Removing from wishlist:", tutorId);
         await wishlistApi.removeTutor(tutorId);
         toast.success("Removed from favorites");
       } else {
-        console.log("Adding to wishlist:", tutorId);
         await wishlistApi.addTutor(tutorId);
         toast.success("Added to favorites");
       }
     } catch (error: any) {
-      // Revert optimistic update on error
       setIsLoved(wasLoved);
       setLoveCount(previousCount);
-
       console.error("Error toggling favorite:", error);
-
-      // If we get a duplicate error, it means the item IS in the wishlist
-      // So we should refresh the state to match server
-      if (
-        error?.code === "ER_DUP_ENTRY" ||
-        error?.sqlMessage?.includes("Duplicate entry")
-      ) {
-        toast.error("This tutor is already in your favorites");
-
-        // Refresh the actual state from server
-        try {
-          const [freshStatus, freshCount] = await Promise.all([
-            wishlistApi.checkTutor(tutorId),
-            wishlistApi.getTutorLoveCount(tutorId),
-          ]);
-
-          if (
-            freshStatus.data &&
-            typeof freshStatus.data.isLoved === "boolean"
-          ) {
-            setIsLoved(freshStatus.data.isLoved);
-          }
-
-          if (freshCount.data && typeof freshCount.data.count === "number") {
-            setLoveCount(freshCount.data.count);
-          }
-        } catch (refreshError) {
-          console.error("Error refreshing after error:", refreshError);
-        }
-      } else {
-        toast.error(
-          error?.response?.data?.message ||
-            error?.message ||
-            "Failed to update favorites",
-        );
-      }
+      toast.error("Failed to update favorites");
     } finally {
       setLoveLoading(false);
     }
@@ -286,12 +245,23 @@ export default function TutorProfilePage() {
       .join(" ");
   };
 
+  // Helper function to format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   const SessionCard = ({ session }: { session: TutorSession }) => {
     const capitalizedSessionName = capitalizeSessionName(session.name);
+    const sessionStartDate = formatDate(session.start_date);
 
     return (
       <div
-        onClick={() => router.push(`/tuitions/${session.id}`)}
+        onClick={() => router.push(`/tuitions/${session.uuid}`)}
         className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all cursor-pointer"
       >
         <div className="flex items-start justify-between mb-2">
@@ -309,12 +279,12 @@ export default function TutorProfilePage() {
           </span>
         </div>
         <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-          {session.course_title}
+          {session.subject}
         </p>
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-1 text-gray-500">
             <Calendar className="w-4 h-4" />
-            <span>{new Date(session.start_date).toLocaleDateString()}</span>
+            <span>{sessionStartDate}</span>
           </div>
           <div className="flex items-center gap-1 text-gray-500">
             <Users className="w-4 h-4" />
@@ -351,7 +321,6 @@ export default function TutorProfilePage() {
             Share {fullName}&apos;s profile with friends and classmates
           </p>
 
-          {/* Copy Link */}
           <div className="mb-6">
             <div className="flex items-center gap-2">
               <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 truncate">
@@ -371,7 +340,6 @@ export default function TutorProfilePage() {
             </div>
           </div>
 
-          {/* Social Share Buttons */}
           <div className="grid grid-cols-5 gap-2">
             <button
               onClick={() => shareOnSocial("facebook")}
@@ -382,7 +350,6 @@ export default function TutorProfilePage() {
               </div>
               <span className="text-xs text-gray-600">Facebook</span>
             </button>
-
             <button
               onClick={() => shareOnSocial("twitter")}
               className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
@@ -392,7 +359,6 @@ export default function TutorProfilePage() {
               </div>
               <span className="text-xs text-gray-600">X</span>
             </button>
-
             <button
               onClick={() => shareOnSocial("linkedin")}
               className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
@@ -402,7 +368,6 @@ export default function TutorProfilePage() {
               </div>
               <span className="text-xs text-gray-600">LinkedIn</span>
             </button>
-
             <button
               onClick={() => shareOnSocial("whatsapp")}
               className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
@@ -418,7 +383,6 @@ export default function TutorProfilePage() {
               </div>
               <span className="text-xs text-gray-600">WhatsApp</span>
             </button>
-
             <button
               onClick={() => shareOnSocial("email")}
               className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
@@ -430,7 +394,6 @@ export default function TutorProfilePage() {
             </button>
           </div>
 
-          {/* Close button */}
           <button
             onClick={() => setShowShareModal(false)}
             className="w-full mt-6 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -487,7 +450,7 @@ export default function TutorProfilePage() {
         setIsLoginOpen={setShowLoginModal}
         onSuccess={() => {
           setShowLoginModal(false);
-          loadAllData(); // Reload all data after login
+          loadAllData();
         }}
       />
 
@@ -513,10 +476,8 @@ export default function TutorProfilePage() {
 
         {/* Profile Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-          {/* Cover Image */}
           <div className="h-28 bg-gradient-to-r from-gray-100 to-gray-50"></div>
 
-          {/* Profile Info */}
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end -mt-16 mb-4">
               <div className="w-24 h-24 rounded-2xl border-4 border-white bg-white shadow-lg overflow-hidden">
@@ -539,9 +500,13 @@ export default function TutorProfilePage() {
                       {fullName}
                     </h1>
                     <p className="text-gray-500 mt-1">{tutor.headline}</p>
+                    {tutor.tutor_level && (
+                      <p className="text-sm text-purple-600 mt-1">
+                        {tutor.tutor_level.level_name}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-3 sm:mt-0">
-                    {/* Love/Favorite Button with count */}
                     <div className="flex items-center">
                       <button
                         onClick={toggleLove}
@@ -565,8 +530,6 @@ export default function TutorProfilePage() {
                         {loveCount}
                       </span>
                     </div>
-
-                    {/* Share Button */}
                     <button
                       onClick={() => setShowShareModal(true)}
                       className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -579,7 +542,6 @@ export default function TutorProfilePage() {
               </div>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 py-4 border-t border-gray-200">
               <div>
                 <p className="text-xs text-gray-500 mb-1">Response Rate</p>
@@ -690,6 +652,44 @@ export default function TutorProfilePage() {
                       </div>
                     )}
 
+                    {/* Curriculum Expertise - NEW SECTION */}
+                    {tutor.curriculums && tutor.curriculums.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <Globe className="w-4 h-4 text-green-600" />
+                          Curriculum Expertise
+                        </h3>
+                        <div className="space-y-2">
+                          {tutor.curriculums.map((curriculum, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <BadgeCheck className="w-4 h-4 text-green-600" />
+                                  <p className="font-medium text-gray-900">
+                                    {curriculum.curriculum_name}
+                                  </p>
+                                </div>
+                                {curriculum.curriculum_level_name && (
+                                  <p className="text-sm text-gray-600 mt-1 ml-6">
+                                    Level: {curriculum.curriculum_level_name}
+                                  </p>
+                                )}
+                                {curriculum.curriculum_code && (
+                                  <p className="text-xs text-gray-500 mt-0.5 ml-6">
+                                    Code: {curriculum.curriculum_code}
+                                  </p>
+                                )}
+                              </div>
+                              <Award className="w-5 h-5 text-green-500" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Languages */}
                     {tutor.languages && tutor.languages.length > 0 && (
                       <div>
@@ -705,6 +705,25 @@ export default function TutorProfilePage() {
                               {lang.language} • {lang.proficiency}
                             </span>
                           ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tutor Level */}
+                    {tutor.tutor_level && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-3">
+                          Tutor Level
+                        </h3>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <p className="font-medium text-gray-900">
+                            {tutor.tutor_level.level_name}
+                          </p>
+                          {tutor.tutor_level.level_description && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              {tutor.tutor_level.level_description}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
@@ -756,6 +775,33 @@ export default function TutorProfilePage() {
                 ))}
               </div>
             </div>
+
+            {/* Curriculum Expertise Card - NEW */}
+            {tutor.curriculums && tutor.curriculums.length > 0 && (
+              <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-green-600" />
+                  Curriculum Expertise
+                </h3>
+                <div className="space-y-2">
+                  {tutor.curriculums.map((curriculum, index) => (
+                    <div
+                      key={index}
+                      className="p-2 bg-green-50 rounded-lg border border-green-100"
+                    >
+                      <p className="text-sm font-medium text-gray-800">
+                        {curriculum.curriculum_name}
+                      </p>
+                      {curriculum.curriculum_level_name && (
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          {curriculum.curriculum_level_name}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Share this profile card */}
             <div className="bg-white rounded-xl p-6 border border-gray-200">

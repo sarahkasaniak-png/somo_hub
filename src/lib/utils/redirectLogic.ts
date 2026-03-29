@@ -40,68 +40,67 @@ export const getPostLoginRedirect = (userStatus: UserStatus | null): string => {
     return "/dashboard";
   }
 
-  // Check if user has any active/approved roles
-  const hasActiveRole = 
-    (userStatus.hasTutorRole && userStatus.isApprovedTutor) ||
-    (userStatus.hasCommunityRole && userStatus.isApprovedCommunityMember);
+  // Step 2: Check for affiliate role
+  const hasAffiliateRole = userStatus.hasAffiliateRole === true;
+  const isApprovedAffiliate = userStatus.affiliateData?.is_active === true;
+  const hasActiveAffiliateRole = hasAffiliateRole && isApprovedAffiliate;
 
-  console.log("Has active role:", hasActiveRole);
+  console.log("Affiliate role check:", { hasAffiliateRole, isApprovedAffiliate, hasActiveAffiliateRole });
 
-  // Step 2: No incomplete applications - check approved/active roles
-  const activeRoles = [];
-  
-  // Check if user has tutor role (approved)
-  if (userStatus.hasTutorRole && userStatus.isApprovedTutor) {
-    activeRoles.push("tutor");
-  }
-  
-  // Check if user has community role (approved)
-  if (userStatus.hasCommunityRole && userStatus.isApprovedCommunityMember) {
-    activeRoles.push("community");
-  }
-  
-  // Student role only if user has ever registered for course sessions
+  // Step 3: Check for other active roles
+  const hasTutorRole = userStatus.hasTutorRole && userStatus.isApprovedTutor;
+  const hasCommunityRole = userStatus.hasCommunityRole && userStatus.isApprovedCommunityMember;
   const hasStudentActivity = 
-    userStatus.hasActiveEnrollments || // Has any active enrollments
-    (userStatus.activeEnrollments && userStatus.activeEnrollments > 0) || // Active enrollment count
-    userStatus.hasActiveSessions || // Has any active sessions
-    (userStatus.upcomingSessionsCount && userStatus.upcomingSessionsCount > 0); // Upcoming sessions count
-  
-  // Only include student role if they have student activity
-  if (hasStudentActivity) {
-    activeRoles.push("student");
+    userStatus.hasActiveEnrollments || 
+    (userStatus.activeEnrollments && userStatus.activeEnrollments > 0) || 
+    userStatus.hasActiveSessions || 
+    (userStatus.upcomingSessionsCount && userStatus.upcomingSessionsCount > 0);
+
+  // Count active roles (excluding affiliate for now)
+  const activeRoles = [];
+  if (hasTutorRole) activeRoles.push("tutor");
+  if (hasCommunityRole) activeRoles.push("community");
+  if (hasStudentActivity) activeRoles.push("student");
+
+  console.log("Active non-affiliate roles:", activeRoles);
+
+  // SCENARIO 1: User has ONLY affiliate role (and no other active roles)
+  if (hasActiveAffiliateRole && activeRoles.length === 0) {
+    console.log("User has only affiliate role, redirecting to affiliate dashboard");
+    return "/affiliate/dashboard";
   }
 
-  console.log("Active roles (approved):", activeRoles);
-
-  // SINGLE active role redirection
-  if (activeRoles.length === 1) {
-    const role = activeRoles[0];
-    console.log(`Single active role: ${role}`);
-    
-    switch (role) {
-      case "tutor":
-        return "/tutor/dashboard";
-      case "community":
-        return "/community/dashboard";
-      case "student":
-        if (userStatus.hasActiveEnrollments) {
-          return "/student/dashboard";
-        } else {
-          return "/";
-        }
-      default:
-        return "/dashboard";
-    }
-  }
-
-  // MULTIPLE active roles - go to main dashboard
-  if (activeRoles.length > 1) {
-    console.log("Multiple roles, going to dashboard");
+  // SCENARIO 2: User has affiliate role AND other roles - go to dashboard for role selection
+  if (hasActiveAffiliateRole && activeRoles.length > 0) {
+    console.log("User has affiliate and other roles, going to dashboard for selection");
     return "/dashboard";
   }
 
-  // No active roles and no incomplete applications - go to home page
+  // SCENARIO 3: User has tutor role only (no affiliate)
+  if (hasTutorRole && activeRoles.length === 1 && activeRoles[0] === "tutor") {
+    console.log("User has only tutor role, redirecting to tutor dashboard");
+    return "/tutor/dashboard";
+  }
+
+  // SCENARIO 4: User has community role only (no affiliate)
+  if (hasCommunityRole && activeRoles.length === 1 && activeRoles[0] === "community") {
+    console.log("User has only community role, redirecting to community dashboard");
+    return "/community/dashboard";
+  }
+
+  // SCENARIO 5: User has student activity only (no other roles)
+  if (hasStudentActivity && activeRoles.length === 1 && activeRoles[0] === "student") {
+    console.log("User has only student activity, redirecting to student dashboard");
+    return "/student/dashboard";
+  }
+
+  // SCENARIO 6: User has multiple roles - go to dashboard
+  if (activeRoles.length > 1) {
+    console.log("User has multiple roles, going to dashboard");
+    return "/dashboard";
+  }
+
+  // SCENARIO 7: No active roles and no incomplete applications - go to home page
   console.log("No active roles, no incomplete apps - going to home page");
   return "/";
 };

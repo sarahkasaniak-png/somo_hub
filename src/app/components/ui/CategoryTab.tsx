@@ -96,7 +96,7 @@ const CategoryTab: React.FC<CategoryTabProps> = ({
       onClick={handleTabClick}
     >
       <span className="font-sans text-xs font-semibold text-zinc-700 tracking-wide">
-        Tuition/Session Category
+        Session Category
       </span>
 
       {/* Selected item display with clear button */}

@@ -22,6 +22,9 @@ export interface User {
   city?: string;
   created_at?: string;
   updated_at?: string;
+  // Affiliate fields
+  affiliate_code?: string | null;
+  is_affiliate?: boolean;
 }
 
 // Education Interface
@@ -40,7 +43,25 @@ export interface Education {
   achievements?: string;
 }
 
-// User Status Interface - UPDATED with education, interests, learning_goals
+// Affiliate Data Interface
+export interface AffiliateData {
+ id: number;
+  affiliate_code: string;
+  commission_rate: number;
+  total_earnings: number;
+  total_paid: number;
+  total_referred_tutors: number;
+  total_referred_students: number;
+  is_active: boolean;
+  created_at: string;
+  // Optional fields that might be present
+  user_id?: number;
+  updated_at?: string;
+  payment_method?: string;
+  payment_details?: any;
+}
+
+// User Status Interface - UPDATED with education, interests, learning_goals, and affiliate fields
 export interface UserStatus {
   // Profile & Basic Info
   profileCompletion: number;
@@ -109,6 +130,15 @@ export interface UserStatus {
   hasStudentRole: boolean;
   hasAdminRole: boolean;
   
+  // Affiliate role flag
+  hasAffiliateRole?: boolean;
+
+  
+  
+  // Affiliate data
+  affiliateData?: AffiliateData | null;
+  affiliateCode?: string | null;
+  
   // Application status summary
   applicationStatus: {
     tutor: 'not_started' | 'draft' | 'pending' | 'under_review' | 'approved' | 'rejected';
@@ -123,7 +153,7 @@ export interface UserStatus {
   }>;
 }
 
-// Profile Data Interface - NEW
+// Profile Data Interface - UPDATED with affiliate fields
 export interface ProfileData {
   // Basic Info
   first_name: string;
@@ -136,6 +166,14 @@ export interface ProfileData {
   // Location
   country: string;
   city: string;
+
+  // Affiliate fields
+  affiliate_code?: string;
+  commission_rate?: number;
+  total_earnings?: number;
+  total_paid?: number;
+  total_referred_tutors?: number;
+  total_referred_students?: number;
 
   // Education
   education: Education[];
@@ -225,7 +263,7 @@ export interface AuthResponse {
   refresh_token?: string;
   expires_in?: number;
   status?: UserStatus;
-   verified?: boolean;
+  verified?: boolean;
   success?: boolean;
   message?: string;
 }
@@ -237,7 +275,7 @@ export interface AuthError {
   errors?: Record<string, string[]>;
 }
 
-// Auth Context Type - UPDATED WITH profileData
+// Auth Context Type - UPDATED WITH profileData and affiliate support
 export interface AuthContextType {
   // State
   user: User | null;
@@ -247,7 +285,7 @@ export interface AuthContextType {
   
   // Helper Functions
   getUserRoleCount: () => number;
-  getPrimaryRole: () => string | null;
+  getPrimaryRole: (status?: UserStatus | null) => string | null; // Updated to accept optional status parameter
   
   // Registration Methods
   register: (email: string, password: string, confirmPassword: string) => Promise<AuthResponse>;

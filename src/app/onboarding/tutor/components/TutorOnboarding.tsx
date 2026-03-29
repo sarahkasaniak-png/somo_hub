@@ -22,6 +22,7 @@ export default function TutorOnboarding() {
   const [currentStep, setCurrentStep] = useState(0);
   const [application, setApplication] = useState<ApplicationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [formData, setFormData] = useState<any>({});
@@ -41,8 +42,7 @@ export default function TutorOnboarding() {
   const hasShownPendingToast = useRef<boolean>(false);
   const hasRedirectedToStatus = useRef<boolean>(false);
   const hasShownApprovedToast = useRef<boolean>(false);
-  const componentMounted = useRef<boolean>(true);
-  const effectExecuted = useRef<boolean>(false);
+  // Remove componentMounted - not needed with proper cleanup
 
   const steps = [
     { number: 1, title: "Tutor Level & Category" },
@@ -53,7 +53,6 @@ export default function TutorOnboarding() {
 
   // Handle payment callback when returning from Paystack
   useEffect(() => {
-    // Prevent multiple executions
     if (hasProcessedPaymentReturn.current) return;
 
     const queryParams = new URLSearchParams(window.location.search);
@@ -62,7 +61,6 @@ export default function TutorOnboarding() {
 
     console.log("🔍 TutorOnboarding - URL params:", { reference, step });
 
-    // If we have a reference and we're on the summary step, show the summary with the reference
     if (reference && step === "summary" && application && !showSummary) {
       console.log(
         "✅ Payment return detected, showing summary with reference:",
@@ -73,137 +71,127 @@ export default function TutorOnboarding() {
     }
   }, [application, showSummary]);
 
-  // Check existing application on mount - with multiple safeguards
+  // Check existing application on mount
   useEffect(() => {
-    // Prevent multiple executions with multiple safeguards
-    if (effectExecuted.current) {
-      console.log("useEffect already executed, skipping...");
-      return;
-    }
-
-    if (!componentMounted.current) {
-      console.log("Component not mounted, skipping...");
-      return;
-    }
-
+    // Prevent multiple executions
     if (hasCheckedExistingApp.current) {
       console.log("hasCheckedExistingApp already true, skipping...");
       return;
     }
 
     console.log("Running checkExistingApplication for the first time");
-    effectExecuted.current = true;
     hasCheckedExistingApp.current = true;
 
     checkExistingApplication();
 
-    // Cleanup function
-    return () => {
-      console.log("TutorOnboarding cleanup");
-      componentMounted.current = false;
-    };
-  }, []); // Empty dependency array - should run once
-
-  // Debug logging - but don't let it cause re-renders
-  useEffect(() => {
-    console.log("=== TutorOnboarding State Debug ===");
-    console.log("Current step:", currentStep);
-    console.log("Show summary:", showSummary);
-    console.log("Application data:", application);
-    console.log("Application status:", application?.application_status);
-  }, [currentStep, showSummary, application]);
+    // No cleanup needed - React Strict Mode will handle it
+  }, []);
 
   const checkExistingApplication = async () => {
     try {
-      setIsLoading(true);
-      const data = await loadApplication();
-      console.log(
-        "checkExistingApplication data:",
-        data.data.hasApplication,
-        data.data.application,
-      );
+      console.log("🔍 Checking for existing application...");
 
-      if (data.data.hasApplication && data.data.application) {
-        console.log("Existing application found:", data.application);
-        setApplication(data.data.application);
-        setCurrentStep(data.data.application.current_step || 1);
-        setFormData(data.data.application);
+      const response = await loadApplication();
+      console.log("Load application response:", response);
 
-        // Handle pending applications - with multiple safeguards
-        if (data.data.application.application_status === "pending") {
-          console.log("Application status is pending");
+      if (response.success && response.data) {
+        const hasApplication = response.data.hasApplication;
+        const existingApp = response.data.application;
 
-          // Only show toast once with a unique ID
-          if (!hasShownPendingToast.current && componentMounted.current) {
-            hasShownPendingToast.current = true;
-            console.log("Showing pending toast");
-            toast.success(
-              "Your application is already submitted and pending review",
-              {
-                id: "pending-app-toast",
-                duration: 3000,
-              },
-            );
+        console.log("Has application:", hasApplication);
+        console.log("Existing app:", existingApp);
+
+        if (hasApplication && existingApp) {
+          console.log("Existing application found:", existingApp);
+
+          // Parse any JSON fields if needed
+          let parsedApp = { ...existingApp };
+          if (
+            existingApp.selected_curriculums &&
+            typeof existingApp.selected_curriculums === "string"
+          ) {
+            try {
+              parsedApp.selected_curriculums = JSON.parse(
+                existingApp.selected_curriculums,
+              );
+            } catch (e) {
+              console.error("Error parsing selected_curriculums:", e);
+            }
           }
 
-          // Only redirect once
-          if (!hasRedirectedToStatus.current && componentMounted.current) {
-            hasRedirectedToStatus.current = true;
-            console.log("Redirecting to status page");
-            // Use setTimeout to prevent redirect during render
-            setTimeout(() => {
-              if (componentMounted.current) {
+          // Handle pending applications
+          if (existingApp.application_status === "pending") {
+            console.log("Application status is pending");
+            if (!hasShownPendingToast.current) {
+              hasShownPendingToast.current = true;
+              toast.success(
+                "Your application is already submitted and pending review",
+                { id: "pending-app-toast", duration: 3000 },
+              );
+            }
+
+            if (!hasRedirectedToStatus.current) {
+              hasRedirectedToStatus.current = true;
+              setTimeout(() => {
                 router.push("/onboarding/tutor/status");
-              }
-            }, 100);
-          }
-          return;
-        }
-
-        // Handle approved applications
-        if (data.data.application.application_status === "approved") {
-          console.log("Application status is approved");
-
-          if (!hasShownApprovedToast.current && componentMounted.current) {
-            hasShownApprovedToast.current = true;
-            toast.success("You are already an approved tutor!", {
-              id: "approved-toast",
-              duration: 3000,
-            });
+              }, 100);
+            }
+            setIsLoading(false);
+            return;
           }
 
-          if (!hasRedirectedToStatus.current && componentMounted.current) {
-            hasRedirectedToStatus.current = true;
-            setTimeout(() => {
-              if (componentMounted.current) {
+          // Handle approved applications
+          if (existingApp.application_status === "approved") {
+            console.log("Application status is approved");
+            if (!hasShownApprovedToast.current) {
+              hasShownApprovedToast.current = true;
+              toast.success("You are already an approved tutor!", {
+                id: "approved-toast",
+                duration: 3000,
+              });
+            }
+
+            if (!hasRedirectedToStatus.current) {
+              hasRedirectedToStatus.current = true;
+              setTimeout(() => {
                 router.push("/tutor/dashboard");
-              }
-            }, 100);
+              }, 100);
+            }
+            setIsLoading(false);
+            return;
           }
-          return;
+
+          // Handle draft application - set all states
+          console.log("Setting application data");
+          setFormData(parsedApp);
+          setApplication(parsedApp);
+
+          const savedStep = existingApp.current_step || 1;
+          console.log("Setting current step to:", savedStep);
+          setCurrentStep(savedStep);
+        } else {
+          console.log("No existing application found, showing intro");
+          setCurrentStep(0);
         }
       } else {
         console.log("No existing application found, showing intro");
         setCurrentStep(0);
       }
-      console.log("Loaded application data:", data);
     } catch (error) {
       console.error("Failed to load application:", error);
-      // Only show error toast once
       toast.error("Failed to load application data", {
         id: "load-error-toast",
         duration: 3000,
       });
+      setCurrentStep(0);
     } finally {
-      if (componentMounted.current) {
-        setIsLoading(false);
-      }
+      console.log("Setting isLoading to false");
+      setIsLoading(false);
     }
   };
 
   const handleNext = useCallback(
     async (stepData: any) => {
-      // CRITICAL: Prevent multiple submissions
       if (isSubmitting.current) {
         console.log("⏳ Submission already in progress, skipping...");
         return;
@@ -211,7 +199,7 @@ export default function TutorOnboarding() {
 
       try {
         isSubmitting.current = true;
-        setIsLoading(true);
+        setIsSaving(true);
 
         console.log(
           "🚀 handleNext called with step:",
@@ -229,8 +217,26 @@ export default function TutorOnboarding() {
         );
 
         if (response.success && response.data) {
-          setApplication(response.data);
-          setFormData(response.data);
+          // Parse any JSON fields in response
+          let parsedResponse = { ...response.data };
+          if (
+            parsedResponse.selected_curriculums &&
+            typeof parsedResponse.selected_curriculums === "string"
+          ) {
+            try {
+              parsedResponse.selected_curriculums = JSON.parse(
+                parsedResponse.selected_curriculums,
+              );
+            } catch (e) {
+              console.error(
+                "Error parsing selected_curriculums in response:",
+                e,
+              );
+            }
+          }
+
+          setApplication(parsedResponse);
+          setFormData(parsedResponse);
 
           if (currentStep === 4) {
             console.log("🎯 Step 4 completed, setting showSummary to true");
@@ -265,10 +271,9 @@ export default function TutorOnboarding() {
           id: "step-error",
         });
       } finally {
-        console.log("Setting isLoading to false");
-        setIsLoading(false);
+        console.log("Setting isSaving to false");
+        setIsSaving(false);
 
-        // Reset submission flag after a delay to prevent rapid re-submissions
         setTimeout(() => {
           isSubmitting.current = false;
         }, 1000);
@@ -295,7 +300,7 @@ export default function TutorOnboarding() {
 
     try {
       isSubmitting.current = true;
-      setIsLoading(true);
+      setIsSaving(true);
 
       const response = await submitApplication(paymentReference, paymentMethod);
 
@@ -314,7 +319,7 @@ export default function TutorOnboarding() {
       });
       throw error;
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
       setTimeout(() => {
         isSubmitting.current = false;
       }, 1000);
@@ -352,8 +357,8 @@ export default function TutorOnboarding() {
   );
 
   const handleContinueClick = useCallback(() => {
-    if (isSubmitting.current) {
-      console.log("⏳ Already submitting, ignoring click");
+    if (isSubmitting.current || isSaving) {
+      console.log("⏳ Already submitting/saving, ignoring click");
       return;
     }
 
@@ -373,9 +378,10 @@ export default function TutorOnboarding() {
         if (form) form.requestSubmit();
       }
     }
-  }, [currentStep]);
+  }, [currentStep, isSaving]);
 
-  if (isLoading && !application) {
+  // Show loading state while checking for existing application
+  if (isLoading) {
     return (
       <div className="fixed inset-0 bg-white flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-main"></div>
@@ -383,6 +389,7 @@ export default function TutorOnboarding() {
     );
   }
 
+  // Show summary if applicable
   if (showSummary && application) {
     return (
       <div className="fixed inset-0 bg-white overflow-y-auto">
@@ -391,13 +398,14 @@ export default function TutorOnboarding() {
             application={application}
             onSubmit={handleSubmitApplication}
             onEdit={() => setShowSummary(false)}
-            isLoading={isLoading}
+            isLoading={isSaving}
           />
         </div>
       </div>
     );
   }
 
+  // Show intro screen
   if (currentStep === 0) {
     return (
       <div className="fixed inset-0 bg-white flex flex-col">
@@ -452,7 +460,7 @@ export default function TutorOnboarding() {
         <main className="flex-1 overflow-y-auto pb-24">
           <div className="max-w-7xl mx-auto px-1 pt-1 pb-8 md:pt-2 md:pb-8">
             <div className="bg-white p-6 md:p-8">
-              <div className="flex flex-col lg:flex-row gap-2 md:gap-8 ">
+              <div className="flex flex-col lg:flex-row gap-2 md:gap-8">
                 <div className="lg:w-1/2 flex items-center">
                   <div className="text-left w-full">
                     <h1 className="max-w-[18ch] text-3xl md:text-5xl font-semibold text-gray-900 mb-6 leading-tight">
@@ -544,7 +552,7 @@ export default function TutorOnboarding() {
                 </button>
                 <button
                   onClick={handleStartApplication}
-                  className="px-8 py-3 bg-main text-white font-semibold rounded-lg hover:bg-main/90 focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 transition-colors"
+                  className="px-8 py-3 bg-main text-white font-semibold rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 transition-colors"
                 >
                   Start Application
                 </button>
@@ -556,6 +564,7 @@ export default function TutorOnboarding() {
     );
   }
 
+  // Show the main form with steps
   return (
     <div className="fixed inset-0 bg-white flex flex-col">
       <header className="border-b border-gray-200">
@@ -610,28 +619,28 @@ export default function TutorOnboarding() {
             {currentStep === 1 && (
               <Step1TutorLevel
                 key={`step1-${application?.id}`}
-                initialData={application}
+                initialData={formData}
                 onNext={handleFormSubmit}
-                isLoading={isLoading}
+                isLoading={isSaving}
                 ref={step1FormRef}
               />
             )}
             {currentStep === 2 && (
               <Step2PersonalInfo
                 key={`step2-${application?.id}`}
-                initialData={application}
+                initialData={formData}
                 onNext={handleFormSubmit}
-                isLoading={isLoading}
+                isLoading={isSaving}
                 ref={step2FormRef}
               />
             )}
             {currentStep === 3 && (
               <Step3Education
                 key={`step3-${application?.id}`}
-                initialData={application}
+                initialData={formData}
                 onNext={handleFormSubmit}
                 onBack={handleBack}
-                isLoading={isLoading}
+                isLoading={isSaving}
                 tutorLevel={formData?.tutor_level || application?.tutor_level}
                 ref={step3FormRef}
               />
@@ -639,10 +648,11 @@ export default function TutorOnboarding() {
             {currentStep === 4 && (
               <Step4Experience
                 key={`step4-${application?.id}`}
-                initialData={application}
+                initialData={formData}
                 onNext={handleFormSubmit}
                 onBack={handleBack}
-                isLoading={isLoading}
+                isLoading={isSaving}
+                tutorLevel={formData?.tutor_level || application?.tutor_level}
                 ref={step4FormRef}
               />
             )}
@@ -683,7 +693,7 @@ export default function TutorOnboarding() {
                 <button
                   type="button"
                   onClick={handleBack}
-                  disabled={isLoading}
+                  disabled={isSaving}
                   className="px-4 py-2.5 md:px-6 md:py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base"
                 >
                   Back
@@ -704,10 +714,10 @@ export default function TutorOnboarding() {
               <button
                 type="button"
                 onClick={handleContinueClick}
-                disabled={isLoading}
-                className="px-4 py-2.5 md:px-8 md:py-3 bg-main text-white font-semibold rounded-lg hover:bg-main focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base w-full md:w-auto"
+                disabled={isSaving}
+                className="px-4 py-2.5 md:px-8 md:py-3 bg-main text-white font-semibold rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm md:text-base w-full md:w-auto"
               >
-                {isLoading ? (
+                {isSaving ? (
                   <span className="flex items-center justify-center">
                     <svg
                       className="animate-spin h-4 w-4 md:h-5 md:w-5 mr-2 text-white"
@@ -795,7 +805,7 @@ export default function TutorOnboarding() {
                     handleExit(true);
                     setShowExitDialog(false);
                   }}
-                  className="w-full px-4 py-3 bg-main text-white font-medium rounded-lg hover:bg-main/90 focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 transition-colors text-sm md:text-base"
+                  className="w-full px-4 py-3 bg-main text-white font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-main focus:ring-offset-2 transition-colors text-sm md:text-base"
                 >
                   Save & Exit
                 </button>

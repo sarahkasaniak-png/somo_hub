@@ -57,7 +57,7 @@ const Sidebar = ({
 
   const tutorMenu: MenuItem[] = [
     { name: "Dashboard", href: "/tutor/dashboard", icon: Home },
-    { name: "Courses", href: "/tutor/courses", icon: BookOpen },
+    // { name: "Courses", href: "/tutor/courses", icon: BookOpen },
     {
       name: "Sessions",
       href: "/tutor/sessions",

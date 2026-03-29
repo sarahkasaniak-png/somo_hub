@@ -1,185 +1,194 @@
-// src/app/tutor/schedules/page.tsx
+// src/app/tutor/sessions/[id]/schedules/page.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import tutorApi from "@/lib/api/tutor";
-import type { TutorSessionSchedule } from "@/lib/api/tutor";
 import {
   Calendar,
   Clock,
   Video,
   ChevronRight,
+  ArrowLeft,
   PlayCircle,
   CheckCircle,
   XCircle,
-  AlertCircle,
   Loader2,
   CalendarDays,
   MapPinned,
   Wifi,
-  MapPin,
-  ArrowRight,
   Sun,
   Moon,
   Sunrise,
   Sunset,
   Users,
-  GraduationCap,
   BookOpen,
   ExternalLink,
-  MoreVertical,
   Copy,
   Check,
   RefreshCw,
   Info,
+  Edit,
+  Trash2,
+  AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 
-interface ExtendedTutorSessionSchedule extends TutorSessionSchedule {
-  enrolled_students?: number;
+// Make these fields optional to match TutorSessionSchedule
+interface ClassSchedule {
+  id: number;
+  class_number: number;
+  title: string;
+  description: string | null;
+  date: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+  status: "scheduled" | "ongoing" | "completed" | "cancelled" | "rescheduled";
+  meeting_link: string | null;
+  student_meeting_link?: string | null;
+  attendance_taken: boolean;
+  recorded_session_url: string | null;
+  topics: string[];
+  learning_objectives: string[];
+  materials: string[];
+  assignments: any[];
 }
 
-interface ScheduleResponse {
-  success: boolean;
-  data?:
-    | ExtendedTutorSessionSchedule[]
-    | {
-        data?: ExtendedTutorSessionSchedule[];
-        schedules?: ExtendedTutorSessionSchedule[];
-      };
-  message?: string;
+interface SessionInfo {
+  id: number;
+  uuid: string;
+  name: string;
+  session_code: string;
+  subject: string;
+  start_date: string;
+  end_date: string;
+  session_type: string;
+  batch_name: string | null;
+  max_students: number;
+  current_enrollment: number;
 }
 
-export default function TutorSchedulesPage() {
-  const [todaySchedules, setTodaySchedules] = useState<
-    ExtendedTutorSessionSchedule[]
-  >([]);
-  const [upcomingSchedules, setUpcomingSchedules] = useState<
-    ExtendedTutorSessionSchedule[]
-  >([]);
+export default function SessionSchedulesPage() {
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = params.id as string;
+  const classParam = searchParams.get("class");
+
+  const [session, setSession] = useState<SessionInfo | null>(null);
+  const [schedules, setSchedules] = useState<ClassSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [joiningId, setJoiningId] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState({
-    todayCount: 0,
-    liveNow: 0,
-    upcomingCount: 0,
-    thisWeekCount: 0,
-    totalCount: 0,
-  });
+  const [selectedClass, setSelectedClass] = useState<ClassSchedule | null>(
+    null,
+  );
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all");
 
   useEffect(() => {
-    fetchSchedules();
-  }, []);
+    fetchSessionAndSchedules();
+  }, [sessionId]);
 
+  // Handle opening specific class from URL parameter
   useEffect(() => {
-    // Update stats whenever schedules change
-    updateStats();
-  }, [todaySchedules, upcomingSchedules]);
+    if (classParam && schedules.length > 0 && !selectedClass) {
+      const classId = parseInt(classParam);
+      const foundClass = schedules.find((s) => s.id === classId);
+      if (foundClass) {
+        setSelectedClass(foundClass);
+        setShowDetailsModal(true);
+        // Remove the query parameter from URL without refreshing
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+      }
+    }
+  }, [classParam, schedules, selectedClass]);
 
-  const fetchSchedules = async () => {
+  const fetchSessionAndSchedules = async () => {
     try {
       setLoading(true);
-      const [todayRes, upcomingRes] = await Promise.all([
-        tutorApi.schedules.getTodaySchedules() as Promise<ScheduleResponse>,
-        tutorApi.schedules.getUpcomingSchedules(
-          10,
-        ) as Promise<ScheduleResponse>,
-      ]);
 
-      // Safely extract data from responses
-      if (todayRes.success) {
-        // Handle different possible response structures
-        let todayData: ExtendedTutorSessionSchedule[] = [];
+      // Fetch session details
+      const sessionResponse = await tutorApi.getSession(sessionId);
+      if (sessionResponse.success) {
+        const sessionData = sessionResponse.data;
+        setSession({
+          id: sessionData.id,
+          uuid: sessionData.uuid,
+          name: sessionData.name,
+          session_code: sessionData.session_code,
+          subject: sessionData.subject,
+          start_date: sessionData.start_date,
+          end_date: sessionData.end_date,
+          session_type: sessionData.session_type,
+          batch_name: sessionData.batch_name,
+          max_students: sessionData.max_students,
+          current_enrollment: sessionData.current_enrollment,
+        });
 
-        if (todayRes.data) {
-          if (Array.isArray(todayRes.data)) {
-            todayData = todayRes.data;
-          } else if (typeof todayRes.data === "object") {
-            todayData = todayRes.data.data || todayRes.data.schedules || [];
-          }
+        // Fetch schedules for this session
+        const schedulesResponse = await tutorApi.schedules.getSessionSchedules(
+          sessionData.id,
+        );
+        if (schedulesResponse.success) {
+          // Filter schedules to only include those matching this session
+          const filteredSchedules = schedulesResponse.data.filter(
+            (schedule: any) =>
+              schedule.tutor_course_session_id === sessionData.id,
+          );
+
+          // Map TutorSessionSchedule to ClassSchedule
+          const mappedSchedules: ClassSchedule[] = filteredSchedules.map(
+            (schedule: any) => ({
+              id: schedule.id,
+              class_number: schedule.class_number,
+              title: schedule.title,
+              description: schedule.description || null,
+              date: schedule.date,
+              start_time: schedule.start_time,
+              end_time: schedule.end_time,
+              duration_minutes: schedule.duration_minutes,
+              status: schedule.status,
+              meeting_link: schedule.meeting_link || null,
+              student_meeting_link: schedule.student_meeting_link,
+              attendance_taken: schedule.attendance_taken || false,
+              recorded_session_url: schedule.recorded_session_url || null,
+              topics: schedule.topics || [],
+              learning_objectives: schedule.learning_objectives || [],
+              materials: schedule.materials || [],
+              assignments: schedule.assignments || [],
+            }),
+          );
+          setSchedules(mappedSchedules);
         }
-
-        setTodaySchedules(todayData);
-      } else {
-        setTodaySchedules([]);
-      }
-
-      if (upcomingRes.success) {
-        // Handle different possible response structures
-        let upcomingData: ExtendedTutorSessionSchedule[] = [];
-
-        if (upcomingRes.data) {
-          if (Array.isArray(upcomingRes.data)) {
-            upcomingData = upcomingRes.data;
-          } else if (typeof upcomingRes.data === "object") {
-            upcomingData =
-              upcomingRes.data.data || upcomingRes.data.schedules || [];
-          }
-        }
-
-        setUpcomingSchedules(upcomingData);
-      } else {
-        setUpcomingSchedules([]);
       }
     } catch (error) {
-      console.error("Failed to fetch schedules:", error);
-      toast.error("Failed to load schedules");
-      setTodaySchedules([]);
-      setUpcomingSchedules([]);
+      console.error("Failed to fetch session schedules:", error);
+      toast.error("Failed to load class schedules");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchSchedules();
-    toast.success("Schedules refreshed");
-  };
-
-  const updateStats = () => {
-    const todayCount = todaySchedules.length;
-    const liveNow = todaySchedules.filter((s) => s.status === "ongoing").length;
-    const upcomingCount = upcomingSchedules.length;
-
-    // Calculate this week's count
-    const allSchedules = [...todaySchedules, ...upcomingSchedules];
-    const thisWeekCount = allSchedules.filter((s) => {
-      const date = new Date(s.date);
-      const today = new Date();
-      const weekEnd = new Date(today);
-      weekEnd.setDate(today.getDate() + (7 - today.getDay()));
-      return date >= today && date <= weekEnd;
-    }).length;
-
-    setStats({
-      todayCount,
-      liveNow,
-      upcomingCount,
-      thisWeekCount,
-      totalCount: allSchedules.length,
-    });
-  };
-
-  const handleJoinSession = async (scheduleId: number) => {
+  const handleJoinClass = async (scheduleId: number) => {
     try {
       setJoiningId(scheduleId);
       const response =
         await tutorApi.schedules.joinScheduledSession(scheduleId);
 
-      if (response.success && response.data?.meeting_link) {
+      if (response.success && response.data.meeting_link) {
         window.open(response.data.meeting_link, "_blank");
-        toast.success("Joining session...");
-        setTimeout(() => fetchSchedules(), 2000);
+        toast.success("Joining class...");
       } else {
         toast.error("Meeting link not available");
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to join session");
+      toast.error(error.message || "Failed to join class");
     } finally {
       setJoiningId(null);
     }
@@ -217,6 +226,7 @@ export default function TutorSchedulesPage() {
     } else {
       return date.toLocaleDateString("en-US", {
         weekday: "short",
+        year: "numeric",
         month: "short",
         day: "numeric",
       });
@@ -227,6 +237,57 @@ export default function TutorSchedulesPage() {
     const date = new Date(dateString);
     const today = new Date();
     return date.toDateString() === today.toDateString();
+  };
+
+  const isPast = (dateString: string, startTime: string) => {
+    const classDateTime = new Date(`${dateString}T${startTime}`);
+    return classDateTime < new Date();
+  };
+
+  const getStatusBadge = (status: string, date: string, startTime: string) => {
+    if (status === "ongoing") {
+      return {
+        bg: "bg-emerald-50",
+        text: "text-emerald-700",
+        border: "border-emerald-200",
+        icon: <PlayCircle className="w-3.5 h-3.5" />,
+        label: "Live Now",
+      };
+    }
+    if (status === "completed") {
+      return {
+        bg: "bg-purple-50",
+        text: "text-purple-700",
+        border: "border-purple-200",
+        icon: <CheckCircle className="w-3.5 h-3.5" />,
+        label: "Completed",
+      };
+    }
+    if (status === "cancelled") {
+      return {
+        bg: "bg-rose-50",
+        text: "text-rose-700",
+        border: "border-rose-200",
+        icon: <XCircle className="w-3.5 h-3.5" />,
+        label: "Cancelled",
+      };
+    }
+    if (isPast(date, startTime)) {
+      return {
+        bg: "bg-gray-50",
+        text: "text-gray-700",
+        border: "border-gray-200",
+        icon: <Clock className="w-3.5 h-3.5" />,
+        label: "Past",
+      };
+    }
+    return {
+      bg: "bg-blue-50",
+      text: "text-blue-700",
+      border: "border-blue-200",
+      icon: <Calendar className="w-3.5 h-3.5" />,
+      label: "Scheduled",
+    };
   };
 
   const getTimeIcon = (time: string) => {
@@ -240,265 +301,187 @@ export default function TutorSchedulesPage() {
     return <Moon className="w-4 h-4 text-indigo-500" />;
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      scheduled: {
-        bg: "bg-blue-50",
-        text: "text-blue-700",
-        border: "border-blue-200",
-        icon: <Calendar className="w-3.5 h-3.5" />,
-        label: "Scheduled",
-      },
-      ongoing: {
-        bg: "bg-emerald-50",
-        text: "text-emerald-700",
-        border: "border-emerald-200",
-        icon: <PlayCircle className="w-3.5 h-3.5" />,
-        label: "Live Now",
-      },
-      completed: {
-        bg: "bg-purple-50",
-        text: "text-purple-700",
-        border: "border-purple-200",
-        icon: <CheckCircle className="w-3.5 h-3.5" />,
-        label: "Completed",
-      },
-      cancelled: {
-        bg: "bg-rose-50",
-        text: "text-rose-700",
-        border: "border-rose-200",
-        icon: <XCircle className="w-3.5 h-3.5" />,
-        label: "Cancelled",
-      },
-    };
-
-    const config =
-      statusConfig[status as keyof typeof statusConfig] ||
-      statusConfig.scheduled;
-
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}
-      >
-        {config.icon}
-        {config.label}
-      </span>
-    );
+  const getFilteredSchedules = () => {
+    if (filter === "all") return schedules;
+    if (filter === "upcoming") {
+      return schedules.filter(
+        (s) =>
+          !isPast(s.date, s.start_time) &&
+          s.status !== "cancelled" &&
+          s.status !== "completed",
+      );
+    }
+    if (filter === "past") {
+      return schedules.filter(
+        (s) => isPast(s.date, s.start_time) || s.status === "completed",
+      );
+    }
+    return schedules;
   };
 
-  const getModeBadge = (mode: string, platform?: string) => {
-    const modeConfig = {
-      virtual: {
-        bg: "bg-indigo-50",
-        text: "text-indigo-700",
-        border: "border-indigo-200",
-        icon: <Video className="w-3.5 h-3.5" />,
-        label: platform ? platform.replace("_", " ") : "Virtual",
-      },
-      in_person: {
-        bg: "bg-amber-50",
-        text: "text-amber-700",
-        border: "border-amber-200",
-        icon: <MapPinned className="w-3.5 h-3.5" />,
-        label: "In Person",
-      },
-      hybrid: {
-        bg: "bg-teal-50",
-        text: "text-teal-700",
-        border: "border-teal-200",
-        icon: <Wifi className="w-3.5 h-3.5" />,
-        label: "Hybrid",
-      },
-    };
-
-    const config =
-      modeConfig[mode as keyof typeof modeConfig] || modeConfig.virtual;
-
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}
-      >
-        {config.icon}
-        {config.label}
-      </span>
+  const ClassCard = ({ classItem }: { classItem: ClassSchedule }) => {
+    const classIsToday = isToday(classItem.date);
+    const classIsPast = isPast(classItem.date, classItem.start_time);
+    const statusConfig = getStatusBadge(
+      classItem.status,
+      classItem.date,
+      classItem.start_time,
     );
-  };
-
-  const ScheduleCard = ({
-    schedule,
-  }: {
-    schedule: ExtendedTutorSessionSchedule;
-  }) => {
-    const scheduleIsToday = isToday(schedule.date);
     const canJoin =
-      schedule.status === "scheduled" || schedule.status === "ongoing";
-    const isOngoing = schedule.status === "ongoing";
-
-    // Check if there's at least one enrolled student
-    const hasEnrolledStudents = (schedule.enrolled_students || 0) > 0;
-
-    // Determine if join button should be enabled
-    const canJoinClass = canJoin && hasEnrolledStudents;
-
-    // Determine tooltip message for disabled state
-    const getDisabledTooltip = () => {
-      if (!hasEnrolledStudents) return "No students enrolled yet";
-      if (schedule.status === "completed") return "This class is completed";
-      if (schedule.status === "cancelled") return "This class is cancelled";
-      return "Cannot join at this time";
-    };
+      (classItem.status === "scheduled" || classItem.status === "ongoing") &&
+      !classIsPast;
+    const hasStudents =
+      session?.current_enrollment && session.current_enrollment > 0;
 
     return (
-      <div className="group relative bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden">
-        {/* Status Indicator Line */}
+      <div
+        className="group relative bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer"
+        onClick={() => {
+          setSelectedClass(classItem);
+          setShowDetailsModal(true);
+          // Update URL with class parameter without refreshing
+          const newUrl = `${window.location.pathname}?class=${classItem.id}`;
+          window.history.pushState({}, "", newUrl);
+        }}
+      >
         <div
-          className={`absolute top-0 left-0 right-0 h-1 h-[1px] ${
-            isOngoing
+          className={`absolute top-0 left-0 right-0 h-1 ${
+            classItem.status === "ongoing"
               ? "bg-emerald-500"
-              : schedule.status === "scheduled"
-                ? "bg-blue-500"
-                : schedule.status === "completed"
-                  ? "bg-purple-500"
-                  : "bg-rose-500"
+              : classItem.status === "cancelled"
+                ? "bg-rose-500"
+                : classIsToday
+                  ? "bg-amber-500"
+                  : "bg-blue-500"
           }`}
         />
 
         <div className="p-6">
-          {/* Header with Course Info */}
+          {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="w-12 h-12 bg-gradient-to-br from-main/10 to-purple-100 rounded-xl flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-main" />
+                  <Calendar className="w-6 h-6 text-main" />
                 </div>
-                {scheduleIsToday && (
+                {classIsToday && !classIsPast && (
                   <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                 )}
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-gray-900">
-                    {schedule.course_title || "Course"}
+                    Class {classItem.class_number}
                   </h3>
-                  {scheduleIsToday && (
+                  {classIsToday && !classIsPast && (
                     <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
                       Today
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-600">
-                  {schedule.session_name || "Session"}
-                </p>
+                <p className="text-sm text-gray-600">{classItem.title}</p>
               </div>
-            </div>
-
-            {/* Enrollment Badge */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
-              <Users className="w-3 h-3" />
-              <span>{schedule.enrolled_students || 0} enrolled</span>
             </div>
           </div>
 
           {/* Main Content */}
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-            {/* Left side - Class info */}
             <div className="flex-1">
-              <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                {schedule.title}
-              </h4>
-
               {/* Date & Time */}
               <div className="flex flex-wrap items-center gap-4 mb-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="w-4 h-4 text-gray-400" />
                   <span
-                    className={`text-gray-700 ${scheduleIsToday ? "font-medium text-amber-700" : ""}`}
+                    className={`text-gray-700 ${classIsToday ? "font-medium text-amber-700" : ""}`}
                   >
-                    {formatDate(schedule.date)}
+                    {formatDate(classItem.date)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-700">
-                    {formatTime(schedule.start_time)} -{" "}
-                    {formatTime(schedule.end_time)}
+                    {formatTime(classItem.start_time)} -{" "}
+                    {formatTime(classItem.end_time)}
                   </span>
                   <span className="text-xs text-gray-400">
-                    ({schedule.duration_minutes} min)
+                    ({classItem.duration_minutes} min)
                   </span>
                 </div>
               </div>
 
               {/* Badges */}
               <div className="flex flex-wrap items-center gap-2">
-                {getStatusBadge(schedule.status)}
-                {getModeBadge(schedule.mode)}
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
+                >
+                  {statusConfig.icon}
+                  {statusConfig.label}
+                </span>
 
-                {/* Enrollment Status Badge */}
-                {!hasEnrolledStudents && (
+                {!hasStudents && canJoin && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border bg-yellow-50 text-yellow-700 border-yellow-200">
                     <Users className="w-3.5 h-3.5" />
                     No Students
                   </span>
                 )}
               </div>
+
+              {/* Description */}
+              {classItem.description && (
+                <p className="mt-3 text-sm text-gray-600 line-clamp-2">
+                  {classItem.description}
+                </p>
+              )}
             </div>
 
-            {/* Right side - Action Buttons */}
-            <div className="flex items-center gap-2 lg:self-center">
-              {/* Single Join Button - handles everything */}
-              <button
-                onClick={() => handleJoinSession(schedule.id)}
-                disabled={joiningId === schedule.id || !canJoinClass}
-                className={`px-4 py-3 rounded-xl transition-all inline-flex items-center gap-2 relative group/btn ${
-                  !canJoinClass
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : isOngoing
+            {/* Action Buttons - Prevent click propagation to avoid double opening */}
+            <div
+              className="flex items-center gap-2 lg:self-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {canJoin && hasStudents && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleJoinClass(classItem.id);
+                  }}
+                  disabled={joiningId === classItem.id}
+                  className={`px-4 py-3 rounded-xl transition-all inline-flex items-center gap-2 ${
+                    classItem.status === "ongoing"
                       ? "bg-emerald-600 text-white hover:bg-emerald-700 animate-pulse"
-                      : scheduleIsToday
+                      : classIsToday
                         ? "bg-amber-600 text-white hover:bg-amber-700"
                         : "bg-main text-white hover:bg-purple-700"
-                }`}
-                title={!canJoinClass ? getDisabledTooltip() : ""}
-              >
-                {joiningId === schedule.id ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Joining...</span>
-                  </>
-                ) : (
-                  <>
-                    <Video className="w-5 h-5" />
-                    <span className="text-sm font-medium">
-                      {!canJoinClass
-                        ? "Cannot Join"
-                        : isOngoing
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {joiningId === classItem.id ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Joining...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Video className="w-5 h-5" />
+                      <span className="text-sm font-medium">
+                        {classItem.status === "ongoing"
                           ? "Join Live"
-                          : scheduleIsToday
-                            ? "Join Today"
-                            : "Join Class"}
-                    </span>
-                  </>
-                )}
+                          : "Join Class"}
+                      </span>
+                    </>
+                  )}
+                </button>
+              )}
 
-                {/* Tooltip for disabled state */}
-                {!canJoinClass && (
-                  <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                    {getDisabledTooltip()}
-                  </span>
-                )}
-              </button>
-
-              {/* Copy Link Button - appears when meeting is available */}
-              {schedule.meeting_link && canJoinClass && (
+              {classItem.meeting_link && canJoin && (
                 <button
-                  onClick={() =>
-                    handleCopyLink(schedule.meeting_link!, schedule.id)
-                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyLink(classItem.meeting_link!, classItem.id);
+                  }}
                   className="p-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
                   title="Copy meeting link"
                 >
-                  {copiedId === schedule.id ? (
+                  {copiedId === classItem.id ? (
                     <Check className="w-5 h-5 text-green-600" />
                   ) : (
                     <Copy className="w-5 h-5" />
@@ -506,28 +489,24 @@ export default function TutorSchedulesPage() {
                 </button>
               )}
 
-              {/* View Details Link */}
-              <Link
-                href={`/tutor/sessions/${schedule.tutor_course_session_id}/schedules`}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedClass(classItem);
+                  setShowDetailsModal(true);
+                  const newUrl = `${window.location.pathname}?class=${classItem.id}`;
+                  window.history.pushState({}, "", newUrl);
+                }}
                 className="p-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
                 title="View details"
               >
                 <ExternalLink className="w-5 h-5" />
-              </Link>
-
-              {/* View Session Link */}
-              <Link
-                href={`/tutor/sessions/${schedule.tutor_course_session_id}`}
-                className="p-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
-                title="View session"
-              >
-                <ArrowRight className="w-5 h-5" />
-              </Link>
+              </button>
             </div>
           </div>
 
           {/* Info message for classes with no students */}
-          {!hasEnrolledStudents && (
+          {!hasStudents && canJoin && (
             <div className="mt-4 pt-3 border-t border-gray-100">
               <p className="text-xs text-gray-500 flex items-center gap-1">
                 <Info className="w-3 h-3" />
@@ -553,10 +532,37 @@ export default function TutorSchedulesPage() {
     );
   }
 
+  if (!session) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md text-center">
+          <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-12 h-12 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            Session Not Found
+          </h2>
+          <p className="text-gray-600 mb-8">
+            The session you're looking for doesn't exist or has been deleted.
+          </p>
+          <Link
+            href="/tutor/sessions"
+            className="inline-flex items-center px-6 py-3 bg-main text-white font-medium rounded-xl hover:bg-purple-700 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back to Sessions
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredSchedules = getFilteredSchedules();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Header with Breadcrumb */}
+        {/* Breadcrumb */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
             <Link
@@ -566,179 +572,399 @@ export default function TutorSchedulesPage() {
               Dashboard
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 font-medium">My Schedule</span>
+            <Link
+              href="/tutor/sessions"
+              className="hover:text-main transition-colors"
+            >
+              Sessions
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <Link
+              href={`/tutor/sessions/${session.uuid}`}
+              className="hover:text-main transition-colors"
+            >
+              {session.name}
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <span className="text-gray-900 font-medium">Class Schedules</span>
           </div>
 
-          <div className="flex items-start justify-between gap-4">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                My Class Schedule
-              </h1>
-              <p className="text-gray-600 mt-1">
-                View and join your scheduled classes
-              </p>
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/tutor/sessions/${session.uuid}`}
+                  className="p-2 hover:bg-white rounded-xl transition-colors group"
+                  title="Back to Session"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-main transition-colors" />
+                </Link>
+                <div>
+                  <h1 className="text-2xl font-semibold text-gray-900">
+                    Class Schedules
+                  </h1>
+                  <p className="text-gray-600 mt-1">
+                    {session.name} • {session.session_code}
+                  </p>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
-              title="Refresh"
-            >
-              <RefreshCw
-                className={`w-5 h-5 text-gray-600 ${refreshing ? "animate-spin" : ""}`}
-              />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => fetchSessionAndSchedules()}
+                disabled={loading}
+                className="p-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                title="Refresh"
+              >
+                <RefreshCw
+                  className={`w-5 h-5 text-gray-600 ${loading ? "animate-spin" : ""}`}
+                />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500">Today's Classes</p>
-              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-                <Sun className="w-5 h-5 text-amber-600" />
-              </div>
-            </div>
-            <p className="text-2xl font-semibold text-gray-900">
-              {stats.todayCount}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {stats.liveNow} live now
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Total Classes</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">
+              {schedules.length}
             </p>
           </div>
-
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500">Upcoming</p>
-              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-            <p className="text-2xl font-semibold text-gray-900">
-              {stats.upcomingCount}
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Upcoming</p>
+            <p className="text-2xl font-bold text-emerald-600 mt-1">
+              {
+                schedules.filter(
+                  (s) =>
+                    !isPast(s.date, s.start_time) && s.status !== "cancelled",
+                ).length
+              }
             </p>
-            <p className="text-xs text-gray-400 mt-1">Next 7 days</p>
           </div>
-
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500">This Week</p>
-              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
-                <CalendarDays className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-            <p className="text-2xl font-semibold text-gray-900">
-              {stats.thisWeekCount}
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Completed</p>
+            <p className="text-2xl font-bold text-purple-600 mt-1">
+              {
+                schedules.filter(
+                  (s) =>
+                    s.status === "completed" || isPast(s.date, s.start_time),
+                ).length
+              }
             </p>
-            <p className="text-xs text-gray-400 mt-1">Total sessions</p>
           </div>
-
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500">Total Classes</p>
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-            <p className="text-2xl font-semibold text-gray-900">
-              {stats.totalCount}
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Enrolled Students</p>
+            <p className="text-2xl font-bold text-blue-600 mt-1">
+              {session.current_enrollment}/{session.max_students}
             </p>
-            <p className="text-xs text-gray-400 mt-1">Active courses</p>
           </div>
         </div>
 
-        {/* Today's Classes */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Sun className="w-5 h-5 text-amber-500" />
-              Today's Classes
-              {stats.todayCount > 0 && (
-                <span className="ml-2 px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
-                  {stats.todayCount} class{stats.todayCount !== 1 ? "es" : ""}
-                </span>
-              )}
-            </h2>
-            <Link
-              href="/tutor/sessions"
-              className="text-sm text-main hover:text-purple-700 font-medium flex items-center gap-1 group"
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-gray-700">Filter:</span>
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === "all"
+                  ? "bg-main text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
             >
-              View All Sessions
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+              All Classes
+            </button>
+            <button
+              onClick={() => setFilter("upcoming")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === "upcoming"
+                  ? "bg-main text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Upcoming
+            </button>
+            <button
+              onClick={() => setFilter("past")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === "past"
+                  ? "bg-main text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Past
+            </button>
           </div>
-
-          {todaySchedules.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4">
-              {todaySchedules.map((schedule) => (
-                <ScheduleCard key={schedule.id} schedule={schedule} />
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl p-12 text-center border border-gray-200">
-              <div className="w-20 h-20 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Sun className="w-10 h-10 text-amber-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No classes scheduled for today
-              </h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                Take a break or prepare for your upcoming classes. You have no
-                sessions scheduled for today.
-              </p>
-              <Link
-                href="/tutor/sessions/create"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-main text-white font-medium rounded-xl hover:bg-purple-700 transition-colors shadow-sm hover:shadow"
-              >
-                <Calendar className="w-4 h-4" />
-                Create New Session
-              </Link>
-            </div>
-          )}
         </div>
 
-        {/* Upcoming Classes */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-            <CalendarDays className="w-5 h-5 text-main" />
-            Upcoming Classes
-            {stats.upcomingCount > 0 && (
-              <span className="ml-2 px-2.5 py-1 bg-main/10 text-main text-xs font-medium rounded-full">
-                {stats.upcomingCount} upcoming
-              </span>
-            )}
-          </h2>
-
-          {upcomingSchedules.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4">
-              {upcomingSchedules.map((schedule) => (
-                <ScheduleCard key={schedule.id} schedule={schedule} />
-              ))}
+        {/* Class List */}
+        {filteredSchedules.length > 0 ? (
+          <div className="space-y-4">
+            {filteredSchedules.map((classItem) => (
+              <ClassCard key={classItem.id} classItem={classItem} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl p-12 text-center border border-gray-200">
+            <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <CalendarDays className="w-10 h-10 text-gray-400" />
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl p-12 text-center border border-gray-200">
-              <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <CalendarDays className="w-10 h-10 text-blue-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No upcoming classes scheduled
-              </h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                Start planning your next session. Create a new class to get
-                started.
-              </p>
-              <Link
-                href="/tutor/sessions/create"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-main text-white font-medium rounded-xl hover:bg-purple-700 transition-colors shadow-sm hover:shadow"
-              >
-                <Calendar className="w-4 h-4" />
-                Create New Session
-              </Link>
-            </div>
-          )}
-        </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No classes found
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              {filter === "all"
+                ? "No class schedules have been generated for this session yet."
+                : filter === "upcoming"
+                  ? "No upcoming classes found."
+                  : "No past classes found."}
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Class Details Modal */}
+      {showDetailsModal && selectedClass && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Class {selectedClass.class_number}: {selectedClass.title}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setSelectedClass(null);
+                  // Remove query parameter from URL
+                  const newUrl = window.location.pathname;
+                  window.history.pushState({}, "", newUrl);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <XCircle className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Date</p>
+                  <p className="font-medium text-gray-900 mt-1">
+                    {new Date(selectedClass.date).toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Time</p>
+                  <p className="font-medium text-gray-900 mt-1">
+                    {formatTime(selectedClass.start_time)} -{" "}
+                    {formatTime(selectedClass.end_time)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Duration</p>
+                  <p className="font-medium text-gray-900 mt-1">
+                    {selectedClass.duration_minutes} minutes
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <div className="mt-1">
+                    {(() => {
+                      const statusConfig = getStatusBadge(
+                        selectedClass.status,
+                        selectedClass.date,
+                        selectedClass.start_time,
+                      );
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
+                        >
+                          {statusConfig.icon}
+                          {statusConfig.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedClass.description && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">Description</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">
+                    {selectedClass.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Topics */}
+              {selectedClass.topics && selectedClass.topics.length > 0 && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">Topics Covered</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedClass.topics.map((topic, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full"
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Learning Objectives */}
+              {selectedClass.learning_objectives &&
+                selectedClass.learning_objectives.length > 0 && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">
+                      Learning Objectives
+                    </p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {selectedClass.learning_objectives.map((obj, idx) => (
+                        <li key={idx} className="text-gray-700">
+                          {obj}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+              {/* Materials */}
+              {selectedClass.materials &&
+                selectedClass.materials.length > 0 && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Materials</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedClass.materials.map((material, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
+                        >
+                          {material}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Meeting Links */}
+              {(selectedClass.meeting_link ||
+                selectedClass.recorded_session_url) && (
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-3">
+                    Meeting Information
+                  </p>
+                  <div className="space-y-2">
+                    {selectedClass.meeting_link && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            Meeting Link
+                          </p>
+                          <p className="text-xs text-gray-500 truncate max-w-md">
+                            {selectedClass.meeting_link}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() =>
+                            handleCopyLink(
+                              selectedClass.meeting_link!,
+                              selectedClass.id,
+                            )
+                          }
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          {copiedId === selectedClass.id ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    )}
+                    {selectedClass.recorded_session_url && (
+                      <a
+                        href={selectedClass.recorded_session_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            Recording
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Watch recorded session
+                          </p>
+                        </div>
+                        <Video className="w-4 h-4 text-main" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Attendance */}
+              {selectedClass.attendance_taken && (
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <p className="text-sm font-medium text-green-800">
+                      Attendance has been taken for this class
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    setSelectedClass(null);
+                    const newUrl = window.location.pathname;
+                    window.history.pushState({}, "", newUrl);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+                {!isPast(selectedClass.date, selectedClass.start_time) &&
+                  selectedClass.status !== "completed" &&
+                  selectedClass.status !== "cancelled" &&
+                  session.current_enrollment > 0 && (
+                    <button
+                      onClick={() => {
+                        handleJoinClass(selectedClass.id);
+                        setShowDetailsModal(false);
+                        setSelectedClass(null);
+                        const newUrl = window.location.pathname;
+                        window.history.pushState({}, "", newUrl);
+                      }}
+                      className="flex-1 px-4 py-2 bg-main text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Video className="w-4 h-4" />
+                      Join Class
+                    </button>
+                  )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

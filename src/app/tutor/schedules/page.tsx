@@ -35,23 +35,29 @@ import {
   RefreshCw,
   Info,
 } from "lucide-react";
+
+interface ExtendedTutorSessionSchedule extends TutorSessionSchedule {
+  enrolled_students?: number;
+  session_uuid?: string;
+}
+
 interface ScheduleResponse {
   success: boolean;
   data?:
-    | TutorSessionSchedule[]
+    | ExtendedTutorSessionSchedule[]
     | {
-        data?: TutorSessionSchedule[];
-        schedules?: TutorSessionSchedule[];
+        data?: ExtendedTutorSessionSchedule[];
+        schedules?: ExtendedTutorSessionSchedule[];
       };
   message?: string;
 }
 
 export default function TutorSchedulesPage() {
-  const [todaySchedules, setTodaySchedules] = useState<TutorSessionSchedule[]>(
-    [],
-  );
+  const [todaySchedules, setTodaySchedules] = useState<
+    ExtendedTutorSessionSchedule[]
+  >([]);
   const [upcomingSchedules, setUpcomingSchedules] = useState<
-    TutorSessionSchedule[]
+    ExtendedTutorSessionSchedule[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [joiningId, setJoiningId] = useState<number | null>(null);
@@ -70,7 +76,6 @@ export default function TutorSchedulesPage() {
   }, []);
 
   useEffect(() => {
-    // Update stats whenever schedules change
     updateStats();
   }, [todaySchedules, upcomingSchedules]);
 
@@ -83,10 +88,10 @@ export default function TutorSchedulesPage() {
           10,
         ) as Promise<ScheduleResponse>,
       ]);
+
       // Safely extract data from responses
       if (todayRes.success) {
-        // Handle different possible response structures
-        let todayData: TutorSessionSchedule[] = [];
+        let todayData: ExtendedTutorSessionSchedule[] = [];
 
         if (todayRes.data) {
           if (Array.isArray(todayRes.data)) {
@@ -102,8 +107,7 @@ export default function TutorSchedulesPage() {
       }
 
       if (upcomingRes.success) {
-        // Handle different possible response structures
-        let upcomingData: TutorSessionSchedule[] = [];
+        let upcomingData: ExtendedTutorSessionSchedule[] = [];
 
         if (upcomingRes.data) {
           if (Array.isArray(upcomingRes.data)) {
@@ -140,7 +144,6 @@ export default function TutorSchedulesPage() {
     const liveNow = todaySchedules.filter((s) => s.status === "ongoing").length;
     const upcomingCount = upcomingSchedules.length;
 
-    // Calculate this week's count
     const allSchedules = [...todaySchedules, ...upcomingSchedules];
     const thisWeekCount = allSchedules.filter((s) => {
       const date = new Date(s.date);
@@ -318,20 +321,31 @@ export default function TutorSchedulesPage() {
     );
   };
 
-  // Updated ScheduleCard component with right-aligned actions
-
-  // Compact version with icons only
-  const ScheduleCard = ({ schedule }: { schedule: TutorSessionSchedule }) => {
+  const ScheduleCard = ({
+    schedule,
+  }: {
+    schedule: ExtendedTutorSessionSchedule;
+  }) => {
     const scheduleIsToday = isToday(schedule.date);
     const canJoin =
       schedule.status === "scheduled" || schedule.status === "ongoing";
     const isOngoing = schedule.status === "ongoing";
 
+    // Check if there's at least one enrolled student
+    const hasEnrolledStudents = (schedule.enrolled_students || 0) > 0;
+    const canJoinClass = canJoin && hasEnrolledStudents;
+
+    const getDisabledTooltip = () => {
+      if (!hasEnrolledStudents) return "No students enrolled yet";
+      if (schedule.status === "completed") return "This class is completed";
+      if (schedule.status === "cancelled") return "This class is cancelled";
+      return "Cannot join at this time";
+    };
+
     return (
       <div className="group relative bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden">
-        {/* Status Indicator Line */}
         <div
-          className={`h-[1px] absolute top-0 left-0 right-0 h-1 ${
+          className={`absolute top-0 left-0 right-0 h-[1px] ${
             isOngoing
               ? "bg-emerald-500"
               : schedule.status === "scheduled"
@@ -370,17 +384,21 @@ export default function TutorSchedulesPage() {
                 </p>
               </div>
             </div>
+
+            {/* Enrollment Badge */}
+            <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
+              <Users className="w-3 h-3" />
+              <span>{schedule.enrolled_students || 0} enrolled</span>
+            </div>
           </div>
 
           {/* Main Content */}
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-            {/* Left side - Class info */}
             <div className="flex-1">
               <h4 className="text-lg font-semibold text-gray-900 mb-3">
                 {schedule.title}
               </h4>
 
-              {/* Date & Time */}
               <div className="flex flex-wrap items-center gap-4 mb-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="w-4 h-4 text-gray-400" />
@@ -402,52 +420,67 @@ export default function TutorSchedulesPage() {
                 </div>
               </div>
 
-              {/* Badges */}
               <div className="flex flex-wrap items-center gap-2">
                 {getStatusBadge(schedule.status)}
                 {getModeBadge(schedule.mode)}
+                {!hasEnrolledStudents && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border bg-yellow-50 text-yellow-700 border-yellow-200">
+                    <Users className="w-3.5 h-3.5" />
+                    No Students
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Right side - Action Buttons */}
-            <div className="flex items-center gap-2 lg:self-center ">
-              {canJoin && (
-                <button
-                  onClick={() => handleJoinSession(schedule.id)}
-                  disabled={joiningId === schedule.id}
-                  className={`cursor-pointer flex items-center gap-2 p-3 rounded-xl transition-all ${
-                    isOngoing
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 lg:self-center">
+              <button
+                onClick={() => handleJoinSession(schedule.id)}
+                disabled={joiningId === schedule.id || !canJoinClass}
+                className={`px-4 py-3 rounded-xl transition-all inline-flex items-center gap-2 relative group/btn ${
+                  !canJoinClass
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : isOngoing
                       ? "bg-emerald-600 text-white hover:bg-emerald-700 animate-pulse"
                       : scheduleIsToday
                         ? "bg-amber-600 text-white hover:bg-amber-700"
                         : "bg-main text-white hover:bg-purple-700"
-                  } disabled:opacity-50`}
-                  title={
-                    isOngoing
-                      ? "Join Live"
-                      : scheduleIsToday
-                        ? "Join Today"
-                        : "Join Class"
-                  }
-                >
-                  {joiningId === schedule.id ? (
+                }`}
+                title={!canJoinClass ? getDisabledTooltip() : ""}
+              >
+                {joiningId === schedule.id ? (
+                  <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Video className="w-5 h-5" />
-                      <span className="text-sm font-medium">Join Class</span>
-                    </>
-                  )}
-                </button>
-              )}
+                    <span>Joining...</span>
+                  </>
+                ) : (
+                  <>
+                    <Video className="w-5 h-5" />
+                    <span className="text-sm font-medium">
+                      {!canJoinClass
+                        ? "Cannot Join"
+                        : isOngoing
+                          ? "Join Live"
+                          : scheduleIsToday
+                            ? "Join Today"
+                            : "Join Class"}
+                    </span>
+                  </>
+                )}
+                {!canJoinClass && (
+                  <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                    {getDisabledTooltip()}
+                  </span>
+                )}
+              </button>
 
-              {/* {schedule.meeting_link && (
+              {schedule.meeting_link && canJoinClass && (
                 <button
                   onClick={() =>
                     handleCopyLink(schedule.meeting_link!, schedule.id)
                   }
                   className="p-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
-                  title="Copy link"
+                  title="Copy meeting link"
                 >
                   {copiedId === schedule.id ? (
                     <Check className="w-5 h-5 text-green-600" />
@@ -455,10 +488,10 @@ export default function TutorSchedulesPage() {
                     <Copy className="w-5 h-5" />
                   )}
                 </button>
-              )} */}
+              )}
 
               <Link
-                href={`/tutor/sessions/${schedule.tutor_course_session_id}/schedules`}
+                href={`/tutor/sessions/${schedule.session_uuid || schedule.tutor_course_session_id}/schedules`}
                 className="p-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
                 title="View details"
               >
@@ -466,7 +499,7 @@ export default function TutorSchedulesPage() {
               </Link>
 
               <Link
-                href={`/tutor/sessions/${schedule.tutor_course_session_id}`}
+                href={`/tutor/sessions/${schedule.session_uuid || schedule.tutor_course_session_id}`}
                 className="p-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
                 title="View session"
               >
@@ -474,6 +507,15 @@ export default function TutorSchedulesPage() {
               </Link>
             </div>
           </div>
+
+          {!hasEnrolledStudents && (
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <p className="text-xs text-gray-500 flex items-center gap-1">
+                <Info className="w-3 h-3" />
+                You can join once at least one student is enrolled
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );

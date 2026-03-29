@@ -1,4 +1,4 @@
-// src/app/components/Navbar.tsx
+// src/app/components/ui/Navbar.tsx
 "use client";
 import React, {
   useState,
@@ -22,15 +22,19 @@ import {
   MonitorCloud,
   ChevronDown,
   Home,
+  BookOpen,
 } from "lucide-react";
-import CategoryTab from "./CategoryTab";
-import LevelTab from "./LevelTab";
-import TitleTab from "./TitleTab";
-import TutorCategoryTab from "./TutorCategoryTab";
-import TutorLevelTab from "./TutorLevelTab";
-import TutorSearchTab from "./TutorSearchTab";
+import CategoryTab from "../ui/CategoryTab";
+import LevelTab from "../ui/LevelTab";
+import TitleTab from "../ui/TitleTab";
+import CurriculumTab from "../ui/CurriculumTab";
+import TutorCategoryTab from "../ui/TutorCategoryTab";
+import TutorLevelTab from "../ui/TutorLevelTab";
+import TutorSearchTab from "../ui/TutorSearchTab";
+import TutorCurriculumTab from "../ui/TutorCurriculumTab";
 import Login from "./Login";
 import { useAuth } from "../../context/AuthContext";
+import client from "@/lib/api/client";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -61,23 +65,60 @@ export default function Navbar() {
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
+  const [selectedCurriculumId, setSelectedCurriculumId] = useState<
+    number | null
+  >(null);
+  const [selectedCurriculumLevelId, setSelectedCurriculumLevelId] = useState<
+    number | null
+  >(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   // Tutor filter states
   const [tutorCategory, setTutorCategory] = useState<string>("all");
   const [tutorLevel, setTutorLevel] = useState<string>("all");
+  const [tutorCurriculumId, setTutorCurriculumId] = useState<number | null>(
+    null,
+  );
+  const [tutorCurriculumLevelId, setTutorCurriculumLevelId] = useState<
+    number | null
+  >(null);
   const [tutorSearchTerm, setTutorSearchTerm] = useState<string>("");
   const [tutorSubject, setTutorSubject] = useState<string>("");
 
   // Mobile search states
   const [mobileCategory, setMobileCategory] = useState<string>("all");
   const [mobileLevel, setMobileLevel] = useState<string>("all");
+  const [mobileCurriculumId, setMobileCurriculumId] = useState<number | null>(
+    null,
+  );
+  const [mobileCurriculumLevelId, setMobileCurriculumLevelId] = useState<
+    number | null
+  >(null);
   const [mobileSearchTerm, setMobileSearchTerm] = useState<string>("");
+
+  // Mobile tutor search states
+  const [mobileTutorCategory, setMobileTutorCategory] = useState<string>("all");
+  const [mobileTutorLevel, setMobileTutorLevel] = useState<string>("all");
+  const [mobileTutorCurriculumId, setMobileTutorCurriculumId] = useState<
+    number | null
+  >(null);
+  const [mobileTutorCurriculumLevelId, setMobileTutorCurriculumLevelId] =
+    useState<number | null>(null);
+  const [mobileTutorSearchTerm, setMobileTutorSearchTerm] =
+    useState<string>("");
+  const [mobileTutorSubject, setMobileTutorSubject] = useState<string>("");
 
   // Mobile dropdown states
   const [showMobileCategoryDropdown, setShowMobileCategoryDropdown] =
     useState(false);
   const [showMobileLevelDropdown, setShowMobileLevelDropdown] = useState(false);
+  const [showMobileCurriculumDropdown, setShowMobileCurriculumDropdown] =
+    useState(false);
+  const [showMobileCurriculumLevels, setShowMobileCurriculumLevels] =
+    useState(false);
+  const [mobileCurriculums, setMobileCurriculums] = useState<any[]>([]);
+  const [mobileSelectedCurriculum, setMobileSelectedCurriculum] =
+    useState<any>(null);
 
   // Get auth state
   const { user, logout } = useAuth();
@@ -87,7 +128,27 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileCategoryRef = useRef<HTMLDivElement>(null);
   const mobileLevelRef = useRef<HTMLDivElement>(null);
+  const mobileCurriculumRef = useRef<HTMLDivElement>(null);
   const hamburgerButtonRef = useRef<HTMLDivElement>(null);
+
+  // Fetch curriculums for mobile
+  useEffect(() => {
+    const fetchCurriculums = async () => {
+      try {
+        // const response = await fetch("/api/tuitions/curriculums");
+        const response = await client.get<{ success: boolean; data: any[] }>(
+          "/tuitions/curriculums",
+        );
+
+        if (response.success && response.data) {
+          setMobileCurriculums(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch curriculums:", error);
+      }
+    };
+    fetchCurriculums();
+  }, []);
 
   // Handle click on a segment to expand the search bar
   const handleSegmentClick = useCallback(
@@ -96,12 +157,13 @@ export default function Navbar() {
       setIsSearchExpanded(true);
       setIsScrolled(false);
 
-      // Set the selected state to open the corresponding dropdown after a brief delay
       setTimeout(() => {
         if (segment === "category") {
           setSelected("category");
         } else if (segment === "level") {
           setSelected("level");
+        } else if (segment === "curriculum") {
+          setSelected("curriculum");
         } else if (segment === "title") {
           setSelected("title");
         }
@@ -110,19 +172,16 @@ export default function Navbar() {
     [],
   );
 
-  // Optimized scroll handler with requestAnimationFrame
+  // Optimized scroll handler
   const handleScroll = useCallback(() => {
     if (typeof window === "undefined" || displaySearch) return;
 
     const currentScrollY = window.scrollY;
 
-    // Set scrolled state for navbar height and search box size
-    // Only reduce if search is not expanded
     if (!isSearchExpanded) {
       setIsScrolled(currentScrollY > 20);
     }
 
-    // Handle mobile nav visibility - only update if state would change
     if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
       if (isMobileNavVisible) {
         setIsMobileNavVisible(false);
@@ -136,7 +195,6 @@ export default function Navbar() {
     lastScrollY.current = currentScrollY;
   }, [displaySearch, isSearchExpanded, isMobileNavVisible]);
 
-  // Optimized scroll listener with requestAnimationFrame
   useEffect(() => {
     const onScroll = () => {
       if (!ticking.current) {
@@ -154,15 +212,13 @@ export default function Navbar() {
     };
   }, [handleScroll]);
 
-  // Handle click inside desktop search to expand
   const handleDesktopSearchClick = useCallback(() => {
     if (!displaySearch) {
       setIsSearchExpanded(true);
-      setIsScrolled(false); // Reset scrolled state when expanded
+      setIsScrolled(false);
     }
   }, [displaySearch]);
 
-  // Handle click outside to collapse
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -170,11 +226,9 @@ export default function Navbar() {
         !desktopSearchRef.current.contains(event.target as Node)
       ) {
         setIsSearchExpanded(false);
-        // Re-evaluate scroll state after closing
         setIsScrolled(window.scrollY > 20);
       }
 
-      // Close dropdown when clicking outside, but not when clicking on the hamburger button
       if (
         dropdownRef.current &&
         hamburgerButtonRef.current &&
@@ -196,20 +250,25 @@ export default function Navbar() {
       ) {
         setShowMobileLevelDropdown(false);
       }
+      if (
+        mobileCurriculumRef.current &&
+        !mobileCurriculumRef.current.contains(event.target as Node)
+      ) {
+        setShowMobileCurriculumDropdown(false);
+        setShowMobileCurriculumLevels(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Prevent body scroll when search is open
   useEffect(() => {
     if (displaySearch) {
       document.body.style.overflow = "hidden";
       document.body.style.position = "fixed";
       document.body.style.width = "100%";
       document.body.style.top = `-${window.scrollY}px`;
-      // Reset scrolled state when search opens
       setIsScrolled(false);
       setIsSearchExpanded(false);
     } else {
@@ -224,7 +283,6 @@ export default function Navbar() {
     }
   }, [displaySearch]);
 
-  // Memoized handlers
   const handleHamburgerNav = useCallback(() => {
     setShowHamburgerNav((prev) => !prev);
   }, []);
@@ -239,7 +297,19 @@ export default function Navbar() {
 
   const handleLevelChange = useCallback((level: string) => {
     setSelectedLevel(level);
+    if (level === "adult") {
+      setSelectedCurriculumId(null);
+      setSelectedCurriculumLevelId(null);
+    }
   }, []);
+
+  const handleCurriculumChange = useCallback(
+    (curriculumId: number | null, curriculumLevelId: number | null) => {
+      setSelectedCurriculumId(curriculumId);
+      setSelectedCurriculumLevelId(curriculumLevelId);
+    },
+    [],
+  );
 
   const handleSearchTermChange = useCallback((term: string) => {
     setSearchTerm(term);
@@ -263,6 +333,30 @@ export default function Navbar() {
         params.append("category", selectedCategory);
       if (selectedLevel && selectedLevel !== "all")
         params.append("level", selectedLevel);
+
+      if (selectedLevel === "adult") {
+        params.append("no_curriculum", "true");
+      } else if (
+        selectedCurriculumId !== null &&
+        selectedCurriculumId !== undefined
+      ) {
+        params.append("curriculum_id", selectedCurriculumId.toString());
+        if (
+          selectedCurriculumLevelId !== null &&
+          selectedCurriculumLevelId !== undefined
+        ) {
+          params.append(
+            "curriculum_level_id",
+            selectedCurriculumLevelId.toString(),
+          );
+        }
+      } else if (
+        selectedLevel === "university" &&
+        selectedCurriculumId === null
+      ) {
+        params.append("no_curriculum", "true");
+      }
+
       if (searchTerm) params.append("q", searchTerm);
       router.replace(
         `/sessions${params.toString() ? `?${params.toString()}` : ""}`,
@@ -273,6 +367,30 @@ export default function Navbar() {
         params.append("category", selectedCategory);
       if (selectedLevel && selectedLevel !== "all")
         params.append("level", selectedLevel);
+
+      if (selectedLevel === "adult") {
+        params.append("no_curriculum", "true");
+      } else if (
+        selectedCurriculumId !== null &&
+        selectedCurriculumId !== undefined
+      ) {
+        params.append("curriculum_id", selectedCurriculumId.toString());
+        if (
+          selectedCurriculumLevelId !== null &&
+          selectedCurriculumLevelId !== undefined
+        ) {
+          params.append(
+            "curriculum_level_id",
+            selectedCurriculumLevelId.toString(),
+          );
+        }
+      } else if (
+        selectedLevel === "university" &&
+        selectedCurriculumId === null
+      ) {
+        params.append("no_curriculum", "true");
+      }
+
       if (searchTerm) params.append("q", searchTerm);
       router.push(`/search${params.toString() ? `?${params.toString()}` : ""}`);
     }
@@ -285,6 +403,8 @@ export default function Navbar() {
     isSessionsPage,
     selectedCategory,
     selectedLevel,
+    selectedCurriculumId,
+    selectedCurriculumLevelId,
     searchTerm,
     router,
   ]);
@@ -298,6 +418,15 @@ export default function Navbar() {
     setTutorLevel(level);
     updateTutorSearch();
   }, []);
+
+  const handleTutorCurriculumChange = useCallback(
+    (curriculumId: number | null, curriculumLevelId: number | null) => {
+      setTutorCurriculumId(curriculumId);
+      setTutorCurriculumLevelId(curriculumLevelId);
+      updateTutorSearch();
+    },
+    [],
+  );
 
   const handleTutorSearchTermChange = useCallback((term: string) => {
     setTutorSearchTerm(term);
@@ -314,12 +443,29 @@ export default function Navbar() {
     if (tutorLevel && tutorLevel !== "all") params.append("level", tutorLevel);
     if (tutorSearchTerm) params.append("q", tutorSearchTerm);
     if (tutorSubject) params.append("subject", tutorSubject);
+    if (tutorCurriculumId !== null && tutorCurriculumId !== undefined) {
+      params.append("curriculum_id", tutorCurriculumId.toString());
+      if (
+        tutorCurriculumLevelId !== null &&
+        tutorCurriculumLevelId !== undefined
+      ) {
+        params.append("curriculum_level_id", tutorCurriculumLevelId.toString());
+      }
+    }
 
     router.replace(
       `/tutors${params.toString() ? `?${params.toString()}` : ""}`,
       { scroll: false },
     );
-  }, [tutorCategory, tutorLevel, tutorSearchTerm, tutorSubject, router]);
+  }, [
+    tutorCategory,
+    tutorLevel,
+    tutorSearchTerm,
+    tutorSubject,
+    tutorCurriculumId,
+    tutorCurriculumLevelId,
+    router,
+  ]);
 
   const handleTutorSearch = useCallback(() => {
     updateTutorSearch();
@@ -342,11 +488,14 @@ export default function Navbar() {
   const clearTutorFilters = useCallback(() => {
     setTutorCategory("all");
     setTutorLevel("all");
+    setTutorCurriculumId(null);
+    setTutorCurriculumLevelId(null);
     setTutorSearchTerm("");
     setTutorSubject("");
     router.replace("/tutors", { scroll: false });
   }, [router]);
 
+  // Mobile handlers
   const handleMobileCategorySelect = useCallback((category: string) => {
     setMobileCategory(category);
     setShowMobileCategoryDropdown(false);
@@ -357,11 +506,44 @@ export default function Navbar() {
     setMobileLevel(level);
     setShowMobileLevelDropdown(false);
     setDisplaySearchCount(2);
+
+    if (level === "adult") {
+      setMobileCurriculumId(null);
+      setMobileCurriculumLevelId(null);
+      setMobileSelectedCurriculum(null);
+    }
+  }, []);
+
+  const handleMobileCurriculumSelect = useCallback((curriculum: any) => {
+    setMobileSelectedCurriculum(curriculum);
+    setMobileCurriculumId(curriculum.id);
+    setMobileCurriculumLevelId(null);
+    setShowMobileCurriculumLevels(true);
+  }, []);
+
+  const handleMobileCurriculumLevelSelect = useCallback(
+    (levelId: number | null) => {
+      setMobileCurriculumLevelId(levelId);
+      if (levelId === null) {
+        setShowMobileCurriculumLevels(false);
+      }
+      setDisplaySearchCount(3);
+    },
+    [],
+  );
+
+  const handleMobileNoCurriculumSelect = useCallback(() => {
+    setMobileCurriculumId(null);
+    setMobileCurriculumLevelId(null);
+    setMobileSelectedCurriculum(null);
+    setShowMobileCurriculumDropdown(false);
+    setShowMobileCurriculumLevels(false);
+    setDisplaySearchCount(3);
   }, []);
 
   const handleMobileSearchTermChange = useCallback((term: string) => {
     setMobileSearchTerm(term);
-    if (term) setDisplaySearchCount(3);
+    if (term) setDisplaySearchCount(4);
   }, []);
 
   const handleMobileSearch = useCallback(() => {
@@ -370,6 +552,27 @@ export default function Navbar() {
       params.append("category", mobileCategory);
     if (mobileLevel && mobileLevel !== "all")
       params.append("level", mobileLevel);
+
+    if (mobileLevel === "adult") {
+      params.append("no_curriculum", "true");
+    } else if (
+      mobileCurriculumId !== null &&
+      mobileCurriculumId !== undefined
+    ) {
+      params.append("curriculum_id", mobileCurriculumId.toString());
+      if (
+        mobileCurriculumLevelId !== null &&
+        mobileCurriculumLevelId !== undefined
+      ) {
+        params.append(
+          "curriculum_level_id",
+          mobileCurriculumLevelId.toString(),
+        );
+      }
+    } else if (mobileLevel === "university" && mobileCurriculumId === null) {
+      params.append("no_curriculum", "true");
+    }
+
     if (mobileSearchTerm) params.append("q", mobileSearchTerm);
 
     router.push(`/search${params.toString() ? `?${params.toString()}` : ""}`);
@@ -379,18 +582,138 @@ export default function Navbar() {
     setDisplaySearchCount(0);
     setShowMobileCategoryDropdown(false);
     setShowMobileLevelDropdown(false);
+    setShowMobileCurriculumDropdown(false);
+    setShowMobileCurriculumLevels(false);
     setMobileCategory("all");
     setMobileLevel("all");
+    setMobileCurriculumId(null);
+    setMobileCurriculumLevelId(null);
+    setMobileSelectedCurriculum(null);
     setMobileSearchTerm("");
-  }, [mobileCategory, mobileLevel, mobileSearchTerm, router]);
+  }, [
+    mobileCategory,
+    mobileLevel,
+    mobileCurriculumId,
+    mobileCurriculumLevelId,
+    mobileSearchTerm,
+    router,
+  ]);
+
+  // Mobile tutor handlers
+  const handleMobileTutorCategorySelect = useCallback((category: string) => {
+    setMobileTutorCategory(category);
+    setShowMobileCategoryDropdown(false);
+    setDisplaySearchCount(1);
+  }, []);
+
+  const handleMobileTutorLevelSelect = useCallback((level: string) => {
+    setMobileTutorLevel(level);
+    setShowMobileLevelDropdown(false);
+    setDisplaySearchCount(2);
+  }, []);
+
+  const handleMobileTutorCurriculumSelect = useCallback((curriculum: any) => {
+    setMobileTutorCurriculumId(curriculum.id);
+    setMobileTutorCurriculumLevelId(null);
+    setShowMobileCurriculumLevels(true);
+  }, []);
+
+  const handleMobileTutorCurriculumLevelSelect = useCallback(
+    (levelId: number | null) => {
+      setMobileTutorCurriculumLevelId(levelId);
+      if (levelId === null) {
+        setShowMobileCurriculumLevels(false);
+      }
+      setDisplaySearchCount(3);
+    },
+    [],
+  );
+
+  const handleMobileTutorNoCurriculumSelect = useCallback(() => {
+    setMobileTutorCurriculumId(null);
+    setMobileTutorCurriculumLevelId(null);
+    setShowMobileCurriculumDropdown(false);
+    setShowMobileCurriculumLevels(false);
+    setDisplaySearchCount(3);
+  }, []);
+
+  const handleMobileTutorSearchTermChange = useCallback((term: string) => {
+    setMobileTutorSearchTerm(term);
+  }, []);
+
+  const handleMobileTutorSubjectChange = useCallback((subject: string) => {
+    setMobileTutorSubject(subject);
+  }, []);
+
+  const handleMobileTutorSearch = useCallback(() => {
+    const params = new URLSearchParams();
+    if (mobileTutorCategory && mobileTutorCategory !== "all")
+      params.append("category", mobileTutorCategory);
+    if (mobileTutorLevel && mobileTutorLevel !== "all")
+      params.append("level", mobileTutorLevel);
+    if (mobileTutorSearchTerm) params.append("q", mobileTutorSearchTerm);
+    if (mobileTutorSubject) params.append("subject", mobileTutorSubject);
+    if (mobileTutorCurriculumId !== null) {
+      params.append("curriculum_id", mobileTutorCurriculumId.toString());
+      if (mobileTutorCurriculumLevelId !== null) {
+        params.append(
+          "curriculum_level_id",
+          mobileTutorCurriculumLevelId.toString(),
+        );
+      }
+    }
+
+    router.push(`/tutors${params.toString() ? `?${params.toString()}` : ""}`);
+
+    setDisplaySearch(false);
+    setSelected(null);
+    setDisplaySearchCount(0);
+    setShowMobileCategoryDropdown(false);
+    setShowMobileLevelDropdown(false);
+    setShowMobileCurriculumDropdown(false);
+    setShowMobileCurriculumLevels(false);
+    setMobileTutorCategory("all");
+    setMobileTutorLevel("all");
+    setMobileTutorCurriculumId(null);
+    setMobileTutorCurriculumLevelId(null);
+    setMobileTutorSearchTerm("");
+    setMobileTutorSubject("");
+  }, [
+    mobileTutorCategory,
+    mobileTutorLevel,
+    mobileTutorSearchTerm,
+    mobileTutorSubject,
+    mobileTutorCurriculumId,
+    mobileTutorCurriculumLevelId,
+    router,
+  ]);
 
   const clearMobileFilters = useCallback(() => {
     setMobileCategory("all");
     setMobileLevel("all");
+    setMobileCurriculumId(null);
+    setMobileCurriculumLevelId(null);
+    setMobileSelectedCurriculum(null);
     setMobileSearchTerm("");
     setDisplaySearchCount(0);
     setShowMobileCategoryDropdown(false);
     setShowMobileLevelDropdown(false);
+    setShowMobileCurriculumDropdown(false);
+    setShowMobileCurriculumLevels(false);
+  }, []);
+
+  const clearMobileTutorFilters = useCallback(() => {
+    setMobileTutorCategory("all");
+    setMobileTutorLevel("all");
+    setMobileTutorCurriculumId(null);
+    setMobileTutorCurriculumLevelId(null);
+    setMobileTutorSearchTerm("");
+    setMobileTutorSubject("");
+    setDisplaySearchCount(0);
+    setShowMobileCategoryDropdown(false);
+    setShowMobileLevelDropdown(false);
+    setShowMobileCurriculumDropdown(false);
+    setShowMobileCurriculumLevels(false);
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -398,7 +721,7 @@ export default function Navbar() {
     router.push("/");
   }, [logout, router]);
 
-  // Memoized display mappings
+  // Display mappings
   const getCategoryDisplay = useCallback((category: string) => {
     const map: Record<string, string> = {
       all: "All Sessions",
@@ -415,10 +738,28 @@ export default function Navbar() {
       junior_high: "Junior High School",
       senior_high: "Senior High School",
       university: "University",
-      adult: "Adult Education",
+      adult: "Adult / Professional",
     };
     return map[level] || level;
   }, []);
+
+  const getCurriculumDisplay = useCallback(
+    (curriculumId: number | null, curriculumLevelId: number | null) => {
+      if (curriculumId === null) {
+        return "No Curriculum / Professional";
+      }
+      const curriculum = mobileCurriculums.find((c) => c.id === curriculumId);
+      if (!curriculum) return "Select Curriculum";
+      if (curriculumLevelId) {
+        const level = curriculum.levels.find(
+          (l: any) => l.id === curriculumLevelId,
+        );
+        if (level) return `${curriculum.name} - ${level.name}`;
+      }
+      return curriculum.name;
+    },
+    [mobileCurriculums],
+  );
 
   const getTutorCategoryDisplay = useCallback((category: string) => {
     const map: Record<string, string> = {
@@ -442,7 +783,7 @@ export default function Navbar() {
     return map[level] || level;
   }, []);
 
-  // Memoized class names for navbar and search box
+  // Memoized class names
   const navbarClasses = useMemo(() => {
     return `nav-container transition-all duration-300 ${
       isScrolled && !isSearchExpanded ? "pt-1 pb-0" : "pt-3 pb-1"
@@ -455,7 +796,6 @@ export default function Navbar() {
     }`;
   }, [isScrolled, isSearchExpanded]);
 
-  // Desktop search box classes - shows only labels when reduced, expands when clicked
   const desktopSearchClasses = useMemo(() => {
     const isReduced = isScrolled && !isSearchExpanded;
     return `w-full transition-all duration-300 ${
@@ -465,7 +805,6 @@ export default function Navbar() {
     }`;
   }, [isScrolled, isSearchExpanded]);
 
-  // Mobile search bar classes - completely stable, no transitions
   const mobileSearchBarClasses = useMemo(() => {
     return `w-[90%] mb-3 mt-1 mx-auto relative md:hidden ${
       displaySearch
@@ -474,12 +813,6 @@ export default function Navbar() {
     }`;
   }, [displaySearch]);
 
-  // Search icon size based on scroll state
-  const searchIconSize = useMemo(() => {
-    return isScrolled && !isSearchExpanded ? 16 : 18;
-  }, [isScrolled, isSearchExpanded]);
-
-  // Desktop search icon button - bigger in normal view, medium when scrolled
   const searchButtonClasses = useMemo(() => {
     const isReduced = isScrolled && !isSearchExpanded;
     return `transition-all duration-300 ${
@@ -495,7 +828,6 @@ export default function Navbar() {
     } bg-main rounded-full flex items-center justify-center hover:ring-1 ring-main hover:bg-main/95 hover:text-main-50 cursor-pointer`;
   }, [isScrolled, isSearchExpanded, isTutorsPage, selected]);
 
-  // Mobile navigation links - with will-change for better performance
   const mobileNavClasses = useMemo(() => {
     if (displaySearch) {
       return "md:hidden hidden";
@@ -508,7 +840,6 @@ export default function Navbar() {
     }`;
   }, [displaySearch, isMobileNavVisible]);
 
-  // Logo and hamburger remain the same size
   const logoClasses = "logo flex items-center gap-0 cursor-pointer select-none";
   const hamburgerContainerClasses = `hamburger-container relative transition-all duration-300 ${
     displaySearch
@@ -516,7 +847,6 @@ export default function Navbar() {
       : "bg-zinc-200 hover:bg-zinc-300"
   } w-8 h-8`;
 
-  // Handle dropdown item click - closes dropdown after navigation
   const handleDropdownItemClick = useCallback((callback: () => void) => {
     return (e: React.MouseEvent) => {
       e.preventDefault();
@@ -526,12 +856,10 @@ export default function Navbar() {
     };
   }, []);
 
-  // Handle mobile search click - opens modal and hides search bar
   const handleMobileSearchClick = useCallback(() => {
     setDisplaySearch(true);
   }, []);
 
-  // Handle hamburger X close
   const handleHamburgerClose = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setDisplaySearch(false);
@@ -539,9 +867,20 @@ export default function Navbar() {
     setDisplaySearchCount(0);
     setMobileCategory("all");
     setMobileLevel("all");
+    setMobileCurriculumId(null);
+    setMobileCurriculumLevelId(null);
+    setMobileSelectedCurriculum(null);
     setMobileSearchTerm("");
+    setMobileTutorCategory("all");
+    setMobileTutorLevel("all");
+    setMobileTutorCurriculumId(null);
+    setMobileTutorCurriculumLevelId(null);
+    setMobileTutorSearchTerm("");
+    setMobileTutorSubject("");
     setShowMobileCategoryDropdown(false);
     setShowMobileLevelDropdown(false);
+    setShowMobileCurriculumDropdown(false);
+    setShowMobileCurriculumLevels(false);
     setShowHamburgerNav(false);
   }, []);
 
@@ -565,7 +904,6 @@ export default function Navbar() {
               </span>
             </div>
 
-            {/* Desktop Navigation Links */}
             <ul className="nav-links hidden md:flex">
               <li>
                 <Link
@@ -660,9 +998,19 @@ export default function Navbar() {
                     setSelected(null);
                     setMobileCategory("all");
                     setMobileLevel("all");
+                    setMobileCurriculumId(null);
+                    setMobileCurriculumLevelId(null);
+                    setMobileSelectedCurriculum(null);
                     setMobileSearchTerm("");
+                    setMobileTutorCategory("all");
+                    setMobileTutorLevel("all");
+                    setMobileTutorCurriculumId(null);
+                    setMobileTutorCurriculumLevelId(null);
+                    setMobileTutorSearchTerm("");
+                    setMobileTutorSubject("");
                     setShowMobileCategoryDropdown(false);
                     setShowMobileLevelDropdown(false);
+                    setShowMobileCurriculumDropdown(false);
                   } else {
                     handleHamburgerNav();
                   }
@@ -684,7 +1032,6 @@ export default function Navbar() {
             </div>
           </nav>
 
-          {/* Mobile Navigation Links - with will-change for better performance */}
           <div ref={mobileNavRef} className={mobileNavClasses}>
             <ul className="flex justify-center items-center gap-6 w-full">
               <li>
@@ -742,7 +1089,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Hamburger Menu Dropdown */}
         {showHamburgerNav && (
           <div
             ref={dropdownRef}
@@ -867,7 +1213,6 @@ export default function Navbar() {
                 : "justify-center items-center"
             } w-full md:max-w-4xl md:m-auto`}
           >
-            {/* Mobile Search Bar */}
             {!displaySearch && (
               <div
                 className={mobileSearchBarClasses}
@@ -885,7 +1230,6 @@ export default function Navbar() {
             {/* Mobile Search Modal Content */}
             {displaySearch && (
               <div className="w-full h-full flex flex-col">
-                {/* Header with close button */}
                 <div className="w-full flex justify-between items-center py-4 px-4 border-b border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900">
                     {isTutorsPage ? "Find a Tutor" : "Search"}
@@ -925,9 +1269,9 @@ export default function Navbar() {
                           Tutor Category
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text- font-medium">
-                            {tutorCategory !== "all"
-                              ? getTutorCategoryDisplay(tutorCategory)
+                          <span className="text-sm font-medium">
+                            {mobileTutorCategory !== "all"
+                              ? getTutorCategoryDisplay(mobileTutorCategory)
                               : "All Tutors"}
                           </span>
                           <ChevronDown
@@ -966,7 +1310,7 @@ export default function Navbar() {
                               key={cat.value}
                               className="p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
                               onClick={() => {
-                                handleTutorCategoryChange(cat.value);
+                                handleMobileTutorCategorySelect(cat.value);
                                 setShowMobileCategoryDropdown(false);
                               }}
                             >
@@ -994,9 +1338,9 @@ export default function Navbar() {
                           Education Level
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text- font-medium">
-                            {tutorLevel !== "all"
-                              ? getTutorLevelDisplay(tutorLevel)
+                          <span className="text-sm font-medium">
+                            {mobileTutorLevel !== "all"
+                              ? getTutorLevelDisplay(mobileTutorLevel)
                               : "All Levels"}
                           </span>
                           <ChevronDown
@@ -1027,7 +1371,7 @@ export default function Navbar() {
                               key={lvl.value}
                               className="p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
                               onClick={() => {
-                                handleTutorLevelChange(lvl.value);
+                                handleMobileTutorLevelSelect(lvl.value);
                                 setShowMobileLevelDropdown(false);
                               }}
                             >
@@ -1036,6 +1380,150 @@ export default function Navbar() {
                               </p>
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tutor Curriculum Selection */}
+                    <div className="w-full" ref={mobileCurriculumRef}>
+                      <div
+                        className="flex justify-between items-center py-3 border-b border-gray-100 cursor-pointer"
+                        onClick={() =>
+                          setShowMobileCurriculumDropdown(
+                            !showMobileCurriculumDropdown,
+                          )
+                        }
+                      >
+                        <span className="text-sm font-medium text-gray-700">
+                          Curriculum Expertise
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">
+                            {mobileTutorCurriculumId !== null
+                              ? (() => {
+                                  const curriculum = mobileCurriculums.find(
+                                    (c) => c.id === mobileTutorCurriculumId,
+                                  );
+                                  if (!curriculum) return "Any Curriculum";
+                                  if (mobileTutorCurriculumLevelId) {
+                                    const level = curriculum.levels.find(
+                                      (l: any) =>
+                                        l.id === mobileTutorCurriculumLevelId,
+                                    );
+                                    if (level)
+                                      return `${curriculum.name} - ${level.name}`;
+                                  }
+                                  return curriculum.name;
+                                })()
+                              : "Any Curriculum"}
+                          </span>
+                          <ChevronDown
+                            className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                              showMobileCurriculumDropdown ? "rotate-180" : ""
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      {showMobileCurriculumDropdown && (
+                        <div className="py-3 space-y-2 max-h-60 overflow-y-auto">
+                          {/* "Any Curriculum" option */}
+                          <div
+                            className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                              mobileTutorCurriculumId === null
+                                ? "bg-purple-50"
+                                : ""
+                            }`}
+                            onClick={handleMobileTutorNoCurriculumSelect}
+                          >
+                            <p className="text-sm font-medium text-gray-900">
+                              Any Curriculum
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Tutors qualified for any curriculum
+                            </p>
+                          </div>
+
+                          {/* Curriculums list */}
+                          {mobileCurriculums.map((curriculum) => (
+                            <div key={curriculum.id}>
+                              <div
+                                className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                                  mobileTutorCurriculumId === curriculum.id
+                                    ? "bg-purple-50"
+                                    : ""
+                                }`}
+                                onClick={() =>
+                                  handleMobileTutorCurriculumSelect(curriculum)
+                                }
+                              >
+                                <p className="text-sm font-medium text-gray-900">
+                                  {curriculum.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {curriculum.country}
+                                </p>
+                              </div>
+
+                              {/* Levels submenu */}
+                              {showMobileCurriculumLevels &&
+                                mobileTutorCurriculumId === curriculum.id &&
+                                curriculum.levels.length > 0 && (
+                                  <div className="ml-4 pl-3 border-l-2 border-gray-200 space-y-1 mt-1">
+                                    <div
+                                      className="p-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+                                      onClick={() => {
+                                        handleMobileTutorCurriculumLevelSelect(
+                                          null,
+                                        );
+                                        setShowMobileCurriculumLevels(false);
+                                      }}
+                                    >
+                                      <p className="text-sm text-gray-700">
+                                        All Levels
+                                      </p>
+                                      <p className="text-xs text-gray-400">
+                                        Tutors qualified for any level
+                                      </p>
+                                    </div>
+                                    {curriculum.levels.map((level: any) => (
+                                      <div
+                                        key={level.id}
+                                        className={`p-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                                          mobileTutorCurriculumLevelId ===
+                                          level.id
+                                            ? "bg-purple-50"
+                                            : ""
+                                        }`}
+                                        onClick={() => {
+                                          handleMobileTutorCurriculumLevelSelect(
+                                            level.id,
+                                          );
+                                          setShowMobileCurriculumDropdown(
+                                            false,
+                                          );
+                                          setShowMobileCurriculumLevels(false);
+                                        }}
+                                      >
+                                        <p className="text-sm text-gray-700">
+                                          {level.name}
+                                        </p>
+                                        <p className="text-xs text-gray-400">
+                                          {level.code}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                            </div>
+                          ))}
+
+                          {mobileCurriculums.length === 0 && (
+                            <div className="text-center py-4 text-gray-500">
+                              <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                              <p className="text-sm">No curricula available</p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1054,13 +1542,15 @@ export default function Navbar() {
                           </label>
                           <input
                             type="text"
-                            value={tutorSearchTerm}
-                            onChange={(e) => setTutorSearchTerm(e.target.value)}
+                            value={mobileTutorSearchTerm}
+                            onChange={(e) =>
+                              setMobileTutorSearchTerm(e.target.value)
+                            }
                             onKeyDown={(e) =>
-                              e.key === "Enter" && handleTutorSearch()
+                              e.key === "Enter" && handleMobileTutorSearch()
                             }
                             placeholder="e.g., John, Mary, expert..."
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring- focus:border-transparent outline-none"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent outline-none"
                           />
                         </div>
 
@@ -1070,17 +1560,18 @@ export default function Navbar() {
                           </label>
                           <input
                             type="text"
-                            value={tutorSubject}
-                            onChange={(e) => setTutorSubject(e.target.value)}
+                            value={mobileTutorSubject}
+                            onChange={(e) =>
+                              setMobileTutorSubject(e.target.value)
+                            }
                             onKeyDown={(e) =>
-                              e.key === "Enter" && handleTutorSearch()
+                              e.key === "Enter" && handleMobileTutorSearch()
                             }
                             placeholder="e.g., Mathematics, English..."
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring- focus:border-transparent outline-none"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent outline-none"
                           />
                         </div>
 
-                        {/* Popular subjects */}
                         <div className="mt-2">
                           <p className="text-xs font-medium text-gray-500 mb-2">
                             Popular subjects
@@ -1095,7 +1586,7 @@ export default function Navbar() {
                             ].map((item) => (
                               <button
                                 key={item}
-                                onClick={() => setTutorSubject(item)}
+                                onClick={() => setMobileTutorSubject(item)}
                                 className="px-3 py-1 bg-gray-100 hover:bg-purple-100 text-gray-700 hover:text-purple-700 rounded-full text-xs transition-colors"
                               >
                                 {item}
@@ -1105,53 +1596,75 @@ export default function Navbar() {
                         </div>
 
                         {/* Selected filters summary */}
-                        {(tutorCategory !== "all" ||
-                          tutorLevel !== "all" ||
-                          tutorSearchTerm ||
-                          tutorSubject) && (
+                        {(mobileTutorCategory !== "all" ||
+                          mobileTutorLevel !== "all" ||
+                          mobileTutorCurriculumId !== null ||
+                          mobileTutorSearchTerm ||
+                          mobileTutorSubject) && (
                           <div className="mt-4 p-3 bg-purple-50 rounded-lg">
                             <p className="text-xs font-medium text-purple-700 mb-2">
                               Selected filters:
                             </p>
                             <div className="flex flex-wrap gap-2">
-                              {tutorCategory !== "all" && (
+                              {mobileTutorCategory !== "all" && (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                                  {getTutorCategoryDisplay(tutorCategory)}
+                                  {getTutorCategoryDisplay(mobileTutorCategory)}
                                   <button
-                                    onClick={() => setTutorCategory("all")}
+                                    onClick={() =>
+                                      setMobileTutorCategory("all")
+                                    }
                                     className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
                                 </span>
                               )}
-                              {tutorLevel !== "all" && (
+                              {mobileTutorLevel !== "all" && (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                  {getTutorLevelDisplay(tutorLevel)}
+                                  {getTutorLevelDisplay(mobileTutorLevel)}
                                   <button
-                                    onClick={() => setTutorLevel("all")}
+                                    onClick={() => setMobileTutorLevel("all")}
                                     className="ml-1 hover:bg-blue-200 rounded-full p-0.5"
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
                                 </span>
                               )}
-                              {tutorSearchTerm && (
+                              {mobileTutorCurriculumId !== null && (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                                  "{tutorSearchTerm}"
+                                  <BookOpen className="w-3 h-3" />
+                                  {getCurriculumDisplay(
+                                    mobileTutorCurriculumId,
+                                    mobileTutorCurriculumLevelId,
+                                  )}
                                   <button
-                                    onClick={() => setTutorSearchTerm("")}
+                                    onClick={() => {
+                                      setMobileTutorCurriculumId(null);
+                                      setMobileTutorCurriculumLevelId(null);
+                                      handleMobileTutorSearch();
+                                    }}
                                     className="ml-1 hover:bg-green-200 rounded-full p-0.5"
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
                                 </span>
                               )}
-                              {tutorSubject && (
-                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">
-                                  {tutorSubject}
+                              {mobileTutorSearchTerm && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                                  "{mobileTutorSearchTerm}"
                                   <button
-                                    onClick={() => setTutorSubject("")}
+                                    onClick={() => setMobileTutorSearchTerm("")}
+                                    className="ml-1 hover:bg-yellow-200 rounded-full p-0.5"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </span>
+                              )}
+                              {mobileTutorSubject && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">
+                                  {mobileTutorSubject}
+                                  <button
+                                    onClick={() => setMobileTutorSubject("")}
                                     className="ml-1 hover:bg-amber-200 rounded-full p-0.5"
                                   >
                                     <X className="w-3 h-3" />
@@ -1164,16 +1677,15 @@ export default function Navbar() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="w-full mt-4 flex gap-3">
                       <button
-                        onClick={clearTutorFilters}
+                        onClick={clearMobileTutorFilters}
                         className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
                       >
                         Clear All
                       </button>
                       <button
-                        onClick={handleTutorSearch}
+                        onClick={handleMobileTutorSearch}
                         className="flex-1 px-4 py-3 bg-gradient-to-r from-main to-purple-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-main transition-colors"
                       >
                         Search Tutors
@@ -1181,7 +1693,7 @@ export default function Navbar() {
                     </div>
                   </div>
                 ) : (
-                  // Mobile Session Search
+                  // Mobile Session Search (Home and Sessions pages)
                   <div className="flex-1 overflow-y-auto px-4 pb-6">
                     {/* Category Selection */}
                     <div className="w-full" ref={mobileCategoryRef}>
@@ -1194,10 +1706,10 @@ export default function Navbar() {
                         }
                       >
                         <span className="text-sm font-medium text-gray-700">
-                          Tuition/Session Category
+                          Session Category
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text- font-medium">
+                          <span className="text-sm font-medium">
                             {mobileCategory !== "all"
                               ? getCategoryDisplay(mobileCategory)
                               : "Select Category"}
@@ -1257,10 +1769,10 @@ export default function Navbar() {
                         }
                       >
                         <span className="text-sm font-medium text-gray-700">
-                          Level
+                          Education Level
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text- font-medium">
+                          <span className="text-sm font-medium">
                             {mobileLevel !== "all"
                               ? getLevelDisplay(mobileLevel)
                               : "Select Level"}
@@ -1286,8 +1798,15 @@ export default function Navbar() {
                               value: "senior_high",
                               label: "Senior High School",
                             },
-                            { value: "university", label: "University" },
-                            { value: "adult", label: "Adult Education" },
+                            {
+                              value: "university",
+                              label: "University",
+                            },
+                            {
+                              value: "adult",
+                              label: "Adult / Professional",
+                              desc: "Professional courses, certifications",
+                            },
                           ].map((lvl) => (
                             <div
                               key={lvl.value}
@@ -1297,11 +1816,196 @@ export default function Navbar() {
                               <p className="text-sm font-medium text-gray-900">
                                 {lvl.label}
                               </p>
+                              {(lvl as any).desc && (
+                                <p className="text-xs text-gray-500">
+                                  {(lvl as any).desc}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
+
+                    {/* Curriculum Selection - Only show for relevant levels */}
+                    {mobileLevel !== "adult" && (
+                      <div className="w-full" ref={mobileCurriculumRef}>
+                        <div
+                          className="flex justify-between items-center py-3 border-b border-gray-100 cursor-pointer"
+                          onClick={() =>
+                            setShowMobileCurriculumDropdown(
+                              !showMobileCurriculumDropdown,
+                            )
+                          }
+                        >
+                          <span className="text-sm font-medium text-gray-700">
+                            Curriculum
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">
+                              {mobileCurriculumId !== null
+                                ? (() => {
+                                    const curriculum = mobileCurriculums.find(
+                                      (c) => c.id === mobileCurriculumId,
+                                    );
+                                    if (!curriculum) return "Select Curriculum";
+                                    if (mobileCurriculumLevelId) {
+                                      const level = curriculum.levels.find(
+                                        (l: any) =>
+                                          l.id === mobileCurriculumLevelId,
+                                      );
+                                      if (level)
+                                        return `${curriculum.name} - ${level.name}`;
+                                    }
+                                    return curriculum.name;
+                                  })()
+                                : "Select Curriculum"}
+                            </span>
+                            <ChevronDown
+                              className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                                showMobileCurriculumDropdown ? "rotate-180" : ""
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {showMobileCurriculumDropdown && (
+                          <div className="py-3 space-y-2 max-h-60 overflow-y-auto">
+                            {/* "No Curriculum" option for university level */}
+                            {mobileLevel === "university" && (
+                              <div
+                                className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                                  mobileCurriculumId === null &&
+                                  !mobileSelectedCurriculum
+                                    ? "bg-purple-50"
+                                    : ""
+                                }`}
+                                onClick={handleMobileNoCurriculumSelect}
+                              >
+                                <p className="text-sm font-medium text-gray-900">
+                                  No Curriculum / Professional
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  For professional courses, certifications, and
+                                  specialized training
+                                </p>
+                              </div>
+                            )}
+
+                            {/* "All Curricula" option */}
+                            <div
+                              className="p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+                              onClick={() => {
+                                setMobileCurriculumId(null);
+                                setMobileCurriculumLevelId(null);
+                                setMobileSelectedCurriculum(null);
+                                setShowMobileCurriculumDropdown(false);
+                                setShowMobileCurriculumLevels(false);
+                                setDisplaySearchCount(3);
+                              }}
+                            >
+                              <p className="text-sm font-medium text-gray-900">
+                                All Curricula
+                              </p>
+                            </div>
+
+                            {/* Curriculums list */}
+                            {mobileCurriculums.map((curriculum) => (
+                              <div key={curriculum.id}>
+                                <div
+                                  className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                                    mobileCurriculumId === curriculum.id
+                                      ? "bg-purple-50"
+                                      : ""
+                                  }`}
+                                  onClick={() =>
+                                    handleMobileCurriculumSelect(curriculum)
+                                  }
+                                >
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {curriculum.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {curriculum.country}
+                                  </p>
+                                </div>
+
+                                {/* Levels submenu */}
+                                {showMobileCurriculumLevels &&
+                                  mobileCurriculumId === curriculum.id &&
+                                  curriculum.levels.length > 0 && (
+                                    <div className="ml-4 pl-3 border-l-2 border-gray-200 space-y-1 mt-1">
+                                      <div
+                                        className="p-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+                                        onClick={() => {
+                                          handleMobileCurriculumLevelSelect(
+                                            null,
+                                          );
+                                          setShowMobileCurriculumLevels(false);
+                                        }}
+                                      >
+                                        <p className="text-sm text-gray-700">
+                                          All Levels
+                                        </p>
+                                      </div>
+                                      {curriculum.levels.map((level: any) => (
+                                        <div
+                                          key={level.id}
+                                          className={`p-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                                            mobileCurriculumLevelId === level.id
+                                              ? "bg-purple-50"
+                                              : ""
+                                          }`}
+                                          onClick={() => {
+                                            handleMobileCurriculumLevelSelect(
+                                              level.id,
+                                            );
+                                            setShowMobileCurriculumDropdown(
+                                              false,
+                                            );
+                                            setShowMobileCurriculumLevels(
+                                              false,
+                                            );
+                                          }}
+                                        >
+                                          <p className="text-sm text-gray-700">
+                                            {level.name}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                              </div>
+                            ))}
+
+                            {mobileCurriculums.length === 0 && (
+                              <div className="text-center py-4 text-gray-500">
+                                <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm">
+                                  No curricula available
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Adult Education Info */}
+                    {mobileLevel === "adult" && (
+                      <div className="w-full py-3">
+                        <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">
+                          <p className="font-medium">
+                            Professional & Adult Education
+                          </p>
+                          <p className="text-xs mt-1">
+                            Showing professional courses, certifications, and
+                            specialized training programs. These programs don't
+                            follow standard academic curricula.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Title/Subject Search */}
                     <div className="w-full">
@@ -1321,7 +2025,7 @@ export default function Navbar() {
                             e.key === "Enter" && handleMobileSearch()
                           }
                           placeholder="Search subjects, courses..."
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring- focus:border-transparent outline-none"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent outline-none"
                         />
 
                         {/* Popular searches */}
@@ -1330,30 +2034,39 @@ export default function Navbar() {
                             Popular searches
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {[
-                              "Mathematics",
-                              "English",
-                              "Science",
-                              "Programming",
-                              "Kiswahili",
-                            ].map((item) => (
-                              <button
-                                key={item}
-                                onClick={() => {
-                                  setMobileSearchTerm(item);
-                                  handleMobileSearch();
-                                }}
-                                className="px-3 py-1 bg-gray-100 hover:bg-purple-100 text-gray-700 hover:text-purple-700 rounded-full text-xs transition-colors"
-                              >
-                                {item}
-                              </button>
-                            ))}
+                            {mobileLevel === "adult"
+                              ? [
+                                  "Project Management",
+                                  "Digital Marketing",
+                                  "Data Science",
+                                  "Leadership",
+                                  "Business Analysis",
+                                ]
+                              : [
+                                  "Mathematics",
+                                  "English",
+                                  "Science",
+                                  "Programming",
+                                  "Kiswahili",
+                                ].map((item) => (
+                                  <button
+                                    key={item}
+                                    onClick={() => {
+                                      setMobileSearchTerm(item);
+                                      handleMobileSearch();
+                                    }}
+                                    className="px-3 py-1 bg-gray-100 hover:bg-purple-100 text-gray-700 hover:text-purple-700 rounded-full text-xs transition-colors"
+                                  >
+                                    {item}
+                                  </button>
+                                ))}
                           </div>
                         </div>
 
                         {/* Selected filters summary */}
                         {(mobileCategory !== "all" ||
                           mobileLevel !== "all" ||
+                          mobileCurriculumId !== null ||
                           mobileSearchTerm) && (
                           <div className="mt-4 p-3 bg-purple-50 rounded-lg">
                             <p className="text-xs font-medium text-purple-700 mb-2">
@@ -1382,12 +2095,31 @@ export default function Navbar() {
                                   </button>
                                 </span>
                               )}
-                              {mobileSearchTerm && (
+                              {mobileCurriculumId !== null && (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                                  <BookOpen className="w-3 h-3" />
+                                  {getCurriculumDisplay(
+                                    mobileCurriculumId,
+                                    mobileCurriculumLevelId,
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      setMobileCurriculumId(null);
+                                      setMobileCurriculumLevelId(null);
+                                      setMobileSelectedCurriculum(null);
+                                    }}
+                                    className="ml-1 hover:bg-green-200 rounded-full p-0.5"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </span>
+                              )}
+                              {mobileSearchTerm && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
                                   "{mobileSearchTerm}"
                                   <button
                                     onClick={() => setMobileSearchTerm("")}
-                                    className="ml-1 hover:bg-green-200 rounded-full p-0.5"
+                                    className="ml-1 hover:bg-yellow-200 rounded-full p-0.5"
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
@@ -1426,12 +2158,9 @@ export default function Navbar() {
               onClick={handleDesktopSearchClick}
             >
               {isTutorsPage ? (
-                // Tutor Search with Category and Level tabs
                 <>
                   {isScrolled && !isSearchExpanded ? (
-                    // Reduced view - show only labels in equally divided segments
                     <div className="w-full h-full flex items-center">
-                      {/* Three equal segments with click handlers */}
                       <div
                         className="flex-1 flex items-center justify-center px-2 cursor-pointer hover:bg-gray-50 h-full transition-colors"
                         onClick={(e) => handleSegmentClick(e, "category")}
@@ -1439,7 +2168,7 @@ export default function Navbar() {
                         <span className="text-xs font-semibold text-gray-700 truncate">
                           {tutorCategory !== "all"
                             ? getTutorCategoryDisplay(tutorCategory)
-                            : "Tuition Category"}
+                            : "Tutor Category"}
                         </span>
                       </div>
                       <div className="h-5 w-px bg-gray-300"></div>
@@ -1456,6 +2185,17 @@ export default function Navbar() {
                       <div className="h-5 w-px bg-gray-300"></div>
                       <div
                         className="flex-1 flex items-center justify-center px-2 cursor-pointer hover:bg-gray-50 h-full transition-colors"
+                        onClick={(e) => handleSegmentClick(e, "curriculum")}
+                      >
+                        <span className="text-xs font-semibold text-gray-700 truncate">
+                          {tutorCurriculumId !== null
+                            ? "Curriculum"
+                            : "Curriculum Expertise"}
+                        </span>
+                      </div>
+                      <div className="h-5 w-px bg-gray-300"></div>
+                      <div
+                        className="flex-1 flex items-center justify-center px-2 cursor-pointer hover:bg-gray-50 h-full transition-colors"
                         onClick={(e) => handleSegmentClick(e, "title")}
                       >
                         <span className="text-xs font-semibold text-gray-700 truncate">
@@ -1464,14 +2204,13 @@ export default function Navbar() {
                             : "Subject/Title"}
                         </span>
                       </div>
-                      {/* Search icon at the end */}
                       <div className="flex items-center justify-center px-3">
                         <div
                           className={`${
                             isScrolled && !isSearchExpanded
                               ? "h-9 w-9"
                               : "h-9 w-9"
-                          } bg-main rounded-full flex items-center justify-center transition-all duration-300`}
+                          } bg-main rounded-full flex items-center justify-center`}
                         >
                           <SearchIcon
                             size={isScrolled && !isSearchExpanded ? 16 : 18}
@@ -1482,7 +2221,6 @@ export default function Navbar() {
                       </div>
                     </div>
                   ) : (
-                    // Expanded view - show full tabs
                     <>
                       <TutorCategoryTab
                         hovered={hovered}
@@ -1513,9 +2251,29 @@ export default function Navbar() {
                       <div
                         className={`h-[50%] w-px bg-zinc-300 transition-opacity duration-200 ${
                           hovered === "level" ||
+                          hovered === "curriculum" ||
+                          selected === "curriculum" ||
+                          selected === "level"
+                            ? "opacity-0"
+                            : "opacity-100"
+                        }`}
+                      ></div>
+                      <TutorCurriculumTab
+                        hovered={hovered}
+                        selected={selected}
+                        setHovered={setHovered}
+                        setSelected={setSelected}
+                        onCurriculumSelect={handleTutorCurriculumChange}
+                        selectedCurriculumId={tutorCurriculumId}
+                        selectedCurriculumLevelId={tutorCurriculumLevelId}
+                        selectedLevel={tutorLevel}
+                      />
+                      <div
+                        className={`h-[50%] w-px bg-zinc-300 transition-opacity duration-200 ${
+                          hovered === "curriculum" ||
                           hovered === "title" ||
                           selected === "title" ||
-                          selected === "level"
+                          selected === "curriculum"
                             ? "opacity-0"
                             : "opacity-100"
                         }`}
@@ -1531,8 +2289,6 @@ export default function Navbar() {
                         searchTerm={tutorSearchTerm}
                         subject={tutorSubject}
                       />
-
-                      {/* Search icon button in expanded view */}
                       <div className="px-2">
                         <button
                           onClick={handleTutorSearch}
@@ -1550,12 +2306,9 @@ export default function Navbar() {
                   )}
                 </>
               ) : (
-                // Session Search
                 <>
                   {isScrolled && !isSearchExpanded ? (
-                    // Reduced view - show only labels in equally divided segments
                     <div className="w-full h-full flex items-center">
-                      {/* Three equal segments with click handlers */}
                       <div
                         className="flex-1 flex items-center justify-center px-2 cursor-pointer hover:bg-gray-50 h-full transition-colors"
                         onClick={(e) => handleSegmentClick(e, "category")}
@@ -1580,20 +2333,32 @@ export default function Navbar() {
                       <div className="h-5 w-px bg-gray-300"></div>
                       <div
                         className="flex-1 flex items-center justify-center px-2 cursor-pointer hover:bg-gray-50 h-full transition-colors"
+                        onClick={(e) => handleSegmentClick(e, "curriculum")}
+                      >
+                        <span className="text-xs font-semibold text-gray-700 truncate">
+                          {selectedLevel === "adult"
+                            ? "Professional"
+                            : selectedCurriculumId !== null
+                              ? "Curriculum"
+                              : "Curriculum"}
+                        </span>
+                      </div>
+                      <div className="h-5 w-px bg-gray-300"></div>
+                      <div
+                        className="flex-1 flex items-center justify-center px-2 cursor-pointer hover:bg-gray-50 h-full transition-colors"
                         onClick={(e) => handleSegmentClick(e, "title")}
                       >
                         <span className="text-xs font-semibold text-gray-700 truncate">
                           {searchTerm ? "Active" : "Subject/Title"}
                         </span>
                       </div>
-                      {/* Search icon at the end */}
                       <div className="flex items-center justify-center px-3">
                         <div
                           className={`${
                             isScrolled && !isSearchExpanded
                               ? "h-9 w-9"
                               : "h-9 w-9"
-                          } bg-main rounded-full flex items-center justify-center transition-all duration-300`}
+                          } bg-main rounded-full flex items-center justify-center`}
                         >
                           <SearchIcon
                             size={isScrolled && !isSearchExpanded ? 16 : 18}
@@ -1604,7 +2369,6 @@ export default function Navbar() {
                       </div>
                     </div>
                   ) : (
-                    // Expanded view - show full tabs
                     <>
                       <CategoryTab
                         hovered={hovered}
@@ -1635,9 +2399,29 @@ export default function Navbar() {
                       <div
                         className={`h-[50%] w-px bg-zinc-300 transition-opacity duration-200 ${
                           hovered === "level" ||
+                          hovered === "curriculum" ||
+                          selected === "curriculum" ||
+                          selected === "level"
+                            ? "opacity-0"
+                            : "opacity-100"
+                        }`}
+                      ></div>
+                      <CurriculumTab
+                        hovered={hovered}
+                        selected={selected}
+                        setHovered={setHovered}
+                        setSelected={setSelected}
+                        onCurriculumSelect={handleCurriculumChange}
+                        selectedCurriculumId={selectedCurriculumId}
+                        selectedCurriculumLevelId={selectedCurriculumLevelId}
+                        selectedLevel={selectedLevel}
+                      />
+                      <div
+                        className={`h-[50%] w-px bg-zinc-300 transition-opacity duration-200 ${
+                          hovered === "curriculum" ||
                           hovered === "title" ||
                           selected === "title" ||
-                          selected === "level"
+                          selected === "curriculum"
                             ? "opacity-0"
                             : "opacity-100"
                         }`}
@@ -1651,8 +2435,6 @@ export default function Navbar() {
                         onSearch={handleSearch}
                         searchTerm={searchTerm}
                       />
-
-                      {/* Search icon button in expanded view */}
                       <div className="px-2">
                         <button
                           onClick={handleSearch}

@@ -1,6 +1,24 @@
 // src/lib/api/user.ts
 import client from "./client";
 
+// Define the affiliate data interface for backend response
+export interface AffiliateData {
+  id: number;
+  affiliate_code: string;
+  commission_rate: number;
+  total_earnings: number;
+  total_paid: number;
+  total_referred_tutors: number;
+  total_referred_students: number;
+  is_active: boolean;
+  created_at: string;
+  // Optional fields that might be present in some responses
+  user_id?: number;
+  updated_at?: string;
+  payment_method?: string;
+  payment_details?: any;
+}
+
 // Define the extended user status data type
 export interface UserStatusData {
   // Profile & Basic Info
@@ -82,6 +100,12 @@ export interface UserStatusData {
   hasCommunityRole: boolean;
   hasStudentRole: boolean;
   hasAdminRole: boolean;
+  // Affiliate role flag
+  hasAffiliateRole?: boolean;
+  
+  // Affiliate data - using the AffiliateData interface
+  affiliateData?: AffiliateData | null;
+  affiliateCode?: string | null;
   
   // Application status summary
   applicationStatus: {
@@ -111,6 +135,7 @@ export interface UserStatusData {
     country?: string;
     city?: string;
     created_at?: string;
+    affiliate_code?: string | null;
   };
 }
 

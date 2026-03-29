@@ -27,6 +27,7 @@ import {
   MapPin,
   DollarSign,
   Timer,
+  Globe,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -106,7 +107,6 @@ export default function HomePage() {
       });
 
       if (response.success && response.data?.sessions) {
-        // Store the sessions in a variable to avoid repeated optional chaining
         const sessions = response.data.sessions;
 
         if (sessions.length > 0) {
@@ -181,12 +181,10 @@ export default function HomePage() {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // Compact Session Card with prominent tutor avatar
+  // Compact Session Card with minimalistic design
   const SessionCard = ({ session }: { session: TutorSession }) => {
     const tutorRating = parseRating(session.tutor_rating);
     const feeAmount = parseNumber(session.fee_amount);
-    const currentEnrollment = parseNumber(session.current_enrollment);
-    const maxStudents = parseNumber(session.max_students);
     const classesPerWeek = parseNumber(session.classes_per_week) || 1;
     const duration = parseNumber(session.class_duration_minutes) || 90;
 
@@ -201,37 +199,29 @@ export default function HomePage() {
         .join(" ");
     };
 
-    // Format level for display
-    const formatLevel = (level?: string) => {
-      if (!level) return null;
-
-      const levelMap: Record<string, string> = {
-        primary: "Primary",
-        junior_high: "Junior High",
-        senior_high: "Senior High",
-        university: "University",
-        adult: "Adult",
-        all: "All Levels",
-      };
-
-      return levelMap[level] || level;
-    };
-
-    const courseLevel = formatLevel(session.course_level);
-
     // Capitalize tutor name and session name
     const capitalizedTutorName = capitalizeName(session.tutor_name || "Tutor");
     const capitalizedSessionName = capitalizeName(session.name);
 
+    // Use session.uuid for navigation
+    const handleCardClick = () => {
+      if (session.uuid) {
+        router.push(`/tuitions/${session.uuid}`);
+      } else {
+        console.error("Session has no UUID:", session);
+        toast.error("Unable to open session");
+      }
+    };
+
     return (
       <div
-        onClick={() => router.push(`/tuitions/${session.id}`)}
-        className="group bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
+        onClick={handleCardClick}
+        className="group bg-white rounded-lg overflow-hidden border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 cursor-pointer"
       >
         {/* Compact Header with Tutor Avatar and Session Type */}
-        <div className="p-3 flex items-center gap-2 border-b border-gray-100">
+        <div className="p-3 flex items-center gap-2 border-b border-gray-50">
           {/* Tutor Avatar - Prominently displayed */}
-          <div className="w-12 h-12 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 overflow-hidden flex-shrink-0">
+          <div className="w-12 h-12 md:w-12 md:h-12 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
             {session.tutor_avatar ? (
               <img
                 src={session.tutor_avatar}
@@ -240,35 +230,30 @@ export default function HomePage() {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <User className="w-4 h-4 text-gray-500" />
+                <User className="w-4 h-4 text-gray-400" />
               </div>
             )}
           </div>
 
           {/* Tutor Name and Session Type */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">
+            <p className="text-sm font-medium text-gray-800 truncate">
               {capitalizedTutorName}
             </p>
             <div className="flex items-center gap-1 flex-wrap">
               <span
                 className={`text-xs px-1.5 py-0.5 rounded-full ${
                   session.session_type === "one_on_one"
-                    ? "bg-purple-50 text-purple-600"
-                    : "bg-blue-50 text-blue-600"
+                    ? "bg-gray-100 text-gray-600"
+                    : "bg-gray-100 text-gray-600"
                 }`}
               >
                 {session.session_type === "one_on_one" ? "1:1" : "Group"}
               </span>
-              {courseLevel && (
-                <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                  {courseLevel}
-                </span>
-              )}
               {tutorRating > 0 && (
                 <div className="flex items-center gap-0.5">
-                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                  <span className="text-xs font-medium text-gray-600">
+                  <Star className="w-3 h-3 fill-gray-300 text-gray-300" />
+                  <span className="text-xs text-gray-500">
                     {tutorRating.toFixed(1)}
                   </span>
                 </div>
@@ -279,16 +264,32 @@ export default function HomePage() {
 
         {/* Session Content */}
         <div className="p-3">
-          <h3 className="font-semibold text-gray-800 text-sm md:text-md line-clamp-1 mb-1">
+          <h3 className="font-medium text-gray-800 text-sm md:text-md line-clamp-1 mb-1">
             {capitalizedSessionName}
           </h3>
 
           <p className="text-xs text-gray-500 line-clamp-2 mb-2">
-            {session.course_title || session.description}
+            {session.subject}
           </p>
 
+          {/* Minimalistic Curriculum Badge */}
+          {session.curriculum_name && (
+            <div className="mb-2">
+              <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+                <Globe className="w-3 h-3 text-gray-400" />
+                {session.curriculum_name}
+                {session.curriculum_level_name && (
+                  <span className="text-gray-400">
+                    {" "}
+                    · {session.curriculum_level_name}
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+
           {/* Session Meta - Compact grid */}
-          <div className="grid grid-cols-3 gap-1 text-xs text-gray-500 mb-2">
+          <div className="grid grid-cols-3 gap-1 text-xs text-gray-400 mb-2">
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
               <span className="truncate">{formatDate(session.start_date)}</span>
@@ -303,18 +304,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Course Level Badge (alternative placement) */}
-          {courseLevel && (
-            <div className="mb-2">
-              <span className="text-xs px-2 py-1 bg-purple-50 text-zinc-700 rounded">
-                {courseLevel} Course Level
-              </span>
-            </div>
-          )}
-
           {/* Price - Compact */}
           <div className="text-left">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm font-medium text-gray-700">
               {formatCurrency(feeAmount, session.fee_currency)}
             </p>
           </div>
@@ -340,12 +332,12 @@ export default function HomePage() {
     return (
       <div
         onClick={() => router.push(`/tutors/${tutor.id}`)}
-        className="group bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
+        className="group bg-white rounded-lg overflow-hidden border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 cursor-pointer"
       >
         <div className="p-3">
           <div className="flex items-center gap-3">
             {/* Avatar */}
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 overflow-hidden flex-shrink-0">
+            <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
               {tutor.avatar_url ? (
                 <img
                   src={tutor.avatar_url}
@@ -361,7 +353,7 @@ export default function HomePage() {
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-gray-900 group-hover:text-purple-600 transition-colors truncate">
+              <h3 className="font-medium text-gray-800 group-hover:text-gray-600 transition-colors truncate">
                 {fullName}
               </h3>
               <p className="text-xs text-gray-500 truncate">
@@ -371,14 +363,14 @@ export default function HomePage() {
               {/* Rating and Rate */}
               <div className="flex items-center justify-between mt-1">
                 <div className="flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                  <span className="text-xs font-medium text-gray-700">
+                  <Star className="w-3 h-3 fill-gray-300 text-gray-300" />
+                  <span className="text-xs text-gray-500">
                     {tutorRating.toFixed(1)}
                   </span>
                 </div>
-                <span className="text-xs font-medium text-gray-900">
+                <span className="text-xs text-gray-600">
                   {formatCurrency(hourlyRate, tutor.currency)}
-                  <span className="text-gray-500">/hr</span>
+                  <span className="text-gray-400">/hr</span>
                 </span>
               </div>
             </div>
@@ -390,13 +382,13 @@ export default function HomePage() {
               {tutor.subjects.slice(0, 2).map((subject, idx) => (
                 <span
                   key={idx}
-                  className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
+                  className="px-1.5 py-0.5 bg-gray-50 text-gray-500 text-xs rounded"
                 >
                   {subject.subject}
                 </span>
               ))}
               {(tutor.subjects?.length || 0) > 2 && (
-                <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                <span className="px-1.5 py-0.5 bg-gray-50 text-gray-500 text-xs rounded">
                   +{tutor.subjects.length - 2}
                 </span>
               )}
@@ -410,10 +402,10 @@ export default function HomePage() {
   const CommunityCard = ({ community }: { community: Community }) => (
     <div
       onClick={() => router.push(`/communities/${community.slug}`)}
-      className="group bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
+      className="group bg-white rounded-lg overflow-hidden border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 cursor-pointer"
     >
       {/* Banner */}
-      <div className="relative h-20 bg-gradient-to-r from-purple-600 to-blue-600">
+      <div className="relative h-20 bg-gray-100">
         {community.banner_url ? (
           <img
             src={community.banner_url}
@@ -422,13 +414,13 @@ export default function HomePage() {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <School className="w-8 h-8 text-white/30" />
+            <School className="w-8 h-8 text-gray-300" />
           </div>
         )}
 
         {/* Logo */}
         <div className="absolute -bottom-6 left-3">
-          <div className="w-10 h-10 rounded-lg bg-white border-2 border-white shadow overflow-hidden">
+          <div className="w-10 h-10 rounded-lg bg-white border border-gray-100 shadow-sm overflow-hidden">
             {community.logo_url ? (
               <img
                 src={community.logo_url}
@@ -436,7 +428,7 @@ export default function HomePage() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
+              <div className="w-full h-full bg-gray-50 flex items-center justify-center">
                 <Building2 className="w-5 h-5 text-gray-400" />
               </div>
             )}
@@ -446,7 +438,7 @@ export default function HomePage() {
 
       {/* Content */}
       <div className="pt-8 p-3">
-        <h3 className="font-medium text-gray-900 group-hover:text-purple-600 transition-colors text-sm">
+        <h3 className="font-medium text-gray-800 group-hover:text-gray-600 transition-colors text-sm">
           {community.name}
         </h3>
         <p className="text-xs text-gray-500 mt-1 line-clamp-2">
@@ -454,7 +446,7 @@ export default function HomePage() {
         </p>
 
         {/* Stats */}
-        <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+        <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
           <div className="flex items-center gap-1">
             <Users className="w-3 h-3" />
             <span>{community.member_count}</span>
@@ -481,13 +473,13 @@ export default function HomePage() {
   }) => (
     <div className="flex items-end justify-between mb-4">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+        <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
         <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
       </div>
       {onViewAll && (
         <button
           onClick={onViewAll}
-          className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1 group"
+          className="text-sm text-gray-500 hover:text-gray-700 font-medium flex items-center gap-1 group"
         >
           View all
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -500,9 +492,9 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-gray-200 border-t-purple-600 rounded-full animate-spin"></div>
+          <div className="w-16 h-16 border-4 border-gray-100 border-t-gray-300 rounded-full animate-spin"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <GraduationCap className="w-6 h-6 text-purple-600 animate-pulse" />
+            <GraduationCap className="w-6 h-6 text-gray-400 animate-pulse" />
           </div>
         </div>
       </div>
@@ -530,7 +522,7 @@ export default function HomePage() {
             <div className="flex justify-center mt-6">
               <button
                 onClick={loadMoreGroup}
-                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
+                className="px-4 py-2 border border-gray-200 bg-white text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
               >
                 Load More
                 <ChevronRight className="w-4 h-4" />
@@ -557,7 +549,7 @@ export default function HomePage() {
             <div className="flex justify-center mt-6">
               <button
                 onClick={loadMoreOneOnOne}
-                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
+                className="px-4 py-2 border border-gray-200 bg-white text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
               >
                 Load More
                 <ChevronRight className="w-4 h-4" />
@@ -584,7 +576,7 @@ export default function HomePage() {
             <div className="flex justify-center mt-6">
               <button
                 onClick={() => setTutorsPage((p) => p + 1)}
-                className="px-4 py-2 bg-white text-purple-600 text-sm font-medium rounded-lg hover:bg-purple-50 transition-colors border border-purple-200 flex items-center gap-1"
+                className="px-4 py-2 bg-white text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors border border-gray-200 flex items-center gap-1"
               >
                 View All Tutors
                 <ArrowRight className="w-4 h-4" />
@@ -592,98 +584,6 @@ export default function HomePage() {
             </div>
           )}
         </section>
-
-        {/* Communities Section */}
-        {/* <section>
-          <SectionHeader
-            title="Learning Communities"
-            subtitle="Join vibrant communities"
-            onViewAll={() => router.push("/communities")}
-          />
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-            {communities.map((community) => (
-              <CommunityCard key={community.id} community={community} />
-            ))}
-          </div>
-
-          {hasMoreCommunities && (
-            <div className="flex justify-center mt-6">
-              <button
-                onClick={() => setCommunitiesPage((p) => p + 1)}
-                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
-              >
-                Explore Communities
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </section> */}
-
-        {/* Why Choose Us Section */}
-        {/* <section className="bg-white rounded-2xl p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 text-center mb-8">
-            Why Choose SomoHub?
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-              <h3 className="font-medium text-gray-900 mb-1">Expert Tutors</h3>
-              <p className="text-sm text-gray-500">
-                Learn from qualified and experienced tutors
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <Video className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="font-medium text-gray-900 mb-1">
-                Flexible Learning
-              </h3>
-              <p className="text-sm text-gray-500">
-                Join live sessions or learn at your own pace
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <Award className="w-6 h-6 text-green-600" />
-              </div>
-              <h3 className="font-medium text-gray-900 mb-1">
-                Certified Learning
-              </h3>
-              <p className="text-sm text-gray-500">
-                Earn certificates upon completion
-              </p>
-            </div>
-          </div>
-        </section> */}
-
-        {/* CTA Section */}
-        {/* <section className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 text-center text-white">
-          <h2 className="text-2xl font-bold mb-3">Ready to Start Learning?</h2>
-          <p className="text-base text-purple-100 mb-6 max-w-xl mx-auto">
-            Join thousands of students already learning on SomoHub
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => router.push("/sessions")}
-              className="px-6 py-2.5 bg-white text-purple-600 font-medium rounded-lg hover:bg-purple-50 transition-colors text-sm"
-            >
-              Browse Sessions
-            </button>
-            <button
-              onClick={() => router.push("/tutors")}
-              className="px-6 py-2.5 border-2 border-white text-white font-medium rounded-lg hover:bg-white/10 transition-colors text-sm"
-            >
-              Find a Tutor
-            </button>
-          </div>
-        </section> */}
       </div>
     </div>
   );

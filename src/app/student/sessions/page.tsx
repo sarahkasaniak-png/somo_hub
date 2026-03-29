@@ -19,7 +19,6 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
-  CalendarDays,
   MapPinned,
   Wifi,
   Sun,
@@ -30,16 +29,16 @@ import {
   Search,
   Filter,
   SlidersHorizontal,
-  ArrowLeft,
   ArrowRight,
   GraduationCap,
   Star,
   RefreshCw,
-  Copy,
-  Check,
-  Info,
 } from "lucide-react";
 
+// Use the type from the API directly to avoid mismatch
+import type { Enrollment as ApiEnrollment } from "@/lib/api/student";
+
+// Define the component's Enrollment type based on what we actually need
 interface Enrollment {
   id: number;
   tutor_course_session_id: number;
@@ -69,13 +68,9 @@ interface Enrollment {
     enrollment_status: string;
     description: string | null;
     session_type: string;
-    course: {
-      id: number;
-      title: string;
-      subject: string;
-      level: string;
-      thumbnail_url: string | null;
-    };
+    subject?: string; // Make optional since API might not have it
+    level?: string; // Make optional since API might not have it
+    thumbnail_url?: string | null; // Make optional since API might not have it
     tutor: {
       id: number;
       first_name: string;
@@ -83,7 +78,7 @@ interface Enrollment {
       email: string;
       avatar_url: string | null;
       bio: string | null;
-      rating: number;
+      rating: number | string | null;
     };
   };
 }
@@ -105,6 +100,14 @@ export default function StudentSessionsPage() {
     completed: 0,
   });
 
+  // Helper function to safely format rating
+  const formatRating = (rating: any): string => {
+    if (!rating && rating !== 0) return "0";
+    const numRating = typeof rating === "string" ? parseFloat(rating) : rating;
+    if (isNaN(numRating)) return "0";
+    return numRating.toFixed(1);
+  };
+
   useEffect(() => {
     fetchEnrollments();
   }, []);
@@ -118,27 +121,70 @@ export default function StudentSessionsPage() {
       setLoading(true);
       const response = await studentApi.getMyEnrollments();
 
+      console.log("Enrollments response:", response);
+
       if (response.success && response.data) {
-        // Now TypeScript knows response.data exists
         const enrollmentsData = response.data.enrollments || [];
-        setEnrollments(enrollmentsData);
+
+        // Map the API response to our component's Enrollment type
+        const mappedEnrollments: Enrollment[] = enrollmentsData.map(
+          (item: any) => ({
+            id: item.id,
+            tutor_course_session_id: item.tutor_course_session_id,
+            student_id: item.student_id,
+            enrollment_status: item.enrollment_status,
+            payment_status: item.payment_status,
+            payment_amount: item.payment_amount,
+            enrolled_at: item.enrolled_at,
+            progress_percentage: item.progress_percentage,
+            classes_attended: item.classes_attended,
+            total_classes: item.total_classes,
+            session: {
+              id: item.session?.id,
+              name: item.session?.name,
+              session_code: item.session?.session_code,
+              start_date: item.session?.start_date,
+              end_date: item.session?.end_date,
+              max_students: item.session?.max_students,
+              fee_amount: item.session?.fee_amount,
+              fee_currency: item.session?.fee_currency,
+              status: item.session?.status,
+              enrollment_status: item.session?.enrollment_status,
+              description: item.session?.description,
+              session_type: item.session?.session_type,
+              subject: item.session?.subject,
+              level: item.session?.level,
+              thumbnail_url: item.session?.thumbnail_url,
+              tutor: {
+                id: item.session?.tutor?.id,
+                first_name: item.session?.tutor?.first_name,
+                last_name: item.session?.tutor?.last_name,
+                email: item.session?.tutor?.email,
+                avatar_url: item.session?.tutor?.avatar_url,
+                bio: item.session?.tutor?.bio,
+                rating: item.session?.tutor?.rating,
+              },
+            },
+          }),
+        );
+
+        setEnrollments(mappedEnrollments);
 
         // Calculate stats
         const total = response.data.total || 0;
-        const active = enrollmentsData.filter(
+        const active = mappedEnrollments.filter(
           (e: Enrollment) => e.enrollment_status === "active",
         ).length;
-        const pending = enrollmentsData.filter(
+        const pending = mappedEnrollments.filter(
           (e: Enrollment) => e.enrollment_status === "pending",
         ).length;
-        const completed = enrollmentsData.filter(
+        const completed = mappedEnrollments.filter(
           (e: Enrollment) => e.enrollment_status === "completed",
         ).length;
 
         setStats({ total, active, pending, completed });
       } else {
-        // Handle case where response is successful but no data
-        toast.error("No enrollment data found");
+        toast.error(response.message || "No enrollment data found");
       }
     } catch (error) {
       console.error("Failed to fetch enrollments:", error);
@@ -156,15 +202,14 @@ export default function StudentSessionsPage() {
       filtered = filtered.filter((e) => e.enrollment_status === filter);
     }
 
-    // Apply search
+    // Apply search - use session.name and session.subject
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (e) =>
-          e.session.name.toLowerCase().includes(query) ||
-          e.session.course.title.toLowerCase().includes(query) ||
-          e.session.course.subject.toLowerCase().includes(query) ||
-          e.session.session_code.toLowerCase().includes(query),
+          (e.session.name || "").toLowerCase().includes(query) ||
+          (e.session.subject || "").toLowerCase().includes(query) ||
+          (e.session.session_code || "").toLowerCase().includes(query),
       );
     }
 
@@ -179,7 +224,7 @@ export default function StudentSessionsPage() {
         case "progress":
           return b.progress_percentage - a.progress_percentage;
         case "name":
-          return a.session.name.localeCompare(b.session.name);
+          return (a.session.name || "").localeCompare(b.session.name || "");
         default:
           return 0;
       }
@@ -189,6 +234,7 @@ export default function StudentSessionsPage() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "Not set";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -364,15 +410,15 @@ export default function StudentSessionsPage() {
             >
               <div className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                  {/* Left side - Course Info */}
+                  {/* Left side - Session Info */}
                   <div className="flex-1">
                     <div className="flex items-start gap-4">
                       {/* Thumbnail */}
                       <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        {enrollment.session.course.thumbnail_url ? (
+                        {enrollment.session.thumbnail_url ? (
                           <img
-                            src={enrollment.session.course.thumbnail_url}
-                            alt={enrollment.session.course.title}
+                            src={enrollment.session.thumbnail_url}
+                            alt={enrollment.session.name}
                             className="w-full h-full object-cover rounded-lg"
                           />
                         ) : (
@@ -382,26 +428,27 @@ export default function StudentSessionsPage() {
 
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {enrollment.session.course.title}
+                          {enrollment.session.name}
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">
-                          {enrollment.session.name} •{" "}
+                          {enrollment.session.subject || "General"} •{" "}
                           {enrollment.session.session_code}
                         </p>
                         <div className="flex flex-wrap items-center gap-3 mt-2">
                           <span className="text-xs text-gray-500 flex items-center gap-1">
                             <GraduationCap className="w-3 h-3" />
-                            {enrollment.session.course.subject}
+                            {enrollment.session.subject || "General"}
                           </span>
                           <span className="text-xs text-gray-500 flex items-center gap-1">
                             <Users className="w-3 h-3" />
                             Tutor: {enrollment.session.tutor.first_name}{" "}
                             {enrollment.session.tutor.last_name}
                           </span>
-                          {enrollment.session.tutor.rating > 0 && (
+                          {/* Rating display */}
+                          {enrollment.session.tutor.rating && (
                             <span className="text-xs text-gray-500 flex items-center gap-1">
                               <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                              {enrollment.session.tutor.rating.toFixed(1)}
+                              {formatRating(enrollment.session.tutor.rating)}
                             </span>
                           )}
                         </div>
@@ -520,13 +567,13 @@ export default function StudentSessionsPage() {
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
             {searchQuery || filter !== "all"
               ? "No sessions match your search criteria. Try adjusting your filters."
-              : "You haven't enrolled in any sessions yet. Browse our courses to get started!"}
+              : "You haven't enrolled in any sessions yet. Browse our sessions to get started!"}
           </p>
           <Link
             href="/"
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Browse Courses
+            Browse Sessions
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

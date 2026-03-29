@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (userStatus.hasTutorRole) roles.push("tutor");
     if (userStatus.hasCommunityRole) roles.push("community");
     if (userStatus.hasStudentRole) roles.push("student");
+    if (userStatus.hasAffiliateRole) roles.push("affiliate");
 
     return roles.length;
   };
@@ -58,6 +59,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const currentStatus = status || userStatus;
     if (!currentStatus) return null;
 
+    // Affiliate takes precedence for redirect purposes
+    if (currentStatus.hasAffiliateRole) return "affiliate";
     if (currentStatus.hasTutorRole) return "tutor";
     if (currentStatus.hasCommunityRole) return "community";
     if (currentStatus.hasStudentRole) return "student";
@@ -102,6 +105,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         hasCommunityRole: backendData.hasCommunityRole || false,
         hasStudentRole: backendData.hasStudentRole !== false,
         hasAdminRole: backendData.hasAdminRole || false,
+        hasAffiliateRole: backendData.hasAffiliateRole || false,
+        affiliateData: backendData.affiliateData || null,
+        affiliateCode: backendData.affiliateCode || null,
         applicationStatus: backendData.applicationStatus || {
           tutor: "not_started",
           community: "not_started",
@@ -141,6 +147,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         hasCommunityRole: false,
         hasStudentRole: true,
         hasAdminRole: false,
+        hasAffiliateRole: false,
+        affiliateData: null,
+        affiliateCode: null,
         applicationStatus: {
           tutor: "not_started",
           community: "not_started",
@@ -163,27 +172,112 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     if (!currentUser) return null;
 
-    // console.log("📊 fetchProfileData - user:", currentUser);
-    // console.log("📊 fetchProfileData - status:", currentStatus);
+    console.log("📊 fetchProfileData - user:", currentUser);
+    console.log("📊 fetchProfileData - status:", currentStatus);
 
     try {
       const primaryRole = getPrimaryRole(currentStatus);
-      // console.log("📊 fetchProfileData - primary role:", primaryRole);
+      console.log("📊 fetchProfileData - primary role:", primaryRole);
 
-      if (primaryRole === "student") {
+      // Handle affiliate profile
+      if (primaryRole === "affiliate") {
+        try {
+          // Try to get affiliate profile from API
+          const affiliateApi = await import("../../lib/api/affiliate");
+          const response = await affiliateApi.default.getProfile();
+
+          if (response.success && response.data) {
+            console.log("✅ Affiliate profile loaded from API:", response.data);
+            const affiliateProfile: ProfileData = {
+              first_name: currentUser.first_name || "",
+              last_name: currentUser.last_name || "",
+              email: currentUser.email || "",
+              phone: currentUser.phone || "",
+              date_of_birth: currentUser.date_of_birth || "",
+              avatar_url: currentUser.avatar_url || null,
+              country: currentUser.country || "",
+              city: currentUser.city || "",
+              affiliate_code: response.data.affiliate_code,
+              commission_rate: response.data.commission_rate,
+              total_earnings: response.data.total_earnings,
+              total_paid: response.data.total_paid,
+              total_referred_tutors: response.data.total_referred_tutors,
+              total_referred_students: response.data.total_referred_students,
+              education: [],
+              interests: [],
+              learning_goals: [],
+              stats: {
+                courses_completed: 0,
+                sessions_attended: 0,
+                learning_hours: 0,
+                certificates_earned: 0,
+                average_rating: 0,
+                reviews_left: 0,
+              },
+              verification: {
+                email_verified: currentUser.is_verified || false,
+                phone_verified: currentUser.phone_verified || false,
+              },
+            };
+            setProfileData(affiliateProfile);
+            return affiliateProfile;
+          }
+        } catch (error) {
+          console.log("⚠️ Affiliate profile endpoint not available");
+
+          // Build affiliate profile from status data
+          if (currentStatus && currentStatus.affiliateData) {
+            const affiliateProfile: ProfileData = {
+              first_name: currentUser.first_name || "",
+              last_name: currentUser.last_name || "",
+              email: currentUser.email || "",
+              phone: currentUser.phone || "",
+              date_of_birth: currentUser.date_of_birth || "",
+              avatar_url: currentUser.avatar_url || null,
+              country: currentUser.country || "",
+              city: currentUser.city || "",
+              affiliate_code: currentStatus.affiliateData.affiliate_code,
+              commission_rate: currentStatus.affiliateData.commission_rate,
+              total_earnings: currentStatus.affiliateData.total_earnings,
+              total_paid: currentStatus.affiliateData.total_paid,
+              total_referred_tutors:
+                currentStatus.affiliateData.total_referred_tutors,
+              total_referred_students:
+                currentStatus.affiliateData.total_referred_students,
+              education: [],
+              interests: [],
+              learning_goals: [],
+              stats: {
+                courses_completed: 0,
+                sessions_attended: 0,
+                learning_hours: 0,
+                certificates_earned: 0,
+                average_rating: 0,
+                reviews_left: 0,
+              },
+              verification: {
+                email_verified: currentUser.is_verified || false,
+                phone_verified: currentUser.phone_verified || false,
+              },
+            };
+            setProfileData(affiliateProfile);
+            return affiliateProfile;
+          }
+        }
+      } else if (primaryRole === "student") {
         try {
           // Try to get student profile from API
           const response = await studentApi.getProfile();
 
           if (response.success && response.data) {
-            // console.log("✅ Student profile loaded from API:", response.data);
+            console.log("✅ Student profile loaded from API:", response.data);
             setProfileData(response.data);
             return response.data;
           }
         } catch (error) {
-          // console.log(
-          //   "⚠️ Student profile endpoint not available, using userStatus data",
-          // );
+          console.log(
+            "⚠️ Student profile endpoint not available, using userStatus data",
+          );
 
           // Use the passed status data instead of state
           if (currentStatus) {
@@ -213,10 +307,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               },
             };
 
-            // console.log(
-            //   "✅ Student profile built from status:",
-            //   profileFromStatus,
-            // );
+            console.log(
+              "✅ Student profile built from status:",
+              profileFromStatus,
+            );
             setProfileData(profileFromStatus);
             return profileFromStatus;
           }
@@ -225,15 +319,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           const response = await tutorApi.getTutorProfile();
           if (response.success && response.data) {
-            // console.log("✅ Tutor profile loaded from API:", response.data);
+            console.log("✅ Tutor profile loaded from API:", response.data);
             setProfileData(response.data);
             return response.data;
           }
         } catch (error) {
-          // console.error("❌ Failed to fetch tutor profile:", error);
+          console.error("❌ Failed to fetch tutor profile:", error);
         }
       } else {
-        // console.log("⚠️ No primary role found, using basic user profile");
+        console.log("⚠️ No primary role found, using basic user profile");
 
         // Fallback - create basic profile from user data
         const basicProfile: ProfileData = {
@@ -268,7 +362,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       return null;
     } catch (error) {
-      // console.error("❌ Failed to fetch profile data:", error);
+      console.error("❌ Failed to fetch profile data:", error);
       return null;
     }
   };
@@ -289,12 +383,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const currentUser = data.user;
         setUser(currentUser);
 
-        // console.log("📊 AuthContext - User loaded:", currentUser);
+        console.log("📊 AuthContext - User loaded:", currentUser);
 
         const status = await fetchUserStatus();
         setUserStatus(status);
 
-        // console.log("📊 AuthContext - User status loaded:", status);
+        console.log("📊 AuthContext - User status loaded:", status);
 
         // Pass both user and status explicitly to avoid state update delays
         await fetchProfileData(currentUser, status);
@@ -304,7 +398,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setProfileData(null);
       }
     } catch (error) {
-      // console.error("❌ Failed to load user:", error);
+      console.error("❌ Failed to load user:", error);
       setUser(null);
       setUserStatus(null);
       setProfileData(null);

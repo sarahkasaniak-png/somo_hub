@@ -13,6 +13,18 @@ body {
   @apply bg-gray-50
 }
 
+select,
+select option {
+  color: #1f2937 !important;
+  /* gray-800 */
+  background-color: white !important;
+}
+
+select:focus {
+  outline: none;
+  ring: 2px solid #9333ea;
+  border-color: transparent;
+}
 
 @custom-variant dark (&:is(.dark *));
 

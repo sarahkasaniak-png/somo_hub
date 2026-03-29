@@ -1,3 +1,4 @@
+// src/components/Header.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,6 +16,7 @@ import {
   Award,
   AlertCircle,
   ChevronDown,
+  TrendingUp,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import studentNotificationsApi, {
@@ -186,9 +188,11 @@ const Header = ({ onMenuToggle }: HeaderProps) => {
     if (pathname.includes("/tutor/")) return "Tutor";
     if (pathname.includes("/community/")) return "Community Admin";
     if (pathname.includes("/student/")) return "Student";
+    if (pathname.includes("/affiliate/")) return "Affiliate";
 
     // Determine from user roles
     if (user?.roles) {
+      if (user.roles.includes("affiliate")) return "Affiliate";
       if (user.roles.includes("tutor")) return "Tutor";
       if (user.roles.includes("community")) return "Community Admin";
       if (user.roles.includes("student")) return "Student";
@@ -231,6 +235,14 @@ const Header = ({ onMenuToggle }: HeaderProps) => {
   // Get user avatar URL
   const getUserAvatar = () => {
     return profileData?.avatar_url || user?.avatar_url || null;
+  };
+
+  // Get dashboard link based on role
+  const getDashboardLink = () => {
+    if (user?.roles?.includes("affiliate")) return "/affiliate/dashboard";
+    if (user?.roles?.includes("tutor")) return "/tutor/dashboard";
+    if (user?.roles?.includes("community")) return "/community/dashboard";
+    return "/student/dashboard";
   };
 
   return (
@@ -570,6 +582,11 @@ const Header = ({ onMenuToggle }: HeaderProps) => {
                           <div className="text-xs text-purple-600 mt-1">
                             {getCurrentRole()}
                           </div>
+                          {user?.is_affiliate && user?.affiliate_code && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Code: {user.affiliate_code}
+                            </div>
+                          )}
                         </div>
                         {isMobile && (
                           <button
@@ -597,6 +614,17 @@ const Header = ({ onMenuToggle }: HeaderProps) => {
 
                     <div className="py-3">
                       <Link
+                        href={getDashboardLink()}
+                        className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors mx-2"
+                        onClick={() => setShowProfile(false)}
+                      >
+                        <TrendingUp className="w-5 h-5 text-gray-500" />
+                        <span className="font-medium text-gray-700">
+                          Dashboard
+                        </span>
+                      </Link>
+
+                      <Link
                         href={`/${getCurrentRole().toLowerCase()}/profile`}
                         className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors mx-2"
                         onClick={() => setShowProfile(false)}
@@ -620,7 +648,7 @@ const Header = ({ onMenuToggle }: HeaderProps) => {
                       </Link>
 
                       <Link
-                        href={`/help/${getCurrentRole()}`}
+                        href={`/help/${getCurrentRole().toLowerCase()}`}
                         className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors mx-2"
                         onClick={() => setShowProfile(false)}
                       >

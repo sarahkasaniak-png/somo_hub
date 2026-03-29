@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
-import tutorApi from "@/lib/api/tutor";
+import tutorApi, { Curriculum, TutorLevelInfo } from "@/lib/api/tutor";
 import ScheduleConfig from "../../create/components/ScheduleConfig";
 import {
   ArrowLeft,
@@ -38,37 +38,47 @@ import {
   FileText,
   Timer,
   Hourglass,
+  GraduationCap,
 } from "lucide-react";
 
-interface ScheduleConfig {
+interface ScheduleConfigType {
   day_of_week: number;
   start_time: string;
   end_time: string;
 }
 
+interface CurriculumWeek {
+  week: number;
+  topic: string;
+  objectives?: string[];
+  materials?: string[];
+}
+
+// Updated SessionData to match TutorSession from API
 interface SessionData {
   id: number;
-  tutor_course_id: number;
+  uuid: string;
+  tutor_id: number;
   name: string;
   description: string | null;
+  subject: string;
+  curriculum_id?: number;
+  curriculum_level_id?: number;
+  prerequisites?: string[] | string;
+  learning_outcomes?: string[] | string;
+  curriculum?: CurriculumWeek[] | string;
   batch_name: string | null;
   session_type: "one_on_one" | "group";
   max_students: number;
   start_date: string;
   end_date: string;
+  session_code: string;
+  enrollment_status: string;
+  session_status: string;
   fee_amount: number;
   fee_currency: string;
-  status: string;
-  enrollment_status: string;
-  session_code: string;
-  schedule_configs?: ScheduleConfig[];
-}
-
-interface CourseData {
-  id: number;
-  title: string;
-  subject: string;
-  description?: string;
+  current_enrollment: number;
+  schedule_configs?: ScheduleConfigType[];
 }
 
 export default function EditSessionPage() {
@@ -78,17 +88,32 @@ export default function EditSessionPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [course, setCourse] = useState<CourseData | null>(null);
+
   const [session, setSession] = useState<SessionData | null>(null);
-  const [scheduleConfigs, setScheduleConfigs] = useState<ScheduleConfig[]>([]);
+  const [scheduleConfigs, setScheduleConfigs] = useState<ScheduleConfigType[]>(
+    [],
+  );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"basic" | "schedule">("basic");
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
 
+  // Curriculum state
+  const [allCurriculums, setAllCurriculums] = useState<Curriculum[]>([]);
+  const [tutorCurriculums, setTutorCurriculums] = useState<Curriculum[]>([]);
+  const [tutorLevel, setTutorLevel] = useState<TutorLevelInfo | null>(null);
+  const [selectedCurriculumId, setSelectedCurriculumId] = useState<
+    number | null
+  >(null);
+  const [selectedCurriculumLevelId, setSelectedCurriculumLevelId] = useState<
+    number | null
+  >(null);
+  const [loadingCurriculums, setLoadingCurriculums] = useState(true);
+
+  // Form data - includes all fields
   const [formData, setFormData] = useState({
-    tutor_course_id: 0,
     name: "",
     description: "",
+    subject: "",
     batch_name: "",
     session_type: "group" as "one_on_one" | "group",
     max_students: 10,
@@ -96,7 +121,16 @@ export default function EditSessionPage() {
     end_date: "",
     fee_amount: 0,
     fee_currency: "KES",
+    curriculum_id: undefined as number | undefined,
+    curriculum_level_id: undefined as number | undefined,
+    prerequisites: [] as string[],
+    learning_outcomes: [] as string[],
+    curriculum: [] as CurriculumWeek[],
   });
+
+  // Separate state for new prerequisite/outcome inputs
+  const [newPrerequisite, setNewPrerequisite] = useState("");
+  const [newOutcome, setNewOutcome] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -105,18 +139,80 @@ export default function EditSessionPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setLoadingCurriculums(true);
 
-      // Fetch session details first
-      const sessionResponse = await tutorApi.getSession(parseInt(sessionId));
+      const sessionResponse = await tutorApi.getSession(sessionId);
       if (sessionResponse.success) {
         const sessionData = sessionResponse.data;
-        setSession(sessionData);
 
-        // Populate form data
+        // Parse JSON fields if they're strings, ensure they're always arrays
+        let prerequisites: string[] = [];
+        let learningOutcomes: string[] = [];
+        let curriculumData: CurriculumWeek[] = [];
+
+        // Handle prerequisites
+        if (sessionData.prerequisites) {
+          if (typeof sessionData.prerequisites === "string") {
+            try {
+              prerequisites = JSON.parse(sessionData.prerequisites);
+            } catch (e) {
+              prerequisites = [];
+            }
+          } else if (Array.isArray(sessionData.prerequisites)) {
+            prerequisites = sessionData.prerequisites;
+          }
+        }
+
+        // Handle learning outcomes
+        if (sessionData.learning_outcomes) {
+          if (typeof sessionData.learning_outcomes === "string") {
+            try {
+              learningOutcomes = JSON.parse(sessionData.learning_outcomes);
+            } catch (e) {
+              learningOutcomes = [];
+            }
+          } else if (Array.isArray(sessionData.learning_outcomes)) {
+            learningOutcomes = sessionData.learning_outcomes;
+          }
+        }
+
+        // Handle curriculum
+        if (sessionData.curriculum) {
+          if (typeof sessionData.curriculum === "string") {
+            try {
+              const parsed = JSON.parse(sessionData.curriculum);
+              curriculumData = Array.isArray(parsed)
+                ? parsed.map((week: any) => ({
+                    week: week.week,
+                    topic: week.topic || "",
+                    objectives: week.objectives || [],
+                    materials: week.materials || [],
+                  }))
+                : [];
+            } catch (e) {
+              curriculumData = [];
+            }
+          } else if (Array.isArray(sessionData.curriculum)) {
+            curriculumData = sessionData.curriculum;
+          }
+        }
+
+        // Ensure all fields have proper default values
+        setSession({
+          ...sessionData,
+          prerequisites: prerequisites,
+          learning_outcomes: learningOutcomes,
+          curriculum: curriculumData,
+        });
+
+        setSelectedCurriculumId(sessionData.curriculum_id || null);
+        setSelectedCurriculumLevelId(sessionData.curriculum_level_id || null);
+
+        // Populate form data with proper arrays
         setFormData({
-          tutor_course_id: sessionData.tutor_course_id,
           name: sessionData.name,
           description: sessionData.description || "",
+          subject: sessionData.subject,
           batch_name: sessionData.batch_name || "",
           session_type: sessionData.session_type,
           max_students: sessionData.max_students,
@@ -124,27 +220,77 @@ export default function EditSessionPage() {
           end_date: sessionData.end_date.split("T")[0],
           fee_amount: sessionData.fee_amount,
           fee_currency: sessionData.fee_currency,
+          curriculum_id: sessionData.curriculum_id,
+          curriculum_level_id: sessionData.curriculum_level_id,
+          prerequisites: prerequisites,
+          learning_outcomes: learningOutcomes,
+          curriculum: curriculumData,
         });
 
         // Populate schedule configs
         if (sessionData.schedule_configs) {
           setScheduleConfigs(sessionData.schedule_configs);
         }
-
-        // Fetch the specific course for this session
-        const courseResponse = await tutorApi.getCourse(
-          sessionData.tutor_course_id,
-        );
-        if (courseResponse.success) {
-          setCourse(courseResponse.data);
-        }
       }
+
+      await fetchTutorCurriculums();
     } catch (error) {
       console.error("Failed to fetch data:", error);
       toast.error("Failed to load session details");
     } finally {
       setLoading(false);
+      setLoadingCurriculums(false);
     }
+  };
+
+  const fetchTutorCurriculums = async () => {
+    try {
+      // Fetch all curriculums
+      const curriculumsResponse = await tutorApi.getCurriculums();
+
+      if (curriculumsResponse.success && curriculumsResponse.data) {
+        setAllCurriculums(curriculumsResponse.data);
+
+        // Fetch tutor's curriculums from the tutor_curriculums table
+        const tutorCurriculumsResponse = await tutorApi.getTutorCurriculums();
+
+        if (tutorCurriculumsResponse.success && tutorCurriculumsResponse.data) {
+          // Filter curriculums that the tutor is qualified to teach
+          const qualifiedCurriculums = curriculumsResponse.data.filter(
+            (curriculum) =>
+              tutorCurriculumsResponse.data.some(
+                (tc) => tc.curriculum_id === curriculum.id,
+              ),
+          );
+          setTutorCurriculums(qualifiedCurriculums);
+        } else {
+          // If no tutor curriculums found, show all curriculums (fallback)
+          console.log("No tutor curriculums found, showing all curriculums");
+          setTutorCurriculums(curriculumsResponse.data);
+        }
+      }
+
+      // Fetch tutor level
+      const profileResponse = await tutorApi.getTutorProfile();
+      if (profileResponse.success && profileResponse.data.tutor_level_id) {
+        const levelsResponse = await tutorApi.getTutorLevels();
+        if (levelsResponse.success && levelsResponse.data) {
+          const level = levelsResponse.data.find(
+            (l) => l.id === profileResponse.data.tutor_level_id,
+          );
+          setTutorLevel(level || null);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch tutor curriculums:", error);
+    }
+  };
+
+  const getAvailableLevels = () => {
+    const curriculum = allCurriculums.find(
+      (c) => c.id === selectedCurriculumId,
+    );
+    return curriculum?.levels || [];
   };
 
   const handleChange = (
@@ -152,13 +298,98 @@ export default function EditSessionPage() {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]:
         name === "max_students" || name === "fee_amount"
           ? Number(value)
           : value,
+    }));
+  };
+
+  const handleCurriculumChange = (value: number | null) => {
+    setSelectedCurriculumId(value);
+    setFormData((prev) => ({
+      ...prev,
+      curriculum_id: value || undefined,
+      curriculum_level_id: undefined,
+    }));
+    setSelectedCurriculumLevelId(null);
+  };
+
+  const handleCurriculumLevelChange = (value: number | null) => {
+    setSelectedCurriculumLevelId(value);
+    setFormData((prev) => ({
+      ...prev,
+      curriculum_level_id: value || undefined,
+    }));
+  };
+
+  const addPrerequisite = () => {
+    if (newPrerequisite.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        prerequisites: [...prev.prerequisites, newPrerequisite.trim()],
+      }));
+      setNewPrerequisite("");
+    }
+  };
+
+  const removePrerequisite = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      prerequisites: prev.prerequisites.filter((_, i) => i !== index),
+    }));
+  };
+
+  const addLearningOutcome = () => {
+    if (newOutcome.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        learning_outcomes: [...prev.learning_outcomes, newOutcome.trim()],
+      }));
+      setNewOutcome("");
+    }
+  };
+
+  const removeLearningOutcome = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      learning_outcomes: prev.learning_outcomes.filter((_, i) => i !== index),
+    }));
+  };
+
+  const addCurriculumWeek = () => {
+    const weekNumber = formData.curriculum.length + 1;
+    setFormData((prev) => ({
+      ...prev,
+      curriculum: [
+        ...prev.curriculum,
+        {
+          week: weekNumber,
+          topic: "",
+          objectives: [],
+          materials: [],
+        },
+      ],
+    }));
+  };
+
+  const updateCurriculum = (index: number, field: string, value: any) => {
+    setFormData((prev) => {
+      const newCurriculum = [...prev.curriculum];
+      newCurriculum[index] = { ...newCurriculum[index], [field]: value };
+      return { ...prev, curriculum: newCurriculum };
+    });
+  };
+
+  const removeCurriculumWeek = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      curriculum: prev.curriculum
+        .filter((_, i) => i !== index)
+        .map((week, idx) => ({ ...week, week: idx + 1 })),
     }));
   };
 
@@ -224,44 +455,46 @@ export default function EditSessionPage() {
     setSaving(true);
 
     try {
-      // Format the schedule configs to remove seconds from time strings
-      const formattedScheduleConfigs = scheduleConfigs.map((config) => ({
-        ...config,
-        start_time: config.start_time.substring(0, 5), // Takes only HH:MM part
-        end_time: config.end_time.substring(0, 5), // Takes only HH:MM part
-      }));
-
-      const finalData = {
-        ...formData,
-        schedule_configs: formattedScheduleConfigs,
+      // Build update data - send as arrays to pass validation
+      const updateData: any = {
+        name: formData.name,
+        description: formData.description || null,
+        batch_name: formData.batch_name || null,
+        session_type: formData.session_type,
+        max_students: formData.max_students,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        fee_amount: formData.fee_amount,
+        fee_currency: formData.fee_currency,
+        curriculum_id: formData.curriculum_id || null,
+        curriculum_level_id: formData.curriculum_level_id || null,
+        prerequisites: formData.prerequisites || [], // Send as array
+        learning_outcomes: formData.learning_outcomes || [], // Send as array
       };
 
-      const response = await tutorApi.updateSession(
-        parseInt(sessionId),
-        finalData,
-      );
+      // Handle curriculum - send as array of objects
+      if (formData.curriculum && formData.curriculum.length > 0) {
+        updateData.curriculum = formData.curriculum.map((week) => ({
+          week: week.week,
+          topic: week.topic,
+          objectives: week.objectives || [],
+          materials: week.materials || [],
+        }));
+      } else {
+        updateData.curriculum = []; // Send as empty array
+      }
 
-      if (response.success) {
-        const totalClasses = scheduleConfigs.reduce((total, config) => {
-          const start = new Date(formData.start_date);
-          const end = new Date(formData.end_date);
-          let count = 0;
-          const current = new Date(start);
-          while (current <= end) {
-            if (current.getDay() === config.day_of_week) {
-              count++;
-            }
-            current.setDate(current.getDate() + 1);
-          }
-          return total + count;
-        }, 0);
+      console.log("=== UPDATE DATA (as arrays) ===");
+      console.log(JSON.stringify(updateData, null, 2));
 
-        toast.success(
-          `Session updated successfully with ${scheduleConfigs.length} schedule configuration${scheduleConfigs.length !== 1 ? "s" : ""} and ${totalClasses} total classes!`,
-        );
+      const response = await tutorApi.updateSession(sessionId, updateData);
+
+      if (response && response.success) {
+        toast.success("Session updated successfully!");
         router.push(`/tutor/sessions/${sessionId}`);
       } else {
-        toast.error("Failed to update session");
+        // Fix: response doesn't have message property, use a default error message
+        toast.error("Failed to update session. Please try again.");
       }
     } catch (error: any) {
       console.error("Update session error:", error);
@@ -277,7 +510,7 @@ export default function EditSessionPage() {
     if (!session) return;
 
     try {
-      const response = await tutorApi.deleteSession(parseInt(sessionId));
+      const response = await tutorApi.deleteSession(sessionId);
       if (response.success) {
         toast.success("Session deleted successfully");
         router.push("/tutor/sessions");
@@ -412,10 +645,10 @@ export default function EditSessionPage() {
                   </h1>
                   <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(session.status)}`}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(session.session_status)}`}
                     >
-                      {session.status.charAt(0).toUpperCase() +
-                        session.status.slice(1)}
+                      {session.session_status.charAt(0).toUpperCase() +
+                        session.session_status.slice(1)}
                     </span>
                     <span
                       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getEnrollmentStatusColor(session.enrollment_status)}`}
@@ -559,38 +792,6 @@ export default function EditSessionPage() {
               {/* Basic Information Tab */}
               {activeTab === "basic" && (
                 <div className="space-y-6">
-                  {/* Course Information - Read Only */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Course
-                    </label>
-                    {course ? (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <BookOpen className="w-5 h-5 text-main mt-0.5" />
-                          <div>
-                            <h3 className="font-medium text-gray-900">
-                              {course.title}
-                            </h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Subject: {course.subject}
-                            </p>
-                            {course.description && (
-                              <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-                                {course.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center gap-2 text-gray-500">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Loading course details...</span>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Session Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -605,6 +806,92 @@ export default function EditSessionPage() {
                       placeholder="e.g., January 2024 Batch"
                       required
                     />
+                  </div>
+
+                  {/* Subject - Read Only */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subject <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.subject}
+                      disabled
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Subject cannot be changed after session creation
+                    </p>
+                  </div>
+
+                  {/* Curriculum Selection */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Curriculum{" "}
+                        <span className="text-gray-400 text-xs font-normal">
+                          (Optional)
+                        </span>
+                      </label>
+                      {loadingCurriculums ? (
+                        <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50">
+                          <div className="animate-pulse flex items-center gap-2">
+                            <div className="h-4 w-4 bg-gray-300 rounded-full"></div>
+                            <div className="h-4 w-32 bg-gray-300 rounded"></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedCurriculumId || ""}
+                          onChange={(e) => {
+                            const value = e.target.value
+                              ? parseInt(e.target.value)
+                              : null;
+                            handleCurriculumChange(value);
+                          }}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
+                        >
+                          <option value="">
+                            {tutorCurriculums.length === 0
+                              ? "No curriculums available"
+                              : "Select curriculum (optional)"}
+                          </option>
+                          {tutorCurriculums.map((curriculum) => (
+                            <option key={curriculum.id} value={curriculum.id}>
+                              {curriculum.name} ({curriculum.code})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    {selectedCurriculumId && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Curriculum Level{" "}
+                          <span className="text-gray-400 text-xs font-normal">
+                            (Optional)
+                          </span>
+                        </label>
+                        <select
+                          value={selectedCurriculumLevelId || ""}
+                          onChange={(e) => {
+                            const value = e.target.value
+                              ? parseInt(e.target.value)
+                              : null;
+                            handleCurriculumLevelChange(value);
+                          }}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
+                        >
+                          <option value="">Select level</option>
+                          {getAvailableLevels().map((level) => (
+                            <option key={level.id} value={level.id}>
+                              {level.name} ({level.code})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
 
                   {/* Session Type and Batch */}
@@ -626,7 +913,10 @@ export default function EditSessionPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Batch Name (Optional)
+                        Batch Name{" "}
+                        <span className="text-gray-400 text-xs font-normal">
+                          (Optional)
+                        </span>
                       </label>
                       <input
                         type="text"
@@ -642,7 +932,10 @@ export default function EditSessionPage() {
                   {/* Description */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Description (Optional)
+                      Description{" "}
+                      <span className="text-gray-400 text-xs font-normal">
+                        (Optional)
+                      </span>
                     </label>
                     <textarea
                       name="description"
@@ -652,6 +945,225 @@ export default function EditSessionPage() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
                       placeholder="Additional details about this session..."
                     />
+                  </div>
+
+                  {/* Prerequisites */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Prerequisites{" "}
+                      <span className="text-gray-400 text-xs font-normal">
+                        (Optional)
+                      </span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newPrerequisite}
+                        onChange={(e) => setNewPrerequisite(e.target.value)}
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
+                        placeholder="Add a prerequisite (e.g., Basic algebra knowledge)..."
+                      />
+                      <button
+                        type="button"
+                        onClick={addPrerequisite}
+                        className="px-4 py-3 bg-main text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Add any requirements students should have before joining
+                    </p>
+
+                    {formData.prerequisites.length > 0 && (
+                      <div className="space-y-2 mt-3">
+                        {formData.prerequisites.map((prereq, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                          >
+                            <span>{prereq}</span>
+                            <button
+                              type="button"
+                              onClick={() => removePrerequisite(index)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Learning Outcomes */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Learning Outcomes{" "}
+                      <span className="text-gray-400 text-xs font-normal">
+                        (Optional)
+                      </span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newOutcome}
+                        onChange={(e) => setNewOutcome(e.target.value)}
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
+                        placeholder="Add a learning outcome (e.g., Master quadratic equations)..."
+                      />
+                      <button
+                        type="button"
+                        onClick={addLearningOutcome}
+                        className="px-4 py-3 bg-main text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      What students will be able to do after completing this
+                      session
+                    </p>
+
+                    {formData.learning_outcomes.length > 0 && (
+                      <div className="space-y-2 mt-3">
+                        {formData.learning_outcomes.map((outcome, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                          >
+                            <span>{outcome}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeLearningOutcome(index)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Weekly Curriculum */}
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Weekly Curriculum{" "}
+                          <span className="text-gray-400 text-xs font-normal">
+                            (Optional)
+                          </span>
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Break down the session into weekly topics and
+                          materials
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addCurriculumWeek}
+                        className="px-4 py-2 bg-main text-white font-medium rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                      >
+                        Add Week
+                      </button>
+                    </div>
+
+                    {formData.curriculum.length === 0 && (
+                      <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-gray-500 text-sm">
+                          No weekly curriculum added yet. Click "Add Week" to
+                          create a structured curriculum.
+                        </p>
+                      </div>
+                    )}
+
+                    {formData.curriculum.map((week, index) => (
+                      <div
+                        key={index}
+                        className="border border-gray-200 rounded-lg p-4 mb-4 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium text-gray-900">
+                            Week {week.week}
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={() => removeCurriculumWeek(index)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Topic <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={week.topic}
+                            onChange={(e) =>
+                              updateCurriculum(index, "topic", e.target.value)
+                            }
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
+                            placeholder="Week topic..."
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Objectives{" "}
+                              <span className="text-gray-400 text-xs font-normal">
+                                (Optional)
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={week.objectives?.join(", ") || ""}
+                              onChange={(e) =>
+                                updateCurriculum(
+                                  index,
+                                  "objectives",
+                                  e.target.value
+                                    .split(",")
+                                    .map((s) => s.trim())
+                                    .filter(Boolean),
+                                )
+                              }
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
+                              placeholder="Understand X, Learn Y, Master Z"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Materials{" "}
+                              <span className="text-gray-400 text-xs font-normal">
+                                (Optional)
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={week.materials?.join(", ") || ""}
+                              onChange={(e) =>
+                                updateCurriculum(
+                                  index,
+                                  "materials",
+                                  e.target.value
+                                    .split(",")
+                                    .map((s) => s.trim())
+                                    .filter(Boolean),
+                                )
+                              }
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
+                              placeholder="Textbook, Slides, Video"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   {/* Session Duration */}
@@ -730,7 +1242,8 @@ export default function EditSessionPage() {
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2 flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-main" />
-                      Class Schedule Configuration
+                      Class Schedule Configuration{" "}
+                      <span className="text-red-500">*</span>
                     </h3>
                     <p className="text-sm text-gray-500 mb-4">
                       Configure recurring class times for this session. Changes
@@ -825,6 +1338,9 @@ export default function EditSessionPage() {
             <li>
               Make sure your date range includes at least one instance of each
               scheduled day
+            </li>
+            <li className="text-amber-700">
+              Subject cannot be changed after session creation
             </li>
           </ul>
         </div>

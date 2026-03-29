@@ -14,44 +14,10 @@ export default function TutorSessionsContent() {
   const [sessions, setSessions] = useState<TutorSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
-  const [courses, setCourses] = useState<any[]>([]);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("all");
 
-  // Get course ID from URL params
-  const courseIdParam = searchParams.get("courseId");
-
-  useEffect(() => {
-    fetchCourses();
-  }, []);
-
-  // Set selected course from URL param once courses are loaded
-  useEffect(() => {
-    if (courses.length > 0 && courseIdParam) {
-      const courseExists = courses.some(
-        (course) => course.id === parseInt(courseIdParam),
-      );
-      if (courseExists) {
-        setSelectedCourseId(courseIdParam);
-      }
-    }
-  }, [courses, courseIdParam]);
-
-  // Fetch sessions when filter or selectedCourseId changes
   useEffect(() => {
     fetchSessions();
-  }, [filter, selectedCourseId]);
-
-  const fetchCourses = async () => {
-    try {
-      const response = await tutorApi.getMyCourses();
-      if (response.success) {
-        console.log("Fetched courses:", response.data.courses);
-        setCourses(response.data.courses);
-      }
-    } catch (error) {
-      console.error("Failed to fetch courses:", error);
-    }
-  };
+  }, [filter]);
 
   const fetchSessions = async () => {
     try {
@@ -59,8 +25,6 @@ export default function TutorSessionsContent() {
       const params: any = {
         limit: 20,
         status: filter !== "all" ? filter : undefined,
-        tutor_course_id:
-          selectedCourseId !== "all" ? parseInt(selectedCourseId) : undefined,
       };
 
       const response = await tutorApi.getSessions(params);
@@ -75,25 +39,7 @@ export default function TutorSessionsContent() {
     }
   };
 
-  const handleCourseChange = (courseId: string) => {
-    setSelectedCourseId(courseId);
-
-    // Update URL with the selected course ID
-    const params = new URLSearchParams(searchParams.toString());
-    if (courseId !== "all") {
-      params.set("courseId", courseId);
-    } else {
-      params.delete("courseId");
-    }
-
-    const newUrl = params.toString()
-      ? `${window.location.pathname}?${params.toString()}`
-      : window.location.pathname;
-
-    router.push(newUrl);
-  };
-
-  const handleDelete = async (sessionId: number) => {
+  const handleDelete = async (sessionUuid: string) => {
     if (
       !confirm(
         "Are you sure you want to delete this session? This action cannot be undone.",
@@ -102,10 +48,10 @@ export default function TutorSessionsContent() {
       return;
 
     try {
-      const response = await tutorApi.deleteSession(sessionId);
+      const response = await tutorApi.deleteSession(sessionUuid);
       if (response.success) {
         toast.success("Session deleted successfully!");
-        setSessions(sessions.filter((session) => session.id !== sessionId));
+        setSessions(sessions.filter((session) => session.uuid !== sessionUuid));
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to delete session");
@@ -113,32 +59,19 @@ export default function TutorSessionsContent() {
   };
 
   const handleEnrollmentStatus = async (
-    sessionId: number,
+    sessionUuid: string,
     newStatus: string,
   ) => {
     try {
-      const response = await tutorApi.updateSession(sessionId, {
+      const response = await tutorApi.updateSession(sessionUuid, {
         enrollment_status: newStatus,
       } as any);
       if (response.success) {
         toast.success(`Enrollment ${newStatus} successfully!`);
-        fetchSessions(); // Refresh list
+        fetchSessions();
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to update enrollment status");
-    }
-  };
-
-  const handleJoinSession = async (sessionId: number) => {
-    try {
-      const response = await tutorApi.joinSession(sessionId);
-      if (response.success && response.data.meeting_link) {
-        window.open(response.data.meeting_link, "_blank");
-      } else {
-        toast.error("Meeting link not available");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to join session");
     }
   };
 
@@ -190,22 +123,8 @@ export default function TutorSessionsContent() {
     });
   };
 
-  const getCourseTitle = (courseId: number) => {
-    const course = courses.find((c) => c.id === courseId);
-    return course ? course.title : `Course #${courseId}`;
-  };
-
   const getSessionTypeLabel = (type: string) => {
     return type === "one_on_one" ? "One-on-One" : "Group";
-  };
-
-  // Get current course name for display
-  const getCurrentCourseName = () => {
-    if (selectedCourseId !== "all") {
-      const course = courses.find((c) => c.id === parseInt(selectedCourseId));
-      return course?.title;
-    }
-    return null;
   };
 
   if (loading && sessions.length === 0) {
@@ -217,30 +136,17 @@ export default function TutorSessionsContent() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto ">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">My Sessions</h1>
           <p className="text-gray-600 mt-2">
-            {selectedCourseId !== "all" ? (
-              <>
-                Managing sessions for:{" "}
-                <span className="font-medium text-main">
-                  {getCurrentCourseName()}
-                </span>
-              </>
-            ) : (
-              "Manage and track all your course sessions"
-            )}
+            Manage and track all your course sessions
           </p>
         </div>
         <Link
-          href={
-            selectedCourseId !== "all"
-              ? `/tutor/sessions/create?courseId=${selectedCourseId}`
-              : "/tutor/sessions/create"
-          }
+          href="/tutor/sessions/create"
           className="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-main to-purple-600 text-white text-sm sm:text-base font-medium rounded-xl hover:from-purple-700 hover:to-main transition-all duration-200 shadow-lg shadow-main/25 hover:shadow-xl hover:shadow-main/30 transform hover:-translate-y-0.5"
         >
           <CalendarPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
@@ -250,58 +156,26 @@ export default function TutorSessionsContent() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Course Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Course
-            </label>
-            <select
-              value={selectedCourseId}
-              onChange={(e) => handleCourseChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-main focus:border-transparent"
-            >
-              <option value="all">All Courses</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                </option>
-              ))}
-            </select>
-
-            {/* Clear filter button - only show when a specific course is selected */}
-            {selectedCourseId !== "all" && (
-              <button
-                onClick={() => handleCourseChange("all")}
-                className="mt-2 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-              >
-                <span>✕</span> Clear course filter
-              </button>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Filter by Status
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {["all", "scheduled", "ongoing", "completed", "cancelled"].map(
+              (status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`px-3 py-2 rounded-lg font-medium capitalize ${
+                    filter === status
+                      ? "bg-main text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {status === "all" ? "All" : status}
+                </button>
+              ),
             )}
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Status
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {["all", "scheduled", "ongoing", "completed", "cancelled"].map(
-                (status) => (
-                  <button
-                    key={status}
-                    onClick={() => setFilter(status)}
-                    className={`px-3 py-2 rounded-lg font-medium capitalize ${
-                      filter === status
-                        ? "bg-main text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    {status === "all" ? "All" : status}
-                  </button>
-                ),
-              )}
-            </div>
           </div>
         </div>
       </div>
@@ -316,7 +190,10 @@ export default function TutorSessionsContent() {
                   Session
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Course
+                  Subject
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Curriculum
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Dates
@@ -334,23 +211,29 @@ export default function TutorSessionsContent() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {sessions.map((session) => (
-                <tr key={session.id} className="hover:bg-gray-50">
+                <tr key={session.uuid} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {session.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {getSessionTypeLabel(session.session_type)}
-                          {session.batch_name && ` • ${session.batch_name}`}
-                        </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {session.name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {getSessionTypeLabel(session.session_type)}
+                        {session.batch_name && ` • ${session.batch_name}`}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {getCourseTitle(session.tutor_course_id)}
+                      {session.subject}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {session.curriculum_name || "Not specified"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {session.curriculum_level_name || ""}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -376,26 +259,26 @@ export default function TutorSessionsContent() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(session.status)}`}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(session.session_status)}`}
                     >
-                      {session.status}
+                      {session.session_status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       <Link
-                        href={`/tutor/sessions/${session.id}`}
+                        href={`/tutor/sessions/${session.uuid}`}
                         className="text-blue-600 hover:text-blue-900"
                       >
                         View
                       </Link>
 
-                      {session.status === "scheduled" && (
+                      {session.session_status === "scheduled" && (
                         <>
                           {session.enrollment_status === "open" ? (
                             <button
                               onClick={() =>
-                                handleEnrollmentStatus(session.id, "closed")
+                                handleEnrollmentStatus(session.uuid, "closed")
                               }
                               className="text-yellow-600 hover:text-yellow-900"
                             >
@@ -404,7 +287,7 @@ export default function TutorSessionsContent() {
                           ) : (
                             <button
                               onClick={() =>
-                                handleEnrollmentStatus(session.id, "open")
+                                handleEnrollmentStatus(session.uuid, "open")
                               }
                               className="text-green-600 hover:text-green-900"
                             >
@@ -414,10 +297,10 @@ export default function TutorSessionsContent() {
                         </>
                       )}
 
-                      {session.status === "scheduled" &&
+                      {session.session_status === "scheduled" &&
                         session.current_enrollment === 0 && (
                           <button
-                            onClick={() => handleDelete(session.id)}
+                            onClick={() => handleDelete(session.uuid)}
                             className="text-red-600 hover:text-red-900"
                           >
                             Delete
@@ -438,16 +321,10 @@ export default function TutorSessionsContent() {
               No sessions found
             </h3>
             <p className="text-gray-600 mb-6">
-              {selectedCourseId === "all"
-                ? "Create a session to get started"
-                : "No sessions for this course yet"}
+              Create a session to get started
             </p>
             <Link
-              href={
-                selectedCourseId !== "all"
-                  ? `/tutor/sessions/create?courseId=${selectedCourseId}`
-                  : "/tutor/sessions/create"
-              }
+              href="/tutor/sessions/create"
               className="px-6 py-3 bg-main text-white font-medium rounded-lg hover:bg-purple-700 transition-colors inline-block"
             >
               Schedule First Session
@@ -473,7 +350,10 @@ export default function TutorSessionsContent() {
             <div>
               <p className="text-sm text-gray-500">Upcoming</p>
               <p className="text-2xl font-bold mt-2">
-                {sessions.filter((s) => s.status === "scheduled").length}
+                {
+                  sessions.filter((s) => s.session_status === "scheduled")
+                    .length
+                }
               </p>
             </div>
             <span className="text-2xl">⏰</span>

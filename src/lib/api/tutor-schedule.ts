@@ -4,6 +4,8 @@ import client from "./client";
 export interface TutorSessionSchedule {
   id: number;
   tutor_course_session_id: number;
+  tutor_course_session_uuid?: string; 
+  uuid?: string; // Alternative field name
   week_number: number;
   class_number: number;
   title: string;
@@ -15,8 +17,12 @@ export interface TutorSessionSchedule {
   mode: "virtual" | "in_person" | "hybrid";
   meeting_platform: "bbb" | "zoom" | "google_meet" | "teams" | "jitsi" | "other";
   meeting_link: string | null;
+  student_meeting_link?: string | null;
   meeting_id: string | null;
   meeting_passcode: string | null;
+  student_meeting_passcode?: string | null;
+  attendee_pw?: string | null;
+  moderator_pw?: string | null;
   meeting_metadata: Record<string, any>;
   location: string | null;
   topics: string[];
@@ -36,6 +42,7 @@ export interface TutorSessionSchedule {
   course_subject?: string;
   session_name?: string;
   session_code?: string;
+  session_uuid?: string;
 }
 
 export interface JoinSessionResponse {
@@ -53,6 +60,10 @@ export interface JoinSessionResponse {
 // Get all schedules for a session
 const getSessionSchedules = (sessionId: number): Promise<{ success: boolean; data: TutorSessionSchedule[] }> =>
   client.get(`/tutor/sessions/${sessionId}/schedules`);
+
+//  Get by UUID if needed
+const getSessionSchedulesByUuid = (sessionUuid: string): Promise<{ success: boolean; data: any[] }> =>
+  client.get(`/tutor/sessions/${sessionUuid}/schedules`);
 
 // Get a specific schedule by ID
 const getScheduleById = (scheduleId: number): Promise<{ success: boolean; data: TutorSessionSchedule }> =>
@@ -79,6 +90,7 @@ const getTodaySchedules = (): Promise<{ success: boolean; data: TutorSessionSche
 
 const tutorScheduleApi = {
   getSessionSchedules,
+    getSessionSchedulesByUuid,
   getScheduleById,
   joinScheduledSession,
   updateScheduleStatus,

@@ -65,7 +65,6 @@ interface Enrollment {
   total_classes: number;
   last_accessed_at: string | null;
   notes: string | null;
-  // Joined fields
   student?: {
     id: number;
     first_name: string;
@@ -83,11 +82,8 @@ interface Enrollment {
     max_students: number;
     fee_amount: number;
     fee_currency: string;
-    course: {
-      id: number;
-      title: string;
-      subject: string;
-    };
+    subject: string;
+    level?: string;
   };
 }
 
@@ -122,11 +118,10 @@ export default function TutorEnrollmentsPage() {
   const fetchEnrollments = async () => {
     try {
       setLoading(true);
-      // You'll need to add this endpoint to your tutorApi
       const response = await tutorApi.getAllEnrollments();
       if (response.success) {
-        setEnrollments(response.data.enrollments);
-        calculateStats(response.data.enrollments);
+        setEnrollments(response.data.enrollments as Enrollment[]);
+        calculateStats(response.data.enrollments as Enrollment[]);
       }
     } catch (error) {
       console.error("Failed to fetch enrollments:", error);
@@ -318,27 +313,23 @@ export default function TutorEnrollmentsPage() {
 
   const filteredEnrollments = enrollments
     .filter((enrollment) => {
-      // Search filter
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         const studentName = getStudentName(enrollment).toLowerCase();
         const studentEmail = getStudentEmail(enrollment).toLowerCase();
         const sessionName = enrollment.session?.name.toLowerCase() || "";
-        // Update this line to use nested course object
-        const courseTitle =
-          enrollment.session?.course?.title.toLowerCase() || "";
+        const subject = enrollment.session?.subject?.toLowerCase() || "";
 
         return (
           studentName.includes(searchLower) ||
           studentEmail.includes(searchLower) ||
           sessionName.includes(searchLower) ||
-          courseTitle.includes(searchLower)
+          subject.includes(searchLower)
         );
       }
       return true;
     })
     .filter((enrollment) => {
-      // Status filter
       if (
         statusFilter !== "all" &&
         enrollment.enrollment_status !== statusFilter
@@ -348,7 +339,6 @@ export default function TutorEnrollmentsPage() {
       return true;
     })
     .filter((enrollment) => {
-      // Payment filter
       if (
         paymentFilter !== "all" &&
         enrollment.payment_status !== paymentFilter
@@ -358,7 +348,6 @@ export default function TutorEnrollmentsPage() {
       return true;
     })
     .sort((a, b) => {
-      // Sorting
       if (sortField === "enrolled_at") {
         return sortDirection === "asc"
           ? new Date(a.enrolled_at).getTime() -
@@ -575,7 +564,7 @@ export default function TutorEnrollmentsPage() {
       </div>
 
       {/* Bulk Actions Bar */}
-      {bulkActionMode && (
+      {/* {bulkActionMode && (
         <div className="mb-4 bg-white rounded-xl p-4 shadow-sm border border-main/20 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <input
@@ -621,7 +610,7 @@ export default function TutorEnrollmentsPage() {
             </button>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Enrollments Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -653,7 +642,7 @@ export default function TutorEnrollmentsPage() {
                   </button>
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Session / Course
+                  Session / Subject
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -679,9 +668,9 @@ export default function TutorEnrollmentsPage() {
                     <ArrowUpDown className="w-3 h-3" />
                   </button>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -722,7 +711,7 @@ export default function TutorEnrollmentsPage() {
                     </div>
                     <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
                       <BookOpen className="w-3 h-3" />
-                      {enrollment.session?.course?.title || "Course"}
+                      {enrollment.session?.subject || "Subject"}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -786,7 +775,7 @@ export default function TutorEnrollmentsPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/tutor/enrollments/${enrollment.id}`}
@@ -827,7 +816,7 @@ export default function TutorEnrollmentsPage() {
                         </button>
                       )}
                     </div>
-                  </td>
+                  </td> */}
                 </tr>
               ))}
             </tbody>

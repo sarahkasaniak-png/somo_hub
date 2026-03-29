@@ -718,7 +718,7 @@ export default function LoginContent({
 
   /* ---------- LOGIN/REGISTER (DEFAULT VIEW) ---------- */
   const renderLoginRegister = () => (
-    <div className="login mb-20 w-full">
+    <div className="login mb-4 w-full">
       <h1 className="text-2xl font-semibold">
         {isRegistering ? "" : "Welcome to SomoHub!"}
       </h1>
@@ -872,7 +872,7 @@ export default function LoginContent({
         </button>
       </div>
 
-      <Divider text="or" className="w-full" />
+      {/* <Divider text="or" className="w-full" />
 
       <button
         className="bg-white font-semibold text-[17px] p-3 rounded-md hover:bg-zinc-100 hover:cursor-pointer transition flex justify-center items-center gap-2 border border-gray-400 w-full"
@@ -902,7 +902,7 @@ export default function LoginContent({
           />
         </svg>
         <span>Continue with Google</span>
-      </button>
+      </button> */}
     </div>
   );
 

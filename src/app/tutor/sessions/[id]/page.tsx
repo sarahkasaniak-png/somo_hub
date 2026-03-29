@@ -78,6 +78,7 @@ interface ScheduleConfig {
 interface ExtendedTutorSession extends TutorSession {
   schedule_configs?: ScheduleConfig[];
   schedules?: any[];
+  status?: string; // Alias for session_status for backward compatibility
 }
 
 export default function SessionDetailPage() {
@@ -127,27 +128,28 @@ export default function SessionDetailPage() {
     }
   };
 
-  // Update the fetchSessionDetails function (around line 135)
-
   const fetchSessionDetails = async () => {
     try {
       setLoading(true);
-      const response = await tutorApi.getSession(parseInt(sessionId));
+      const response = await tutorApi.getSession(sessionId);
       if (response.success) {
-        // Map the response to ensure schedule_configs matches the expected type
         const sessionData = response.data;
 
         // Transform schedule_configs if they exist
         const extendedSession: ExtendedTutorSession = {
           ...sessionData,
-          schedule_configs: sessionData.schedule_configs?.map((config) => ({
-            id: config.id || 0,
-            day_of_week: config.day_of_week,
-            start_time: config.start_time,
-            end_time: config.end_time,
-            duration_minutes: config.duration_minutes || 0, // Provide default value
-            is_active: config.is_active ?? true, // Provide default value
-          })),
+          schedule_configs: sessionData.schedule_configs?.map(
+            (config: any) => ({
+              id: config.id || 0,
+              day_of_week: config.day_of_week,
+              start_time: config.start_time,
+              end_time: config.end_time,
+              duration_minutes: config.duration_minutes || 0,
+              is_active: config.is_active ?? true,
+            }),
+          ),
+          // Add status alias for backward compatibility
+          status: sessionData.session_status,
         };
 
         setSession(extendedSession);
@@ -162,9 +164,7 @@ export default function SessionDetailPage() {
 
   const fetchEnrollments = async () => {
     try {
-      const response = await tutorApi.getSessionEnrollments(
-        parseInt(sessionId),
-      );
+      const response = await tutorApi.getSessionEnrollments(sessionId);
       if (response.success) {
         setEnrollments(response.data);
       }
@@ -177,7 +177,7 @@ export default function SessionDetailPage() {
     if (!session) return;
 
     try {
-      const response = await tutorApi.joinSession(session.id);
+      const response = await tutorApi.joinSession(sessionId);
       if (response.success && response.data.meeting_link) {
         window.open(response.data.meeting_link, "_blank");
       } else {
@@ -192,7 +192,7 @@ export default function SessionDetailPage() {
     if (!session) return;
 
     try {
-      const response = await tutorApi.deleteSession(session.id);
+      const response = await tutorApi.deleteSession(sessionId);
       if (response.success) {
         toast.success("Session deleted successfully");
         router.push("/tutor/sessions");
@@ -365,6 +365,9 @@ export default function SessionDetailPage() {
     );
   }
 
+  // Use session_status for status display
+  const displayStatus = session.session_status || session.status || "scheduled";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -407,11 +410,11 @@ export default function SessionDetailPage() {
                   </h1>
                   <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(session.status)}`}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayStatus)}`}
                     >
-                      {getStatusIcon(session.status)}
-                      {session.status.charAt(0).toUpperCase() +
-                        session.status.slice(1)}
+                      {getStatusIcon(displayStatus)}
+                      {displayStatus.charAt(0).toUpperCase() +
+                        displayStatus.slice(1)}
                     </span>
                     <span
                       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getEnrollmentStatusColor(session.enrollment_status)}`}
@@ -443,18 +446,8 @@ export default function SessionDetailPage() {
 
             {/* Desktop Actions - Professional with Labels */}
             <div className="hidden lg:flex items-center gap-2">
-              {/* {session.status === "scheduled" && (
-                <button
-                  onClick={handleJoinSession}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-main hover:text-white hover:border-main transition-all shadow-sm hover:shadow-md whitespace-nowrap"
-                >
-                  <Video className="w-4 h-4" />
-                  Join Session
-                </button>
-              )} */}
-
               <Link
-                href={`/tutor/sessions/create?courseId=${session.tutor_course_id}`}
+                href="/tutor/sessions/create"
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-emerald-700 font-medium rounded-xl border border-emerald-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-sm hover:shadow-md"
               >
                 <Copy className="w-4 h-4" />
@@ -462,7 +455,7 @@ export default function SessionDetailPage() {
               </Link>
 
               <Link
-                href={`/tutor/sessions/${session.id}/edit`}
+                href={`/tutor/sessions/${session.uuid}/edit`}
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-blue-700 font-medium rounded-xl border border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm hover:shadow-md"
               >
                 <Pencil className="w-4 h-4" />
@@ -497,21 +490,8 @@ export default function SessionDetailPage() {
               {isActionsMenuOpen && (
                 <div className="absolute right-0 left-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-xl z-50">
                   <div className="p-2 space-y-1">
-                    {/* {session.status === "scheduled" && (
-                      <button
-                        onClick={() => {
-                          handleJoinSession();
-                          setIsActionsMenuOpen(false);
-                        }}
-                        className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-main/5 rounded-lg transition-colors"
-                      >
-                        <Video className="w-5 h-5 text-main" />
-                        <span>Join Session</span>
-                      </button>
-                    )} */}
-
                     <Link
-                      href={`/tutor/sessions/create?courseId=${session.tutor_course_id}`}
+                      href="/tutor/sessions/create"
                       className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-emerald-50 rounded-lg transition-colors"
                       onClick={() => setIsActionsMenuOpen(false)}
                     >
@@ -520,7 +500,7 @@ export default function SessionDetailPage() {
                     </Link>
 
                     <Link
-                      href={`/tutor/sessions/${session.id}/edit`}
+                      href={`/tutor/sessions/${session.uuid}/edit`}
                       className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-blue-50 rounded-lg transition-colors"
                       onClick={() => setIsActionsMenuOpen(false)}
                     >
@@ -623,7 +603,7 @@ export default function SessionDetailPage() {
                   id: "schedules",
                   label: "Class Schedules",
                   icon: CalendarDays,
-                }, // New tab
+                },
                 {
                   id: "enrollments",
                   label: "Enrollments",
@@ -708,11 +688,6 @@ export default function SessionDetailPage() {
                           label: "Max Students",
                           value: session.max_students || "Not specified",
                         },
-                        {
-                          icon: GraduationCap,
-                          label: "Course ID",
-                          value: session.tutor_course_id || "Not specified",
-                        },
                       ].map((item, index) => {
                         const Icon = item.icon;
                         return (
@@ -725,7 +700,9 @@ export default function SessionDetailPage() {
                               {item.label}:
                             </dt>
                             <dd
-                              className={`font-medium text-gray-900 ${item.capitalize ? "capitalize" : ""}`}
+                              className={`font-medium text-gray-900 ${
+                                item.capitalize ? "capitalize" : ""
+                              }`}
                             >
                               {item.value}
                             </dd>
@@ -833,6 +810,7 @@ export default function SessionDetailPage() {
                   )}
               </div>
             )}
+
             {/* Schedule Tab */}
             {activeTab === "schedule" && (
               <div className="space-y-6">
@@ -842,7 +820,7 @@ export default function SessionDetailPage() {
                     Class Schedule
                   </h3>
                   <Link
-                    href={`/tutor/sessions/${session.id}/edit?tab=schedule`}
+                    href={`/tutor/sessions/${session.uuid}/edit?tab=schedule`}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-main/10 text-main rounded-lg hover:bg-main/20 transition-colors"
                   >
                     <Pencil className="w-4 h-4" />
@@ -921,7 +899,7 @@ export default function SessionDetailPage() {
                       No schedule configured yet
                     </p>
                     <Link
-                      href={`/tutor/sessions/${session.id}/edit?tab=schedule`}
+                      href={`/tutor/sessions/${session.uuid}/edit?tab=schedule`}
                       className="inline-flex items-center gap-2 px-6 py-3 bg-main text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       <Plus className="w-5 h-5" />
@@ -931,8 +909,8 @@ export default function SessionDetailPage() {
                 )}
               </div>
             )}
-            {/* Class Schedules Tab */}
 
+            {/* Class Schedules Tab */}
             {activeTab === "schedules" && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
@@ -941,7 +919,7 @@ export default function SessionDetailPage() {
                     Class Schedules
                   </h3>
                   <Link
-                    href={`/tutor/sessions/${session.id}/schedules`}
+                    href={`/tutor/sessions/${session.uuid}/schedules`}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-main text-white rounded-lg hover:bg-purple-700 transition-colors"
                   >
                     <Calendar className="w-4 h-4" />
@@ -1072,7 +1050,7 @@ export default function SessionDetailPage() {
                                 </button>
 
                                 <Link
-                                  href={`/tutor/sessions/${session.id}/schedules?class=${schedule.id}`}
+                                  href={`/tutor/sessions/${session.uuid}/schedules?class=${schedule.id}`}
                                   className="p-2 text-gray-600 hover:text-main hover:bg-gray-100 rounded-lg transition-colors"
                                   title="View Details"
                                 >
@@ -1096,7 +1074,7 @@ export default function SessionDetailPage() {
                     }).length > 5 && (
                       <div className="text-center pt-2">
                         <Link
-                          href={`/tutor/sessions/${session.id}/schedules`}
+                          href={`/tutor/sessions/${session.uuid}/schedules`}
                           className="text-main hover:text-purple-700 font-medium text-sm inline-flex items-center gap-1"
                         >
                           View all {session.schedules.length} classes
@@ -1121,6 +1099,7 @@ export default function SessionDetailPage() {
                 )}
               </div>
             )}
+
             {/* Enrollments Tab */}
             {activeTab === "enrollments" && (
               <div className="space-y-6">
@@ -1135,7 +1114,7 @@ export default function SessionDetailPage() {
                       Export
                     </button>
                     <Link
-                      href={`/tutor/sessions/${session.id}/enrollments/manage`}
+                      href={`/tutor/sessions/${session.uuid}/enrollments/manage`}
                       className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-main text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       <UserCheck className="w-4 h-4" />
@@ -1287,6 +1266,7 @@ export default function SessionDetailPage() {
                 )}
               </div>
             )}
+
             {/* Settings Tab */}
             {activeTab === "settings" && (
               <div className="space-y-6">

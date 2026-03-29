@@ -12,7 +12,8 @@ export default function ConditionalFooter() {
     "/student",
     "/tutor/",
     "/community",
-
+    "/admin",
+    "/affiliate",
     "/login",
     "/register",
     "/forgot-password",

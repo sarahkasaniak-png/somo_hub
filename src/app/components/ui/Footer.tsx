@@ -23,6 +23,8 @@ import {
   Briefcase,
   GraduationCap,
   Sparkles,
+  DollarSign,
+  TrendingUp,
 } from "lucide-react";
 
 export default function Footer() {
@@ -30,9 +32,9 @@ export default function Footer() {
 
   return (
     <footer className="bg-zinc-100 border-t border-zinc-300 mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 sm:py-20  lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 sm:py-20 lg:px-8 py-12">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
           {/* Brand Column */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
@@ -111,15 +113,6 @@ export default function Footer() {
                   Find a Tutor
                 </Link>
               </li>
-              {/* <li>
-                <Link
-                  href="/communities"
-                  className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
-                >
-                  <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  Join Communities
-                </Link>
-              </li> */}
               <li>
                 <Link
                   href="/student"
@@ -178,51 +171,78 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Communities */}
-          {/* <div>
+          {/* For Affiliates - New Section */}
+          <div>
             <h3 className="font-semibold text-zinc-800 mb-4 flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Communities
+              <TrendingUp className="w-4 h-4" />
+              For Affiliates
             </h3>
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/onboarding/community"
+                  href="/affiliate/dashboard"
                   className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
                 >
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  Start a Community
+                  Affiliate Dashboard
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/communities"
+                  href="/affiliate/earnings"
                   className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
                 >
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  Explore Communities
+                  Earnings Overview
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/community/guidelines"
+                  href="/affiliate/commissions"
                   className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
                 >
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  Community Guidelines
+                  Commissions
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/community/success-stories"
+                  href="/affiliate/referrals"
                   className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
                 >
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  Success Stories
+                  My Referrals
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/affiliate/payouts"
+                  className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
+                >
+                  <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                  Payouts
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/affiliate/help"
+                  className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
+                >
+                  <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                  Affiliate Help
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/affiliate/terms"
+                  className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
+                >
+                  <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                  Terms & Conditions
                 </Link>
               </li>
             </ul>
-          </div> */}
+          </div>
 
           {/* Support */}
           <div>
@@ -249,15 +269,6 @@ export default function Footer() {
                   Tutor Help
                 </Link>
               </li>
-              {/* <li>
-                <Link
-                  href="/faq"
-                  className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
-                >
-                  <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  FAQ
-                </Link>
-              </li> */}
               <li>
                 <Link
                   href="/contact"
@@ -287,29 +298,20 @@ export default function Footer() {
               </a>
             </div>
           </div>
-          {/* <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-zinc-300 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Phone className="w-4 h-4 text-zinc-700" />
+              <DollarSign className="w-4 h-4 text-zinc-700" />
             </div>
             <div>
-              <p className="text-xs text-zinc-500">Phone</p>
+              <p className="text-xs text-zinc-500">Affiliates</p>
               <a
-                href="tel:+254700000000"
+                href="mailto:affiliates@somohub.com"
                 className="text-sm text-zinc-700 hover:text-zinc-900"
               >
-                +254 700 000 000
+                affiliates@somohub.com
               </a>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-zinc-300 rounded-lg flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-4 h-4 text-zinc-700" />
-            </div>
-            <div>
-              <p className="text-xs text-zinc-500">Location</p>
-              <p className="text-sm text-zinc-700">Nairobi, Kenya</p>
-            </div>
-          </div> */}
         </div>
 
         {/* Bottom Bar */}
@@ -317,7 +319,7 @@ export default function Footer() {
           <p className="text-xs text-zinc-600">
             © {currentYear} SomoHub. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap justify-center">
             <Link
               href="/privacy"
               className="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1"
@@ -332,17 +334,20 @@ export default function Footer() {
               <FileText className="w-3 h-3" />
               Terms
             </Link>
-            {/* <Link
-              href="/cookies"
+            <Link
+              href="/affiliate/terms"
               className="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1"
             >
-              <Globe className="w-3 h-3" />
-              Cookies
+              <TrendingUp className="w-3 h-3" />
+              Affiliate Terms
             </Link>
-            <span className="flex items-center gap-1 text-xs text-zinc-600">
-              <Heart className="w-3 h-3 text-red-500" />
-              Made with love in Kenya
-            </span> */}
+            <Link
+              href="/affiliate/help"
+              className="text-xs text-zinc-600 hover:text-zinc-900 flex items-center gap-1"
+            >
+              <HelpCircle className="w-3 h-3" />
+              Affiliate Help
+            </Link>
           </div>
         </div>
       </div>

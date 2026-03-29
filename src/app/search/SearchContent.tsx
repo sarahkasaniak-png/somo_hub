@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   BookOpen,
   Tag,
+  Globe,
 } from "lucide-react";
 
 interface SearchResponse {
@@ -33,6 +34,7 @@ interface SearchResponse {
     total: number;
     page: number;
     limit: number;
+    totalPages: number;
   };
   message?: string;
 }
@@ -52,18 +54,19 @@ export default function SearchContent() {
   const category = searchParams.get("category") || "all";
   const level = searchParams.get("level") || "all";
   const searchQuery = searchParams.get("q") || "";
+  const curriculumId = searchParams.get("curriculum_id");
+  const curriculumLevelId = searchParams.get("curriculum_level_id");
+  const noCurriculum = searchParams.get("no_curriculum") === "true";
 
-  // Level display mapping
   const levelDisplayMap: Record<string, string> = {
     all: "All Levels",
     primary: "Primary School",
     junior_high: "Junior High School",
     senior_high: "Senior High School",
     university: "University",
-    adult: "Adult Education",
+    adult: "Adult / Professional",
   };
 
-  // Category display mapping
   const categoryDisplayMap: Record<string, string> = {
     all: "All Sessions",
     group: "Group Sessions",
@@ -72,18 +75,49 @@ export default function SearchContent() {
 
   useEffect(() => {
     fetchSearchResults(1, true);
-  }, [category, level, searchQuery]);
+  }, [
+    category,
+    level,
+    searchQuery,
+    curriculumId,
+    curriculumLevelId,
+    noCurriculum,
+  ]);
 
   const fetchSearchResults = async (pageNum: number, reset = false) => {
     try {
       setLoading(true);
-      const response = await client.get<SearchResponse>("/tuitions/search", {
+
+      const params: any = {
         page: pageNum,
         limit: 12,
         session_type: category !== "all" ? category : undefined,
         level: level !== "all" ? level : undefined,
         search: searchQuery || undefined,
-      });
+      };
+
+      // Handle curriculum filtering
+      if (noCurriculum) {
+        params.no_curriculum = "true";
+      } else if (
+        curriculumId &&
+        curriculumId !== "all" &&
+        curriculumId !== "null"
+      ) {
+        params.curriculum_id = curriculumId;
+        if (
+          curriculumLevelId &&
+          curriculumLevelId !== "all" &&
+          curriculumLevelId !== "null"
+        ) {
+          params.curriculum_level_id = curriculumLevelId;
+        }
+      }
+
+      const response = await client.get<SearchResponse>(
+        "/tuitions/search",
+        params,
+      );
 
       if (response.success && response.data) {
         const data = response.data;
@@ -119,6 +153,10 @@ export default function SearchContent() {
       params.delete("level");
     } else if (filterType === "search") {
       params.delete("q");
+    } else if (filterType === "curriculum") {
+      params.delete("curriculum_id");
+      params.delete("curriculum_level_id");
+      params.delete("no_curriculum");
     }
 
     const queryString = params.toString();
@@ -163,13 +201,22 @@ export default function SearchContent() {
     return isNaN(parsed) ? 0 : parsed;
   };
 
+  const getCurriculumDisplay = () => {
+    if (noCurriculum) {
+      return "Professional / No Curriculum";
+    }
+    if (curriculumId && curriculumId !== "all" && curriculumId !== "null") {
+      return `Curriculum: ${curriculumId}${curriculumLevelId ? ` - Level ${curriculumLevelId}` : ""}`;
+    }
+    return null;
+  };
+
   const SessionCard = ({ session }: { session: TutorSession }) => {
     const tutorRating = parseRating(session.tutor_rating);
     const feeAmount = parseNumber(session.fee_amount);
     const classesPerWeek = parseNumber(session.classes_per_week) || 1;
     const duration = parseNumber(session.class_duration_minutes) || 90;
 
-    // Helper function to capitalize names properly
     const capitalizeName = (name: string): string => {
       if (!name) return "";
       return name
@@ -180,28 +227,21 @@ export default function SearchContent() {
         .join(" ");
     };
 
-    const formatLevel = (level?: string) => {
-      if (!level) return null;
-      const levelMap: Record<string, string> = {
-        primary: "Primary",
-        junior_high: "Junior High",
-        senior_high: "Senior High",
-        university: "University",
-        adult: "Adult",
-        all: "All Levels",
-      };
-      return levelMap[level] || level;
-    };
-
-    const courseLevel = formatLevel(session.course_level);
-
-    // Capitalize tutor name and session name
     const capitalizedTutorName = capitalizeName(session.tutor_name || "Tutor");
     const capitalizedSessionName = capitalizeName(session.name);
 
+    const handleCardClick = () => {
+      if (session.uuid) {
+        router.push(`/tuitions/${session.uuid}`);
+      } else {
+        console.error("Session has no UUID:", session);
+        toast.error("Unable to open session");
+      }
+    };
+
     return (
       <div
-        onClick={() => router.push(`/tuitions/${session.id}`)}
+        onClick={handleCardClick}
         className="group bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
       >
         <div className="p-3 flex items-center gap-2 border-b border-gray-100">
@@ -233,11 +273,6 @@ export default function SearchContent() {
               >
                 {session.session_type === "one_on_one" ? "1:1" : "Group"}
               </span>
-              {courseLevel && (
-                <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                  {courseLevel}
-                </span>
-              )}
               {tutorRating > 0 && (
                 <div className="flex items-center gap-0.5">
                   <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -256,8 +291,24 @@ export default function SearchContent() {
           </h3>
 
           <p className="text-xs text-gray-500 line-clamp-2 mb-2">
-            {session.course_title || session.description}
+            {session.subject && `Subject: ${session.subject}`}
           </p>
+
+          {/* Curriculum Badge */}
+          {session.curriculum_name && (
+            <div className="mb-2">
+              <span className="inline-flex items-center gap-1 text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full">
+                <Globe className="w-3 h-3" />
+                {session.curriculum_name}
+                {session.curriculum_level_name && (
+                  <span className="text-green-500">
+                    {" "}
+                    - {session.curriculum_level_name}
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-1 text-xs text-gray-500 mb-2">
             <div className="flex items-center gap-1">
@@ -273,14 +324,6 @@ export default function SearchContent() {
               <span>{Math.floor(duration * classesPerWeek)}min</span>
             </div>
           </div>
-
-          {courseLevel && (
-            <div className="mb-2">
-              <span className="text-xs px-2 py-1 bg-purple-50 text-zinc-700 rounded">
-                {courseLevel} Level
-              </span>
-            </div>
-          )}
 
           <div className="text-left">
             <p className="text-sm text-gray-700">
@@ -298,7 +341,6 @@ export default function SearchContent() {
     const classesPerWeek = parseNumber(session.classes_per_week) || 1;
     const duration = parseNumber(session.class_duration_minutes) || 90;
 
-    // Helper function to capitalize names properly
     const capitalizeName = (name: string): string => {
       if (!name) return "";
       return name
@@ -309,28 +351,21 @@ export default function SearchContent() {
         .join(" ");
     };
 
-    const formatLevel = (level?: string) => {
-      if (!level) return null;
-      const levelMap: Record<string, string> = {
-        primary: "Primary",
-        junior_high: "Junior High",
-        senior_high: "Senior High",
-        university: "University",
-        adult: "Adult",
-        all: "All Levels",
-      };
-      return levelMap[level] || level;
-    };
-
-    const courseLevel = formatLevel(session.course_level);
-
-    // Capitalize tutor name and session name
     const capitalizedTutorName = capitalizeName(session.tutor_name || "Tutor");
     const capitalizedSessionName = capitalizeName(session.name);
 
+    const handleCardClick = () => {
+      if (session.uuid) {
+        router.push(`/tuitions/${session.uuid}`);
+      } else {
+        console.error("Session has no UUID:", session);
+        toast.error("Unable to open session");
+      }
+    };
+
     return (
       <div
-        onClick={() => router.push(`/tuitions/${session.id}`)}
+        onClick={handleCardClick}
         className="group bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
       >
         <div className="p-4 flex items-start gap-4">
@@ -359,11 +394,6 @@ export default function SearchContent() {
               >
                 {session.session_type === "one_on_one" ? "1:1" : "Group"}
               </span>
-              {courseLevel && (
-                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                  {courseLevel}
-                </span>
-              )}
               <span className="text-sm font-medium text-gray-900">
                 {capitalizedTutorName}
               </span>
@@ -382,8 +412,24 @@ export default function SearchContent() {
             </h3>
 
             <p className="text-sm text-gray-500 line-clamp-1 mb-2">
-              {session.course_title || session.description}
+              {session.subject && `Subject: ${session.subject}`}
             </p>
+
+            {/* Curriculum Badge for List View */}
+            {session.curriculum_name && (
+              <div className="mb-2">
+                <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-600 px-2 py-1 rounded-full">
+                  <Globe className="w-3 h-3" />
+                  {session.curriculum_name}
+                  {session.curriculum_level_name && (
+                    <span className="text-green-500">
+                      {" "}
+                      - {session.curriculum_level_name}
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
 
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <div className="flex items-center gap-1">
@@ -418,10 +464,11 @@ export default function SearchContent() {
     );
   };
 
+  const curriculumDisplay = getCurriculumDisplay();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-2">
             <button
@@ -436,12 +483,13 @@ export default function SearchContent() {
             </h1>
           </div>
 
-          {/* Active Filters */}
-          {(category !== "all" || level !== "all" || searchQuery) && (
+          {(category !== "all" ||
+            level !== "all" ||
+            searchQuery ||
+            curriculumDisplay) && (
             <div className="flex flex-wrap items-center gap-2 mt-3 mb-4">
               <span className="text-sm text-gray-500">Active filters:</span>
 
-              {/* Category filter */}
               {category !== "all" && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-50 text-purple-700 text-sm rounded-full">
                   <Tag className="w-3 h-3" />
@@ -456,7 +504,6 @@ export default function SearchContent() {
                 </span>
               )}
 
-              {/* Level filter */}
               {level !== "all" && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
                   <BookOpen className="w-3 h-3" />
@@ -471,13 +518,46 @@ export default function SearchContent() {
                 </span>
               )}
 
-              {/* Search query filter */}
-              {searchQuery && (
+              {noCurriculum && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 text-sm rounded-full">
+                  <Globe className="w-3 h-3" />
+                  Professional / No Curriculum
+                  <button
+                    onClick={() => removeFilter("curriculum")}
+                    className="ml-1 p-0.5 hover:bg-green-200 rounded-full transition-colors"
+                    title="Remove curriculum filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {curriculumId &&
+                curriculumId !== "all" &&
+                curriculumId !== "null" &&
+                !noCurriculum && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 text-sm rounded-full">
+                    <BookOpen className="w-3 h-3" />
+                    Curriculum: {curriculumId}
+                    {curriculumLevelId &&
+                      curriculumLevelId !== "all" &&
+                      ` - Level ${curriculumLevelId}`}
+                    <button
+                      onClick={() => removeFilter("curriculum")}
+                      className="ml-1 p-0.5 hover:bg-green-200 rounded-full transition-colors"
+                      title="Remove curriculum filter"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+              {searchQuery && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-50 text-yellow-700 text-sm rounded-full">
                   <Search className="w-3 h-3" />"{searchQuery}"
                   <button
                     onClick={() => removeFilter("search")}
-                    className="ml-1 p-0.5 hover:bg-green-200 rounded-full transition-colors"
+                    className="ml-1 p-0.5 hover:bg-yellow-200 rounded-full transition-colors"
                     title="Remove search filter"
                   >
                     <X className="w-3 h-3" />
@@ -485,7 +565,6 @@ export default function SearchContent() {
                 </span>
               )}
 
-              {/* Clear all button */}
               <button
                 onClick={clearAllFilters}
                 className="text-sm text-main hover:text-purple-700 font-medium ml-2"
@@ -496,7 +575,25 @@ export default function SearchContent() {
           )}
         </div>
 
-        {/* Results Count and View Toggle */}
+        {/* Adult Education Info Banner */}
+        {level === "adult" && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Globe className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-blue-800">
+                  Professional & Adult Education
+                </p>
+                <p className="text-xs text-blue-700 mt-0.5">
+                  Showing professional courses, certifications, and specialized
+                  training programs designed for adult learners and career
+                  advancement.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">
             Found {total} session{total !== 1 ? "s" : ""}
@@ -519,7 +616,6 @@ export default function SearchContent() {
           </div>
         </div>
 
-        {/* Results Grid */}
         {loading && sessions.length === 0 ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-main" />
@@ -556,7 +652,6 @@ export default function SearchContent() {
               </div>
             )}
 
-            {/* Load More */}
             {hasMore && (
               <div className="flex justify-center mt-8">
                 <button

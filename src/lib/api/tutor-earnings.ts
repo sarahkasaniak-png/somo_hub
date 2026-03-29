@@ -12,6 +12,7 @@ export interface EarningsOverview {
   completion_rate: number;
   average_per_student: number;
   average_per_session: number;
+  total_reviews?: number;
 }
 
 export interface PeriodEarning {
@@ -26,19 +27,22 @@ export interface PeriodEarning {
   growth_percentage?: number;
 }
 
-export interface CourseEarning {
-  course_id: number;
-  course_title: string;
+// Updated: SessionEarning instead of CourseEarning
+export interface SessionEarning {
+  session_id: number;
+  session_name: string;
   subject: string;
-  session_count: number;
+  session_code: string;
   student_count: number;
   total_earned: number;
   average_per_student: number;
   min_payment: number;
   max_payment: number;
-  course_price: number;
-  percentage: number;
-  occupancy_rate: number;
+  session_fee: number;
+  max_capacity: number;
+  current_enrollment: number;
+  percentage?: number;
+  occupancy_rate?: number;
 }
 
 export interface RecentPayout {
@@ -48,7 +52,7 @@ export interface RecentPayout {
   payment_reference: string;
   payment_date: string;
   session_name: string;
-  course_title: string;
+  subject: string;
   first_name: string;
   last_name: string;
   student_email: string;
@@ -62,8 +66,8 @@ export interface PaymentSummary {
     transactions: Array<{
       student_name: string;
       amount: number;
-      course: string;
       session: string;
+      subject: string;
       reference: string;
     }>;
   }>;
@@ -109,9 +113,9 @@ const tutorEarningsApi = {
   getByPeriod: (period: string = 'monthly'): Promise<ApiResponse<PeriodEarning[]>> =>
     client.get("/tutor/earnings/by-period", { period }),
 
-  // Get earnings by course
-  getByCourse: (): Promise<ApiResponse<CourseEarning[]>> =>
-    client.get("/tutor/earnings/by-course"),
+  // Get earnings by session (renamed from getByCourse)
+  getBySession: (): Promise<ApiResponse<SessionEarning[]>> =>
+    client.get("/tutor/earnings/by-session"),
 
   // Get recent payouts
   getRecentPayouts: (limit: number = 10): Promise<ApiResponse<RecentPayout[]>> =>

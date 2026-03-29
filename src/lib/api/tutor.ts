@@ -1,6 +1,6 @@
 // src/lib/api/tutor.ts
 import client from "./client";
-import tutorScheduleApi from "./tutor-schedule"; // Import the schedule API
+import tutorScheduleApi, { TutorSessionSchedule, JoinSessionResponse } from "./tutor-schedule";
 
 // Export types from tutor-schedule
 export type { 
@@ -8,8 +8,18 @@ export type {
   JoinSessionResponse 
 } from "./tutor-schedule";
 
-
-// src/lib/api/tutor.ts - Add these types near the top with your other type definitions
+//interface for tutor curriculum
+export interface TutorCurriculum {
+  id: number;
+  tutor_id: number;
+  curriculum_id: number;
+  curriculum_level_id: number | null;
+  status: string;
+  curriculum_name?: string;
+  curriculum_code?: string;
+  level_name?: string;
+  level_code?: string;
+}
 
 // ================= ENROLLMENT TYPES =================
 
@@ -38,18 +48,16 @@ export interface Enrollment {
   };
   session?: {
     id: number;
+    uuid: string;
     name: string;
     session_code: string;
     start_date: string;
     end_date: string;
     max_students: number;
-    fee_amount: number;  // Changed from 'fee' to match EnrollmentDetail
-    fee_currency: string; // Added to match EnrollmentDetail
-    course: {
-      id: number;
-      title: string;
-      subject: string;
-    };
+    fee_amount: number;
+    fee_currency: string;
+    subject: string;  
+    level: string;  
   };
 }
 
@@ -80,6 +88,7 @@ export interface EnrollmentDetail {
   };
   session: {
     id: number;
+    uuid: string;
     name: string;
     description: string | null;
     session_code: string;
@@ -92,12 +101,9 @@ export interface EnrollmentDetail {
     status: string;
     enrollment_status: string;
     current_enrollment: number;
-    course: {
-      id: number;
-      title: string;
-      subject: string;
-      level: string;
-    };
+    subject: string; 
+    level: string;  
+   
   };
   payment_history?: Array<{
     id: number;
@@ -151,6 +157,32 @@ export type EducationLevel =
   | 'bachelors' 
   | 'masters' 
   | 'phd';
+
+export interface TutorLevelInfo {
+  id: number;
+  level_name: string;
+  level_description: string;
+  requires_admission_letter: boolean;
+  requires_tsc_number: boolean;
+  requires_portfolio: boolean;
+}
+
+export interface CurriculumLevel {
+  id: number;
+  name: string;
+  code: string;
+  order_index: number;
+}
+
+export interface Curriculum {
+  id: number;
+  uuid: string;
+  name: string;
+  code: string;
+  description: string;
+  country: string;
+  levels: CurriculumLevel[];
+}
 
 export interface ApplicationData {
   id?: number;
@@ -234,12 +266,116 @@ export interface Step4ExperienceData {
   }>;
 }
 
-// Helper type for step data
 type StepData = 
   | Step1TutorLevelData 
   | Step2PersonalInfoData 
   | Step3EducationData 
   | Step4ExperienceData;
+
+// ================= TYPES FOR SESSIONS =================
+
+export interface SessionScheduleConfig {
+  id?: number;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  duration_minutes?: number;
+  is_active?: boolean;
+}
+
+export interface TutorSession {
+  id: number;
+  uuid: string;
+  tutor_id: number;
+  tutor_level_id?: number;
+  name: string;
+  description: string | null;
+  subject: string;
+  curriculum_id?: number;
+  curriculum_level_id?: number;
+   level?: 'primary' | 'junior_high' | 'senior_high' | 'university' | 'adult';
+  prerequisites: string[];
+  learning_outcomes: string[];
+  curriculum: Array<{
+    week: number;
+    topic: string;
+    objectives?: string[];
+    materials?: string[];
+  }>;
+  
+  // Curriculum joined fields
+  curriculum_name?: string;
+  curriculum_code?: string;
+  curriculum_level_name?: string;
+  curriculum_level_code?: string;
+  tutor_level_name?: string;
+  tutor_level_description?: string;
+  
+  // Session fields
+  batch_name: string | null;
+  session_type: 'one_on_one' | 'group';
+  max_students: number;
+  start_date: string;
+  end_date: string;
+  session_code: string;
+  enrollment_status: 'open' | 'waiting_list' | 'closed' | 'completed';
+  current_enrollment: number;
+  fee_amount: number;
+  fee_currency: string;
+  session_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+  
+  // Joined fields
+  tutor_name?: string;
+  tutor_avatar?: string;
+  tutor_rating?: number;
+  schedule_configs?: SessionScheduleConfig[];
+  schedules?: TutorSessionSchedule[];
+}
+
+export interface CreateSessionData {
+  name: string;
+  description?: string;
+  subject: string;
+  curriculum_id?: number;  // Change from number | null to optional number
+  curriculum_level_id?: number;  // Change from number | null to optional number
+  prerequisites?: string[];
+  learning_outcomes?: string[];
+  curriculum?: Array<{
+    week: number;
+    topic: string;
+    objectives?: string[];
+    materials?: string[];
+  }>;
+  batch_name?: string;
+  session_type: 'one_on_one' | 'group';
+  max_students: number;
+  start_date: string;
+  end_date: string;
+  fee_amount?: number;
+  fee_currency?: string;
+  schedule_configs: Omit<SessionScheduleConfig, 'id' | 'duration_minutes'>[];
+}
+
+export interface SessionEnrollment {
+  id: number;
+  tutor_course_session_id: number;
+  student_id: number;
+  enrollment_status: 'pending' | 'active' | 'completed' | 'dropped' | 'suspended';
+  payment_status: 'pending' | 'paid' | 'partial' | 'refunded';
+  payment_amount: number;
+  payment_reference: string | null;
+  enrolled_at: string;
+  completed_at: string | null;
+  progress_percentage: number;
+  classes_attended: number;
+  total_classes: number;
+  last_accessed_at: string | null;
+  notes: string | null;
+}
+
+// ================= APPLICATION HELPERS =================
 
 export const loadApplication = async (): Promise<LoadApplicationResponse> => {
   try {
@@ -254,7 +390,6 @@ export const loadApplication = async (): Promise<LoadApplicationResponse> => {
 
 export const saveStep = async (step: number, data: StepData): Promise<SaveStepResponse> => {
   try {
-    // Validate step number for new 4-step structure
     if (step < 1 || step > 4) {
       throw new Error(`Invalid step number: ${step}. Must be between 1 and 4`);
     }
@@ -274,7 +409,6 @@ export const saveStep = async (step: number, data: StepData): Promise<SaveStepRe
   }
 };
 
-// Helper functions for specific steps
 export const saveTutorLevel = async (data: Step1TutorLevelData): Promise<SaveStepResponse> => {
   return saveStep(1, data);
 };
@@ -340,7 +474,7 @@ export const uploadAvatar = async (formData: FormData): Promise<ApiResponse> => 
     });
     
     const response = await client.upload<ApiResponse>(
-      `/tutor/upload-document?target=${fileType == "avatar" ? "avatars" : "tutor-documents"  }`, 
+      `/tutor/upload-document?target=${fileType == "avatar" ? "avatars" : "tutor-documents"}`, 
       formData
     );
     
@@ -362,7 +496,6 @@ export const getApplicationStatus = async (): Promise<LoadApplicationResponse> =
   }
 };
 
-// New helper functions for the 4-step flow
 export const validateStepData = (
   step: number,
   data: any
@@ -374,7 +507,6 @@ export const validateStepData = (
       if (!data.tutor_level) {
         errors.push("Tutor level is required");
       }
-      // TSC number required for school teachers
       if (['junior_high_teacher', 'senior_high_teacher'].includes(data.tutor_level) && !data.tsc_number) {
         errors.push("TSC number is required for school teachers");
       }
@@ -393,7 +525,6 @@ export const validateStepData = (
       if (!data.highest_education_level) errors.push("Education level is required");
       if (!data.university_name?.trim()) errors.push("University name is required");
       
-      // Admission letter required for higher education
       if (['bachelors', 'masters', 'phd', 'diploma'].includes(data.highest_education_level)) {
         if (!data.admission_letter_url?.trim()) {
           errors.push("Admission letter is required for this education level");
@@ -423,15 +554,11 @@ export const validateStepData = (
 
 export const canProceedToStep = (currentStep: number, application?: ApplicationData): boolean => {
   if (!application) return currentStep === 1;
-  
-  // Allow proceeding if:
-  // 1. Current step is less than or equal to application's current step + 1
-  // 2. Or if we're going back to a previous step
   return currentStep <= (application.current_step || 0) + 1;
 };
 
 export const getNextStep = (currentStep: number): number => {
-  return Math.min(currentStep + 1, 4); // Max step is now 4
+  return Math.min(currentStep + 1, 4);
 };
 
 export const getPreviousStep = (currentStep: number): number => {
@@ -439,8 +566,8 @@ export const getPreviousStep = (currentStep: number): number => {
 };
 
 export const getProgressPercentage = (currentStep: number): number => {
-  if (currentStep === 0) return 0; // Intro page
-  return Math.min(currentStep * 25, 100); // 25% per step (4 steps total)
+  if (currentStep === 0) return 0;
+  return Math.min(currentStep * 25, 100);
 };
 
 export const getTutorLevelDisplay = (level?: TutorLevel): string => {
@@ -468,7 +595,6 @@ export const getEducationLevelDisplay = (level?: EducationLevel): string => {
 
 export const getRequiredDocuments = (tutorLevel: string, educationLevel: string) => {
   const isStudent = tutorLevel === "college_student";
-  const isGraduate = tutorLevel !== "college_student";
   const needsHigherEducationDoc = ["diploma", "bachelors", "masters", "phd"].includes(educationLevel);
   
   if (isStudent && needsHigherEducationDoc) {
@@ -479,7 +605,7 @@ export const getRequiredDocuments = (tutorLevel: string, educationLevel: string)
     };
   }
   
-  if (isGraduate && needsHigherEducationDoc) {
+  if (!isStudent && needsHigherEducationDoc) {
     return {
       admissionLetter: false,
       graduationCertificate: true,
@@ -494,11 +620,9 @@ export const getRequiredDocuments = (tutorLevel: string, educationLevel: string)
   };
 };
 
-// Check if application is complete and ready for submission
 export const isApplicationComplete = (application?: ApplicationData): boolean => {
   if (!application) return false;
   
-  // Check all required steps are filled
   const hasTutorLevel = !!application.tutor_level;
   const hasPersonalInfo = !!application.official_first_name && !!application.official_last_name;
   const hasEducation = !!application.highest_education_level && !!application.university_name;
@@ -507,7 +631,6 @@ export const isApplicationComplete = (application?: ApplicationData): boolean =>
   return hasTutorLevel && hasPersonalInfo && hasEducation && hasExperience;
 };
 
-// Format application data for display in summary
 export const formatApplicationForDisplay = (application: ApplicationData) => {
   return {
     ...application,
@@ -524,7 +647,6 @@ export const formatApplicationForDisplay = (application: ApplicationData) => {
   };
 };
 
-// Get step requirements based on tutor level
 export const getStepRequirements = (
   step: number, 
   tutorLevel?: TutorLevel
@@ -563,7 +685,6 @@ export const getStepRequirements = (
 
   const requirements = baseRequirements[step as keyof typeof baseRequirements] || baseRequirements[1];
   
-  // Customize based on tutor level
   if (step === 3) {
     if (tutorLevel === "college_student" || tutorLevel === "university_lecturer") {
       requirements.optional = ["Admission letter (required for higher education)", "Admission number"];
@@ -577,355 +698,148 @@ export const getStepRequirements = (
   return requirements;
 };
 
-export const debugApplicationData = async (): Promise<any> => {
-  try {
-    // You might need to create a debug endpoint in your backend
-    const response = await client.get<any>("/tutor/debug/application");
-    return response;
-  } catch (error) {
-    console.error("Debug error:", error);
-    return null;
-  }
-};
+// ================= SESSION API METHODS =================
 
+const tutorApi = {
+  // Application methods
+  loadApplication,
+  saveStep,
+  saveTutorLevel,
+  savePersonalInfo,
+  saveEducation,
+  saveExperience,
+  submitApplication,
+  uploadDocument,
+  uploadAvatar,
+  getApplicationStatus,
+  validateStepData,
+  canProceedToStep,
+  getNextStep,
+  getPreviousStep,
+  getProgressPercentage,
+  getTutorLevelDisplay,
+  getEducationLevelDisplay,
+  getRequiredDocuments,
+  isApplicationComplete,
+  formatApplicationForDisplay,
+  getStepRequirements,
 
+  getTutorCurriculums: (): Promise<{ success: boolean; data: TutorCurriculum[] }> =>
+  client.get("/tutor/curriculums/tutor"), 
 
-// these ones have been added to sort out tutor courses and sessions, but we can move them to a separate file if it gets too big
-/* ================= TYPES ================= */
+  // ================= SESSION ENDPOINTS =================
+  
+  // Get all sessions
+  getSessions: (params?: {
+    tutor_course_id?: number;
+    session_type?: string;
+    enrollment_status?: string;
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ success: boolean; data: { sessions: TutorSession[]; total: number; page: number; limit: number; totalPages: number } }> => {
+    console.log("Fetching sessions with params:", params);
+    return client.get("/tutor/sessions", params);
+  },
 
-export interface TutorCourse {
-   [key: string]: any;
-  id: number;
-  tutor_id: number;
-  title: string;
-  description: string;
-  subject: string;
-  level: 'primary' | 'junior_high' | 'senior_high' | 'university' | 'adult';
-  total_weeks: number;
-  classes_per_week: number;
-  class_duration_minutes: number;
-  mode: 'virtual' | 'in_person' | 'hybrid';
-  max_students_per_session: number;
-  total_price: number;
-  currency: string;
-  status: 'draft' | 'published' | 'enrolling' | 'ongoing' | 'completed' | 'cancelled';
-  thumbnail_url: string | null;
-  syllabus_url: string | null;
-  prerequisites: string[];
-  learning_outcomes: string[];
-  curriculum: Array<{
-    week: number;
-    topic: string;
-    objectives: string[];
-    materials: string[];
-  }>;
-  requires_approval: boolean;
-  created_at: string;
-  updated_at: string;
-  // Add these optional fields that might be returned in certain queries
-  current_enrollment?: number;
-  total_sessions?: number;
-  average_rating?: number;
-}
+  // Get session by UUID
+  getSession: (uuid: string): Promise<{ success: boolean; data: TutorSession }> =>
+    client.get(`/tutor/sessions/${uuid}`),
 
-// src/lib/api/tutor.ts
+  // Create session
+  createSession: (data: CreateSessionData): Promise<{ success: boolean; data: TutorSession }> =>
+    client.post("/tutor/sessions", data),
 
-export interface SessionScheduleConfig {
-  id?: number;
-  day_of_week: number; // 0-6 (0=Sunday)
-  start_time: string; // HH:MM format
-  end_time: string; // HH:MM format
-  duration_minutes?: number; // Auto-calculated
-  is_active?: boolean;
-}
+  // Update session by UUID
+  updateSession: (uuid: string, data: Partial<CreateSessionData>): Promise<{ success: boolean; data: TutorSession }> =>
+    client.put(`/tutor/sessions/${uuid}`, data),
 
-export interface TutorSession {
-  id: number;
-  tutor_course_id: number;
-  name: string;
-  description: string;
-  batch_name: string | null;
-  session_type: 'one_on_one' | 'group';
-  max_students: number;
-  start_date: string;
-  end_date: string;
-  session_code: string;
-  enrollment_status: 'open' | 'waiting_list' | 'closed' | 'completed';
-  current_enrollment: number;
-  fee_amount: number;
-  fee_currency: string;
-  status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
-  created_at: string;
-  updated_at: string;
-  // New: schedule configurations
-  schedule_configs?: SessionScheduleConfig[];
-}
+  // Delete session by UUID
+  deleteSession: (uuid: string): Promise<{ success: boolean; message: string }> =>
+    client.delete(`/tutor/sessions/${uuid}`),
 
-export interface CreateSessionData {
-  tutor_course_id: number;
-  name: string;
-  description?: string;
-  batch_name?: string;
-  session_type: 'one_on_one' | 'group';
-  max_students: number;
-  start_date: string;
-  end_date: string;
-  fee_amount?: number;
-  fee_currency?: string;
-  // New: flexible schedule configurations
-  schedule_configs: Omit<SessionScheduleConfig, 'id' | 'duration_minutes'>[];
-}
+  // Join session by UUID
+  joinSession: (uuid: string): Promise<{ success: boolean; data: { meeting_link: string } }> =>
+    client.post(`/tutor/sessions/${uuid}/join`),
 
-export interface SessionEnrollment {
-  id: number;
-  tutor_course_session_id: number;
-  student_id: number;
-  enrollment_status: 'pending' | 'active' | 'completed' | 'dropped' | 'suspended';
-  payment_status: 'pending' | 'paid' | 'partial' | 'refunded';
-  payment_amount: number;
-  payment_reference: string | null;
-  enrolled_at: string;
-  completed_at: string | null;
-  progress_percentage: number;
-  classes_attended: number;
-  total_classes: number;
-  last_accessed_at: string | null;
-  notes: string | null;
-}
+  // Get session enrollments by UUID
+  getSessionEnrollments: (uuid: string): Promise<{ success: boolean; data: SessionEnrollment[] }> =>
+    client.get(`/tutor/sessions/${uuid}/enrollments`),
 
-export interface CreateCourseData {
-  title: string;
-  description: string;
-  subject: string;
-  level: 'primary' | 'junior_high' | 'senior_high' | 'university' | 'adult';
-  total_weeks: number;
-  classes_per_week: number;
-  class_duration_minutes: number;
-  mode: 'virtual' | 'in_person' | 'hybrid';
-  max_students_per_session: number;
-  total_price: number;
-  currency?: string;
-  thumbnail_url?: string;
-  syllabus_url?: string;
-  prerequisites?: string[];
-  learning_outcomes?: string[];
-  curriculum?: Array<{
-    week: number;
-    topic: string;
-    objectives?: string[];
-    materials?: string[];
-  }>;
-  requires_approval?: boolean;
-}
+  // Enroll in session by UUID
+  enrollInSession: (uuid: string): Promise<{ success: boolean; data: SessionEnrollment }> =>
+    client.post(`/tutor/sessions/${uuid}/enroll`),
 
-// 
+  // ================= TUTOR PROFILE ENDPOINTS =================
+  
+  // Get tutor profile
+  getTutorProfile: (): Promise<{ success: boolean; data: any }> =>
+    client.get("/tutor/profile"),
 
-/* ================= COURSE ENDPOINTS ================= */
+  // Update tutor profile
+  updateTutorProfile: (data: any): Promise<{ success: boolean; data: any }> =>
+    client.put("/tutor/profile", data),
 
-// Create a new tutor course
-const createCourse = (data: CreateCourseData): Promise<{ success: boolean; data: TutorCourse }> =>
-  client.post("/tutor/courses", data);
-
-// Get tutor courses with filters
-const getCourses = (params?: {
-  tutor_id?: number;
-  subject?: string;
-  level?: string;
-  status?: string;
-  page?: number;
-  limit?: number;
-}): Promise<{ success: boolean; data: { courses: TutorCourse[]; total: number; page: number; limit: number; totalPages: number } }> =>
-  client.get("/tutor/courses", params);
-
-// Get single tutor course
-const getCourse = (id: number): Promise<{ success: boolean; data: TutorCourse }> =>
-  client.get(`/tutor/courses/${id}`);
-
-// Update tutor course
-const updateCourse = (id: number, data: Partial<CreateCourseData>): Promise<{ success: boolean; data: TutorCourse }> =>
-  client.put(`/tutor/courses/${id}`, data);
-
-// Delete tutor course
-const deleteCourse = (id: number): Promise<{ success: boolean; message: string }> =>
-  client.delete(`/tutor/courses/${id}`);
-
-// Get current tutor's courses
-const getMyCourses = (params?: {
-  status?: string;
-  page?: number;
-  limit?: number;
-}): Promise<{ success: boolean; data: { courses: TutorCourse[]; total: number; page: number; limit: number; totalPages: number } }> =>
-  client.get("/tutor/me/courses", params);
-
-// Publish course
-const publishCourse = (id: number): Promise<{ success: boolean; data: TutorCourse }> =>
-  client.post(`/tutor/courses/${id}/publish`);
-
-/* ================= SESSION ENDPOINTS ================= */
-
-// Create a new tutor session
-const createSession = (data: CreateSessionData): Promise<{ success: boolean; data: TutorSession }> =>
-  client.post("/tutor/sessions", data);
-
-// Get tutor sessions with filters
-const getSessions = (params?: {
-  tutor_course_id?: number;
-  session_type?: string;
-  enrollment_status?: string;
-  status?: string;
-  start_date?: string;
-  end_date?: string;
-  page?: number;
-  limit?: number;
-}): Promise<{ success: boolean; data: { sessions: TutorSession[]; total: number; page: number; limit: number; totalPages: number } }> => {
-  console.log("Fetching sessions with params:", params);
-  return client.get("/tutor/sessions", params);
-};
-
-// Get single tutor session
-const getSession = (id: number): Promise<{ success: boolean; data: TutorSession }> =>
-  client.get(`/tutor/sessions/${id}`);
-
-// Update tutor session
-const updateSession = (id: number, data: Partial<CreateSessionData>): Promise<{ success: boolean; data: TutorSession }> =>
-  client.put(`/tutor/sessions/${id}`, data);
-
-// Delete tutor session
-const deleteSession = (id: number): Promise<{ success: boolean; message: string }> =>
-  client.delete(`/tutor/sessions/${id}`);
-
-// Get session enrollments
-const getSessionEnrollments = (sessionId: number): Promise<{ success: boolean; data: SessionEnrollment[] }> =>
-  client.get(`/tutor/sessions/${sessionId}/enrollments`);
-
-// Enroll in tutor session (for students)
-const enrollInSession = (sessionId: number): Promise<{ success: boolean; data: SessionEnrollment }> =>
-  client.post(`/tutor/sessions/${sessionId}/enroll`);
-
-// Join session (for tutors)
-const joinSession = (sessionId: number): Promise<{ success: boolean; data: { meeting_link: string } }> =>
-  client.post(`/tutor/sessions/${sessionId}/join`);
-
-/* ================= TUTOR PROFILE ENDPOINTS ================= */
-
-// Get tutor profile
-const getTutorProfile = (): Promise<{ success: boolean; data: any }> =>
-  client.get("/tutor/profile");
-
-// Update tutor profile
-const updateTutorProfile = (data: any): Promise<{ success: boolean; data: any }> =>
-  client.put("/tutor/profile", data);
-
-// Get tutor dashboard stats
-const getDashboardStats = (): Promise<{ 
+  // Get tutor dashboard stats
+  getDashboardStats: (): Promise<{ 
   success: boolean; 
   data: {
-    totalCourses: number;
+    totalSessions: number;
     activeSessions: number;
     totalStudents: number;
     totalEarnings: number;
     pendingApplications: number;
+    totalEnrollments?: number;
+    completionRate?: number;
+    averageRating?: number;
+    totalReviews?: number;
   } 
-}> => client.get("/tutor/dashboard/stats");
+}> => client.get("/tutor/dashboard/stats"),
 
+  // ================= ENROLLMENT MANAGEMENT =================
 
-// ================= ENROLLMENT MANAGEMENT =================
+  getAllEnrollments: (params?: {
+    status?: string;
+    payment_status?: string;
+    session_id?: number;
+    course_id?: number;
+    page?: number;
+    limit?: number;
+  }): Promise<{ success: boolean; data: { enrollments: Enrollment[]; total: number; page: number; limit: number; totalPages: number } }> =>
+    client.get("/tutor/enrollments", params),
 
-/**
- * Get all enrollments for the tutor
- */
-const getAllEnrollments = (params?: {
-  status?: string;
-  payment_status?: string;
-  session_id?: number;
-  course_id?: number;
-  page?: number;
-  limit?: number;
-}): Promise<{ success: boolean; data: { enrollments: Enrollment[]; total: number; page: number; limit: number; totalPages: number } }> =>
-  client.get("/tutor/enrollments", params);
+  getEnrollmentById: (enrollmentId: number): Promise<{ success: boolean; data: EnrollmentDetail }> =>
+    client.get(`/tutor/enrollments/${enrollmentId}`),
 
-/**
- * Get enrollment by ID
- */
-const getEnrollmentById = (enrollmentId: number): Promise<{ success: boolean; data: EnrollmentDetail }> =>
-  client.get(`/tutor/enrollments/${enrollmentId}`);
+  updateEnrollmentStatus: (enrollmentId: number, data: { status: string }): Promise<{ success: boolean; data: Enrollment }> =>
+    client.put(`/tutor/enrollments/${enrollmentId}/status`, data),
 
-/**
- * Update enrollment status
- */
-const updateEnrollmentStatus = (enrollmentId: number, data: { status: string }): Promise<{ success: boolean; data: Enrollment }> =>
-  client.put(`/tutor/enrollments/${enrollmentId}/status`, data);
+  bulkUpdateEnrollments: (data: { enrollment_ids: number[]; action: string }): Promise<{ success: boolean; data: { updated: number } }> =>
+    client.post("/tutor/enrollments/bulk-update", data),
 
-/**
- * Bulk update enrollments
- */
-const bulkUpdateEnrollments = (data: { enrollment_ids: number[]; action: string }): Promise<{ success: boolean; data: { updated: number } }> =>
-  client.post("/tutor/enrollments/bulk-update", data);
+  recordPayment: (enrollmentId: number, data: { amount: number; reference: string; notes?: string }): Promise<{ success: boolean; data: any }> =>
+    client.post(`/tutor/enrollments/${enrollmentId}/payments`, data),
 
-/**
- * Record payment for enrollment
- */
-const recordPayment = (enrollmentId: number, data: { amount: number; reference: string; notes?: string }): Promise<{ success: boolean; data: any }> =>
-  client.post(`/tutor/enrollments/${enrollmentId}/payments`, data);
+  getEnrollmentPayments: (enrollmentId: number): Promise<{ success: boolean; data: any[] }> =>
+    client.get(`/tutor/enrollments/${enrollmentId}/payments`),
 
-/**
- * Get enrollment payments
- */
-const getEnrollmentPayments = (enrollmentId: number): Promise<{ success: boolean; data: any[] }> =>
-  client.get(`/tutor/enrollments/${enrollmentId}/payments`);
+  getEnrollmentAttendance: (enrollmentId: number): Promise<{ success: boolean; data: any[] }> =>
+    client.get(`/tutor/enrollments/${enrollmentId}/attendance`),
 
-/**
- * Get enrollment attendance
- */
-const getEnrollmentAttendance = (enrollmentId: number): Promise<{ success: boolean; data: any[] }> =>
-  client.get(`/tutor/enrollments/${enrollmentId}/attendance`);
+  markAttendance: (enrollmentId: number, scheduleId: number, attended: boolean): Promise<{ success: boolean; data: any }> =>
+    client.post(`/tutor/enrollments/${enrollmentId}/attendance`, { schedule_id: scheduleId, attended }),
 
-/**
- * Mark attendance for a class
- */
-const markAttendance = (enrollmentId: number, scheduleId: number, attended: boolean): Promise<{ success: boolean; data: any }> =>
-  client.post(`/tutor/enrollments/${enrollmentId}/attendance`, { schedule_id: scheduleId, attended });
+  // ================= CURRICULUM AND LEVELS =================
 
-// Add these to the tutorApi export
+  getCurriculums: (): Promise<{ success: boolean; data: Curriculum[] }> =>
+    client.get("/tutor/curriculums"),
 
-/* ================= EXPORT ================= */
+  getTutorLevels: (): Promise<{ success: boolean; data: TutorLevelInfo[] }> =>
+    client.get("/tutor/levels"),
 
-const tutorApi = {
-  // Courses
-  createCourse,
-  getCourses,
-  getCourse,
-  updateCourse,
-  deleteCourse,
-  getMyCourses,
-  publishCourse,
-  
-  // Sessions
-  createSession,
-  getSessions,
-  getSession,
-  updateSession,
-  deleteSession,
-  getSessionEnrollments,
-  enrollInSession,
-  joinSession,
-
-  //enrollments
-  getAllEnrollments,
-  getEnrollmentById,
-  updateEnrollmentStatus,
-  bulkUpdateEnrollments,
-  recordPayment,
-  getEnrollmentPayments,
-  getEnrollmentAttendance,
-  markAttendance,
-
-  
-  // Profile
-  getTutorProfile,
-  updateTutorProfile,
-  getDashboardStats,
-   // Schedule API - Add this section
+  // ================= SCHEDULE API =================
   schedules: tutorScheduleApi,
 };
 

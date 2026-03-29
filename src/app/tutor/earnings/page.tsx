@@ -40,7 +40,7 @@ import {
   Landmark,
   Globe,
   X,
-  ChevronRight, // Added X icon
+  ChevronRight,
 } from "lucide-react";
 import {
   LineChart as RechartsLineChart,
@@ -62,7 +62,7 @@ import {
 import tutorEarningsApi, {
   EarningsOverview,
   PeriodEarning,
-  CourseEarning,
+  SessionEarning, // Changed from CourseEarning
   RecentPayout,
   PaymentSummary,
   WithdrawalMethod,
@@ -81,7 +81,7 @@ export default function TutorEarningsPage() {
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<EarningsOverview | null>(null);
   const [periodEarnings, setPeriodEarnings] = useState<PeriodEarning[]>([]);
-  const [courseEarnings, setCourseEarnings] = useState<CourseEarning[]>([]);
+  const [sessionEarnings, setSessionEarnings] = useState<SessionEarning[]>([]); // Renamed from courseEarnings
   const [recentPayouts, setRecentPayouts] = useState<RecentPayout[]>([]);
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(
     null,
@@ -125,14 +125,14 @@ export default function TutorEarningsPage() {
       const [
         overviewRes,
         periodRes,
-        courseRes,
+        sessionRes, // Renamed from courseRes
         recentRes,
         summaryRes,
         methodsRes,
       ] = await Promise.all([
         tutorEarningsApi.getOverview(),
         tutorEarningsApi.getByPeriod(selectedPeriod),
-        tutorEarningsApi.getByCourse(),
+        tutorEarningsApi.getBySession(), // Changed from getByCourse
         tutorEarningsApi.getRecentPayouts(10),
         tutorEarningsApi.getPaymentSummary(),
         tutorEarningsApi.getWithdrawalMethods(),
@@ -144,8 +144,8 @@ export default function TutorEarningsPage() {
       if (periodRes.success && periodRes.data) {
         setPeriodEarnings(periodRes.data);
       }
-      if (courseRes.success && courseRes.data) {
-        setCourseEarnings(courseRes.data);
+      if (sessionRes.success && sessionRes.data) {
+        setSessionEarnings(sessionRes.data);
       }
       if (recentRes.success && recentRes.data) {
         setRecentPayouts(recentRes.data);
@@ -282,7 +282,7 @@ export default function TutorEarningsPage() {
     }
   };
 
-  // Custom tooltip formatter for charts - Fixed type
+  // Custom tooltip formatter for charts
   const tooltipFormatter = (value: any) => {
     if (typeof value === "number") {
       return formatCurrency(value);
@@ -331,7 +331,8 @@ export default function TutorEarningsPage() {
               Earnings
             </h1>
             <p className="text-sm sm:text-base text-gray-600 mt-1">
-              Track your income, manage payouts, and analyze your earnings
+              Track your income, manage payouts, and analyze your earnings from
+              tutoring sessions
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -436,7 +437,6 @@ export default function TutorEarningsPage() {
                     {overview.average_rating
                       ? Number(overview.average_rating).toFixed(1)
                       : "0.0"}
-                    .0
                   </span>
                 </div>
               </div>
@@ -512,17 +512,17 @@ export default function TutorEarningsPage() {
             </div>
           </div>
 
-          {/* Earnings by Course */}
+          {/* Earnings by Session */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-6">
-              Earnings by Course
+              Earnings by Session
             </h2>
 
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
                   <Pie
-                    data={courseEarnings}
+                    data={sessionEarnings}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -530,9 +530,9 @@ export default function TutorEarningsPage() {
                     fill="#8884d8"
                     paddingAngle={5}
                     dataKey="total_earned"
-                    nameKey="course_title"
+                    nameKey="session_name"
                   >
-                    {courseEarnings.map((entry, index) => (
+                    {sessionEarnings.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}
@@ -545,9 +545,9 @@ export default function TutorEarningsPage() {
             </div>
 
             <div className="mt-4 space-y-2">
-              {courseEarnings.slice(0, 5).map((course, index) => (
+              {sessionEarnings.slice(0, 5).map((session, index) => (
                 <div
-                  key={course.course_id}
+                  key={session.session_id}
                   className="flex items-center justify-between text-sm"
                 >
                   <div className="flex items-center gap-2">
@@ -556,15 +556,15 @@ export default function TutorEarningsPage() {
                       style={{ backgroundColor: COLORS[index % COLORS.length] }}
                     />
                     <span className="text-gray-700 truncate max-w-[150px]">
-                      {course.course_title}
+                      {session.session_name}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-900">
-                      {(course.percentage || 0).toFixed(1)}%
+                      {(session.percentage || 0).toFixed(1)}%
                     </span>
                     <span className="text-gray-500">
-                      {formatCurrency(course.total_earned)}
+                      {formatCurrency(session.total_earned)}
                     </span>
                   </div>
                 </div>
@@ -573,11 +573,11 @@ export default function TutorEarningsPage() {
           </div>
         </div>
 
-        {/* Course Earnings Table */}
+        {/* Session Performance Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">
-              Course Performance
+              Session Performance
             </h2>
           </div>
           <div className="overflow-x-auto">
@@ -585,13 +585,13 @@ export default function TutorEarningsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Course
+                    Session
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Subject
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sessions
+                    Session Code
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Students
@@ -608,42 +608,45 @@ export default function TutorEarningsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {courseEarnings.map((course) => (
-                  <tr key={course.course_id} className="hover:bg-gray-50">
+                {sessionEarnings.map((session) => (
+                  <tr key={session.session_id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {course.course_title}
+                        {session.session_name}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {session.session_code}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
-                        {course.subject}
+                        {session.subject}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {course.session_count}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">
+                      {session.session_code}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {course.student_count}
+                      {session.student_count} / {session.max_capacity}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-main rounded-full"
-                            style={{ width: `${course.occupancy_rate || 0}%` }}
+                            style={{ width: `${session.occupancy_rate || 0}%` }}
                           />
                         </div>
                         <span className="text-xs text-gray-600">
-                          {(course.occupancy_rate || 0).toFixed(0)}%
+                          {(session.occupancy_rate || 0).toFixed(0)}%
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatCurrency(course.total_earned)}
+                      {formatCurrency(session.total_earned)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {formatCurrency(course.average_per_student)}
+                      {formatCurrency(session.average_per_student)}
                     </td>
                   </tr>
                 ))}
@@ -683,7 +686,7 @@ export default function TutorEarningsPage() {
                           {payout.student_email}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {payout.course_title} • {payout.session_name}
+                          {payout.subject} • {payout.session_name}
                         </p>
                       </div>
                     </div>
@@ -769,7 +772,6 @@ export default function TutorEarningsPage() {
         {showPayoutModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-md w-full p-6 relative">
-              {/* Close button */}
               <button
                 onClick={() => setShowPayoutModal(false)}
                 className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -891,7 +893,6 @@ export default function TutorEarningsPage() {
                       <span className="text-xs">Bank</span>
                     </button>
 
-                    {/* M-PESA remains active, only Airtel and T-Kash disabled */}
                     <button
                       type="button"
                       onClick={() => setSelectedMethodType("mobile_money")}
@@ -907,7 +908,6 @@ export default function TutorEarningsPage() {
                       <span className="text-xs">Mobile Money</span>
                     </button>
 
-                    {/* PayPal - Disabled */}
                     <button
                       type="button"
                       disabled
@@ -1024,7 +1024,7 @@ export default function TutorEarningsPage() {
                   </>
                 )}
 
-                {/* Mobile Money Form - M-PESA active, Airtel & T-Kash disabled */}
+                {/* Mobile Money Form */}
                 {selectedMethodType === "mobile_money" && (
                   <>
                     <div>

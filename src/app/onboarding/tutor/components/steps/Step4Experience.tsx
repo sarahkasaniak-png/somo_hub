@@ -6,6 +6,8 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import FileUpload from "../FileUpload";
+import CurriculumSelector from "../CurriculumSelector";
+import { SelectedCurriculum } from "@/lib/api/curriculum";
 
 // Define the certificate type
 interface Certificate {
@@ -14,33 +16,84 @@ interface Certificate {
   issued_date?: string;
 }
 
-// Simplified schema - make certificates completely permissive
-const experienceSchema = z.object({
-  has_teaching_experience: z.boolean().default(false),
-  tsc_number: z.string().optional().or(z.literal("")),
-  teaching_experience_years: z.number().min(0).max(50).optional().or(z.null()),
-  previous_institutions: z.array(z.string()).optional().default([]),
-  professional_experience: z.string().max(1000).optional().or(z.literal("")),
-  portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
-  certificates: z.any().optional().default([]), // Accept anything
-});
+// Schema factory based on tutor level
+const createExperienceSchema = (tutorLevel: string) => {
+  const isSchoolTeacher = [
+    "junior_high_teacher",
+    "senior_high_teacher",
+  ].includes(tutorLevel);
+  const isUniversityStudent = tutorLevel === "college_student";
 
-type ExperienceFormData = z.infer<typeof experienceSchema>;
+  // Curriculum is REQUIRED for school teachers and university students
+  const requiresCurriculum = isSchoolTeacher || isUniversityStudent;
+
+  return z.object({
+    has_teaching_experience: z.boolean().default(false),
+    tsc_number: z.string().optional().or(z.literal("")),
+    teaching_experience_years: z
+      .number()
+      .min(0)
+      .max(50)
+      .optional()
+      .or(z.null()),
+    previous_institutions: z.array(z.string()).optional().default([]),
+    professional_experience: z.string().max(1000).optional().or(z.literal("")),
+    portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
+    certificates: z.any().optional().default([]),
+    affiliate_code: z.string().max(100).optional().or(z.literal("")),
+    selected_curriculums: requiresCurriculum
+      ? z
+          .array(z.any())
+          .min(
+            1,
+            "Please select at least one curriculum you're qualified to teach",
+          )
+      : z.array(z.any()).optional().default([]),
+  });
+};
+
+type ExperienceFormData = z.infer<ReturnType<typeof createExperienceSchema>>;
 
 interface Step4ExperienceProps {
   initialData?: any;
   onNext: (data: ExperienceFormData) => void;
   onBack: () => void;
   isLoading: boolean;
+  tutorLevel?: string;
 }
 
 const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
-  ({ initialData, onNext, onBack, isLoading }, ref) => {
+  ({ initialData, onNext, onBack, isLoading, tutorLevel }, ref) => {
     const [certificates, setCertificates] = useState<Certificate[]>(
       Array.isArray(initialData?.certificates) ? initialData.certificates : [],
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFormValid, setIsFormValid] = useState(false);
+
+    // Get tutor level - prioritize prop over initialData
+    const actualTutorLevel = tutorLevel || initialData?.tutor_level || "";
+
+    // Determine curriculum requirements
+    const isSchoolTeacher = [
+      "junior_high_teacher",
+      "senior_high_teacher",
+    ].includes(actualTutorLevel);
+    const isUniversityStudent = actualTutorLevel === "college_student";
+    const isUniversityLecturer = actualTutorLevel === "university_lecturer";
+    const isPrivateTutor = actualTutorLevel === "private_tutor";
+    const isSkilledProfessional = actualTutorLevel === "skilled_professional";
+
+    // Curriculum is REQUIRED for school teachers and university students
+    const requiresCurriculum = isSchoolTeacher || isUniversityStudent;
+
+    // Curriculum is OPTIONAL for others
+    const curriculumOptional =
+      isUniversityLecturer || isPrivateTutor || isSkilledProfessional;
+
+    // Show curriculum selector for all except maybe some special cases
+    const showCurriculum = requiresCurriculum || curriculumOptional;
+
+    const schema = createExperienceSchema(actualTutorLevel);
 
     const {
       register,
@@ -49,9 +102,9 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       control,
       setValue,
       trigger,
-      formState: { errors, isValid, isDirty, isValidating },
+      formState: { errors, isValid },
     } = useForm<ExperienceFormData>({
-      resolver: zodResolver(experienceSchema),
+      resolver: zodResolver(schema),
       mode: "onChange",
       defaultValues: {
         has_teaching_experience: initialData?.has_teaching_experience || false,
@@ -61,6 +114,8 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
         professional_experience: initialData?.professional_experience || "",
         portfolio_url: initialData?.portfolio_url || "",
         certificates: initialData?.certificates || [],
+        affiliate_code: initialData?.affiliate_code || "",
+        selected_curriculums: initialData?.selected_curriculums || [],
       },
     });
 
@@ -72,90 +127,56 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     const hasExperience = watch("has_teaching_experience");
     const tscNumber = watch("tsc_number");
     const experienceYears = watch("teaching_experience_years");
+    const selectedCurriculums = watch("selected_curriculums");
 
     // Update form validity state
     useEffect(() => {
       const checkFormValidity = () => {
         const hasExperienceStatus = typeof hasExperience !== "undefined";
 
+        // Check curriculum requirement
+        let curriculumValid = true;
+        if (requiresCurriculum) {
+          curriculumValid =
+            selectedCurriculums && selectedCurriculums.length > 0;
+        }
+
         if (hasExperience) {
           const hasExperienceDetails =
             (tscNumber?.trim() ? true : false) || (experienceYears || 0) > 0;
-          setIsFormValid(hasExperienceStatus && hasExperienceDetails);
+          setIsFormValid(
+            hasExperienceStatus && hasExperienceDetails && curriculumValid,
+          );
         } else {
-          setIsFormValid(hasExperienceStatus);
+          setIsFormValid(hasExperienceStatus && curriculumValid);
         }
       };
 
       checkFormValidity();
-    }, [hasExperience, tscNumber, experienceYears]);
-
-    // Log certificate errors specifically
-    useEffect(() => {
-      if (errors.certificates) {
-        console.log(
-          "🔴 Certificates error details:",
-          JSON.stringify(errors.certificates, null, 2),
-        );
-      }
-    }, [errors.certificates]);
-
-    // Log form state for debugging
-    useEffect(() => {
-      console.log("📊 Step4 Form State:", {
-        isValid,
-        isDirty,
-        isValidating,
-        hasExperience,
-        tscNumber,
-        experienceYears,
-        certificatesCount: fields.length,
-        isFormValid,
-        errors:
-          Object.keys(errors).length > 0 ? Object.keys(errors) : "No errors",
-      });
     }, [
-      isValid,
-      isDirty,
-      isValidating,
       hasExperience,
       tscNumber,
       experienceYears,
-      errors,
-      fields.length,
-      isFormValid,
+      requiresCurriculum,
+      selectedCurriculums,
     ]);
 
-    useEffect(() => {
-      // Parse JSON if coming from initialData
-      if (
-        initialData?.previous_institutions &&
-        typeof initialData.previous_institutions === "string"
-      ) {
-        try {
-          const parsed = JSON.parse(initialData.previous_institutions);
-          setValue("previous_institutions", parsed);
-        } catch (error) {
-          console.error("Error parsing previous_institutions:", error);
-        }
-      }
+    // Handle curriculum selection - UPDATE THIS FUNCTION
+    const handleCurriculumChange = (curriculums: SelectedCurriculum[]) => {
+      console.log("🎯 Curriculum selection changed:", curriculums);
+      // Set the value in react-hook-form
+      setValue("selected_curriculums", curriculums, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
 
-      // Parse certificates if they come as string
-      if (
-        initialData?.certificates &&
-        typeof initialData.certificates === "string"
-      ) {
-        try {
-          const parsed = JSON.parse(initialData.certificates);
-          if (Array.isArray(parsed)) {
-            setCertificates(parsed);
-            setValue("certificates", parsed);
-          }
-        } catch (error) {
-          console.error("Error parsing certificates:", error);
-        }
-      }
-    }, [initialData, setValue]);
+      // Force trigger validation after setting
+      setTimeout(() => {
+        trigger("selected_curriculums");
+        // Also trigger the overall form validation
+        trigger();
+      }, 50);
+    };
 
     const handleFileUpload = async (fileType: string, url: string) => {
       if (fileType === "certificate") {
@@ -165,19 +186,10 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
           issued_date: new Date().toISOString().split("T")[0],
         };
 
-        console.log("Creating new certificate:", newCert);
-
-        // Create a new array with the certificate
         const updatedCertificates = [...certificates, newCert];
         setCertificates(updatedCertificates);
-
-        // Update the form field
         setValue("certificates", updatedCertificates);
-
-        // Trigger validation after update
         await trigger("certificates");
-
-        // Append to field array
         append(newCert);
       }
     };
@@ -190,11 +202,8 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       trigger("certificates");
     };
 
-    // Helper function to ensure certificates is an array
     const ensureCertificatesArray = (certs: any): any[] => {
-      if (Array.isArray(certs)) {
-        return certs;
-      }
+      if (Array.isArray(certs)) return certs;
       if (typeof certs === "string") {
         try {
           const parsed = JSON.parse(certs);
@@ -207,32 +216,14 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     };
 
     const onSubmit = async (data: ExperienceFormData) => {
-      console.log("📝 Step4 onSubmit called with data:", data);
-      console.log(
-        "Current state - isSubmitting:",
-        isSubmitting,
-        "isLoading:",
-        isLoading,
-      );
-
-      if (isSubmitting || isLoading) {
-        console.log("Submission blocked - already submitting");
-        return;
-      }
+      if (isSubmitting || isLoading) return;
 
       try {
         setIsSubmitting(true);
-        console.log("Set isSubmitting to true");
 
         // Additional validation
         if (data.has_teaching_experience) {
-          console.log("Has experience, checking validation:", {
-            tscNumber: data.tsc_number?.trim(),
-            experienceYears: data.teaching_experience_years,
-          });
-
           if (!data.tsc_number?.trim() && !data.teaching_experience_years) {
-            console.log("Validation failed - missing TSC or experience years");
             alert(
               "Please provide either TSC number or teaching experience years",
             );
@@ -241,48 +232,40 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
           }
         }
 
-        // Ensure certificates is an array before filtering
-        const certificatesArray = ensureCertificatesArray(data.certificates);
-        console.log("Certificates array after ensure:", certificatesArray);
+        // Validate curriculum requirement
+        if (requiresCurriculum) {
+          const currentCurriculums = data.selected_curriculums;
+          if (!currentCurriculums || currentCurriculums.length === 0) {
+            alert(
+              "Please select at least one curriculum you're qualified to teach",
+            );
+            setIsSubmitting(false);
+            return;
+          }
+        }
 
-        // Clean up certificates data - remove empty certificates or those without URLs
+        const certificatesArray = ensureCertificatesArray(data.certificates);
+
         const cleanedData = {
           ...data,
-          has_teaching_experience: Boolean(data.has_teaching_experience), // Ensure boolean
+          has_teaching_experience: Boolean(data.has_teaching_experience),
           certificates: certificatesArray.filter(
             (cert: any) => cert && cert.url && cert.url.trim() !== "",
           ),
-          // Ensure previous_institutions is an array
           previous_institutions: Array.isArray(data.previous_institutions)
             ? data.previous_institutions
             : [],
         };
 
-        console.log("Calling onNext with cleaned data:", cleanedData);
+        console.log(
+          "📤 Submitting experience data with curriculums:",
+          cleanedData.selected_curriculums,
+        );
         await onNext(cleanedData);
-        console.log("onNext completed successfully");
       } catch (error) {
         console.error("Submission error:", error);
         setIsSubmitting(false);
       }
-      // Note: isSubmitting will be reset by the parent component
-    };
-
-    const onError = (errors: any) => {
-      console.log("❌ Form validation errors:", errors);
-    };
-
-    // Check if form is ready for submission
-    const isFormReady = () => {
-      const hasExperienceStatus = typeof hasExperience !== "undefined";
-
-      if (hasExperience) {
-        const hasExperienceDetails =
-          (tscNumber?.trim() ? true : false) || (experienceYears || 0) > 0;
-        return hasExperienceStatus && hasExperienceDetails;
-      }
-
-      return hasExperienceStatus;
     };
 
     const handlePreviousInstitutionsChange = (
@@ -295,48 +278,42 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       setValue("previous_institutions", institutions);
     };
 
-    // Function to handle form submission with validation
-    const handleFormSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      console.log("🔥 handleFormSubmit called, isFormValid:", isFormValid);
-
-      if (isFormValid) {
-        console.log("Form is valid, submitting...");
-        handleSubmit(onSubmit, onError)(e);
-      } else {
-        console.log("Form is not valid, triggering validation...");
-        // Trigger validation to show errors
-        trigger().then(() => {
-          // Try submitting again after a short delay
-          setTimeout(() => {
-            if (isFormValid) {
-              console.log("Form became valid, submitting...");
-              handleSubmit(onSubmit, onError)(e);
-            } else {
-              console.log("Form still invalid");
-            }
-          }, 100);
-        });
+    const getCurriculumRequirementText = () => {
+      switch (actualTutorLevel) {
+        case "college_student":
+          return "Select the curriculum(s) you're qualified to teach. University students often tutor in KCSE, Cambridge, or IB based on their high school background.";
+        case "junior_high_teacher":
+        case "senior_high_teacher":
+          return "Select the curriculum(s) you're qualified to teach (e.g., KCSE, Cambridge, IB, etc.). This is required for school teachers.";
+        case "university_lecturer":
+          return "Select the curriculum frameworks you're qualified to teach at university level (optional).";
+        case "private_tutor":
+          return "Select the curriculum(s) you specialize in teaching (optional).";
+        case "skilled_professional":
+          return "If you teach specific curricula, select them here (optional).";
+        default:
+          return "Select the curriculum(s) you're qualified to teach.";
       }
     };
 
     return (
       <form
         ref={ref}
-        onSubmit={handleFormSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         className="space-y-6"
         id="step-4-form"
       >
         <div>
           <h2 className="text-2xl font-semibold text-zinc-700">
-            Teaching Experience
+            Teaching Experience & Qualifications
           </h2>
           <p className="text-gray-600 mt-2">
-            Share your teaching background and qualifications
+            Share your teaching background and what you're qualified to teach
           </p>
         </div>
 
         <div className="space-y-6">
+          {/* Teaching Experience Checkbox */}
           <div className="flex items-center p-4 bg-gray-50 rounded-lg">
             <input
               type="checkbox"
@@ -355,6 +332,58 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
             </label>
           </div>
 
+          {/* Helpful info for university students */}
+          {actualTutorLevel === "college_student" && (
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900">
+                    For University Students
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    As a university student, you can tutor in various curricula.
+                    Select the ones you're comfortable teaching based on your
+                    high school background and university coursework. Most
+                    university students are qualified to teach KCSE, Cambridge,
+                    or IB curricula.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Curriculum Selection */}
+          {showCurriculum && (
+            <div className="border-t border-gray-200 pt-4">
+              <CurriculumSelector
+                tutorLevel={actualTutorLevel}
+                onChange={handleCurriculumChange}
+                initialValue={selectedCurriculums || []}
+                disabled={isLoading || isSubmitting}
+                required={requiresCurriculum}
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                {getCurriculumRequirementText()}
+              </p>
+            </div>
+          )}
+
+          {/* Teaching Experience Details */}
           {hasExperience && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -412,6 +441,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
             </>
           )}
 
+          {/* Professional Experience Summary */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Professional Experience Summary (Optional)
@@ -428,6 +458,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
             </p>
           </div>
 
+          {/* Portfolio URL */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Portfolio URL (Optional)
@@ -442,13 +473,27 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
             <p className="mt-1 text-sm text-gray-500">
               Share links to your GitHub, Behance, LinkedIn, or personal website
             </p>
-            {errors.portfolio_url && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.portfolio_url.message}
-              </p>
-            )}
           </div>
 
+          {/* Affiliate Code - Using affiliate_code field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Affiliate/Referral Code (Optional)
+            </label>
+            <input
+              type="text"
+              {...register("affiliate_code")}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+              placeholder="Enter affiliate or referral code if you have one"
+              disabled={isLoading || isSubmitting}
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              If you were referred by an existing tutor or community, enter
+              their referral code here
+            </p>
+          </div>
+
+          {/* Certificates Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Certificates & Qualifications (Optional)
@@ -462,7 +507,6 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
             {fields.length > 0 && (
               <div className="mt-4 space-y-3">
                 {fields.map((field, index) => {
-                  // Cast field to any to access properties
                   const fieldData = field as any;
                   return (
                     <div
@@ -498,19 +542,42 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">
-                {isFormReady()
+                {isFormValid
                   ? "✓ All required information is provided"
                   : "Please complete all required fields"}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 Required: Teaching experience status
                 {hasExperience && " + Either TSC number or experience years"}
+                {requiresCurriculum &&
+                  " + Select at least one curriculum you're qualified to teach"}
+                {actualTutorLevel === "college_student" &&
+                  !requiresCurriculum && (
+                    <span className="block text-xs text-purple-600 mt-1">
+                      Tip: Adding your teaching curriculum helps students find
+                      you
+                    </span>
+                  )}
               </p>
             </div>
             <div className="text-sm text-gray-600">
-              {fields.length > 0
-                ? `✓ ${fields.length} certificate(s) uploaded`
-                : "No certificates uploaded (optional)"}
+              {requiresCurriculum &&
+                selectedCurriculums &&
+                selectedCurriculums.length > 0 && (
+                  <span className="text-green-600">
+                    ✓ {selectedCurriculums.length} curriculum(s) selected
+                  </span>
+                )}
+              {curriculumOptional &&
+                selectedCurriculums &&
+                selectedCurriculums.length > 0 && (
+                  <span className="text-blue-600">
+                    ✓ {selectedCurriculums.length} curriculum(s) added
+                  </span>
+                )}
+              {fields.length > 0 && (
+                <span className="ml-2">✓ {fields.length} certificate(s)</span>
+              )}
             </div>
           </div>
         </div>

@@ -1,3 +1,4 @@
+// src/app/dashboard/page.tsx
 "use client";
 
 import { useAuth } from "../context/AuthContext";
@@ -25,82 +26,11 @@ export default function DashboardPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Handle initial redirect
   useEffect(() => {
     if (loading || !user || !userStatus || hasRedirected) return;
 
-    // Get redirect path based on user status
     const redirectPath = getPostLoginRedirect(userStatus);
-
-    // Only redirect if we're not already on the correct page
-    const currentPath = window.location.pathname;
-
-    if (redirectPath !== currentPath) {
-      setHasRedirected(true);
-      router.push(redirectPath);
-    }
-  }, [user, userStatus, loading, router, hasRedirected]);
-  //   useEffect(() => {
-  //     if (loading || !user || !userStatus || hasRedirected) return;
-
-  //     // Determine active roles
-  //     const hasTutorRole = userStatus.hasTutorRole;
-  //     const hasCommunityRole = userStatus.hasCommunityRole;
-  //     const hasStudentRole = userStatus.hasStudentRole !== false;
-
-  //     // COUNT incomplete applications
-  //     const incompleteApplications = [];
-
-  //     if (
-  //       userStatus.tutorApplication &&
-  //       (userStatus.tutorApplication.application_status === "draft" ||
-  //         !userStatus.isApprovedTutor)
-  //     ) {
-  //       incompleteApplications.push("tutor");
-  //     }
-
-  //     if (
-  //       userStatus.communityApplication &&
-  //       (userStatus.communityApplication.application_status === "draft" ||
-  //         !userStatus.isApprovedCommunityMember)
-  //     ) {
-  //       incompleteApplications.push("community");
-  //     }
-
-  //     // SCENARIO 1: Single incomplete application - auto-redirect
-  //     if (incompleteApplications.length === 1) {
-  //       const appType = incompleteApplications[0];
-  //       setHasRedirected(true);
-
-  //       if (appType === "tutor") {
-  //         const tutorApp = userStatus.tutorApplication;
-  //         if (tutorApp?.application_status === "draft") {
-  //           router.push(`/onboarding/tutor?step=${tutorApp.current_step}`);
-  //         } else {
-  //           router.push("/onboarding/tutor");
-  //         }
-  //       } else {
-  //         const communityApp = userStatus.communityApplication;
-  //         if (communityApp?.application_status === "draft") {
-  //           router.push(
-  //             `/onboarding/community?step=${communityApp.current_step}`,
-  //           );
-  //         } else {
-  //           router.push("/onboarding/community");
-  //         }
-  //       }
-  //       return;
-  //     }
-  //   }, [user, userStatus, loading, router, hasRedirected]);
-
-  // Close dropdowns when clicking outside
-
-  useEffect(() => {
-    if (loading || !user || !userStatus || hasRedirected) return;
-
-    // Get redirect path based on user status
-    const redirectPath = getPostLoginRedirect(userStatus);
-
-    // Only redirect if we're not already on the correct page
     const currentPath = window.location.pathname;
 
     if (redirectPath !== currentPath) {
@@ -154,14 +84,36 @@ export default function DashboardPage() {
   if (hasTutorApp) incompleteApps.push("tutor");
   if (hasCommunityApp) incompleteApps.push("community");
 
+  // Role flags
   const hasTutorRole = userStatus.hasTutorRole;
   const hasCommunityRole = userStatus.hasCommunityRole;
   const hasStudentRole = userStatus.hasStudentRole !== false;
+  const hasAffiliateRole = userStatus.hasAffiliateRole === true;
+  const isApprovedAffiliate = userStatus.affiliateData?.is_active === true;
+  const hasActiveAffiliateRole = hasAffiliateRole && isApprovedAffiliate;
 
-  // Get current role from pathname
-  const getCurrentRole = () => {
-    return "User"; // Default for dashboard
-  };
+  // Check if tutor is approved and active
+  const hasActiveTutorRole =
+    hasTutorRole && userStatus.isApprovedTutor && !hasTutorApp;
+
+  // Check if community is approved and active
+  const hasActiveCommunityRole =
+    hasCommunityRole &&
+    userStatus.isApprovedCommunityMember &&
+    !hasCommunityApp;
+
+  // Check if student has active enrollments
+  const hasActiveStudentRole =
+    hasStudentRole && userStatus.hasActiveEnrollments;
+
+  // Count active roles for display
+  const activeRoles = [];
+  if (hasActiveStudentRole) activeRoles.push("Student");
+  if (hasActiveTutorRole) activeRoles.push("Tutor");
+  if (hasActiveCommunityRole) activeRoles.push("Community");
+  if (hasActiveAffiliateRole) activeRoles.push("Affiliate");
+
+  const hasMultipleRoles = activeRoles.length > 1;
 
   return (
     <div className="min-h-screen bg-white">
@@ -174,27 +126,33 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-left md:text-center mb-12">
-          <h1 className="text-xl md:text-2xl font-semibold text-gray-900 ">
+          <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
             Welcome back,{" "}
             <span className="text-gray-700 text-sm md:text-md">
               {user.first_name || user.email}
             </span>
           </h1>
-          <p className="text-gray-600 mt-3 max-w-2xl md:mx-auto">
-            Choose how you want to use SomoHub today. You can switch between
-            roles anytime.
-          </p>
+          {hasMultipleRoles ? (
+            <p className="text-gray-600 mt-3 max-w-2xl md:mx-auto">
+              You have multiple roles. Choose which role you want to use today.
+            </p>
+          ) : (
+            <p className="text-gray-600 mt-3 max-w-2xl md:mx-auto">
+              Choose how you want to use SomoHub today. You can switch between
+              roles anytime.
+            </p>
+          )}
         </div>
 
         {/* Incomplete Applications Section */}
         {incompleteApps.length > 0 && (
           <div className="mb-12">
-            <div className="flex flex-col justify-start items-start gap-1 md:flex-row md:items-center md:justify-between mb-6 ">
+            <div className="flex flex-col justify-start items-start gap-1 md:flex-row md:items-center md:justify-between mb-6">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">
                   Complete Your Setup
                 </h2>
-                <p className="text-gray-500 mt-1 ">
+                <p className="text-gray-500 mt-1">
                   Finish these applications to unlock full platform access
                 </p>
               </div>
@@ -262,11 +220,11 @@ export default function DashboardPage() {
         {/* Main Role Cards Section */}
         <div className="mb-12">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Your Active Roles
+            {hasMultipleRoles ? "Your Available Roles" : "Your Active Roles"}
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Student Role Card - Always shown if student role exists */}
-            {hasStudentRole && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Student Role Card - Only show if student has active enrollments */}
+            {hasActiveStudentRole && (
               <RoleCard
                 title="Student"
                 icon={
@@ -297,33 +255,18 @@ export default function DashboardPage() {
                     />
                   </svg>
                 }
-                description={
-                  userStatus.hasActiveEnrollments
-                    ? "Continue learning with your enrolled courses"
-                    : "Discover and join new learning sessions"
-                }
-                href={
-                  userStatus.hasActiveEnrollments
-                    ? "/student/dashboard"
-                    : "/student/browse-tutors"
-                }
-                status={
-                  userStatus.hasActiveEnrollments
-                    ? {
-                        text: "Active",
-                        color: "bg-emerald-100 text-emerald-800",
-                      }
-                    : {
-                        text: "Browse",
-                        color: "bg-blue-100 text-blue-800",
-                      }
-                }
+                description="Continue learning with your enrolled courses"
+                href="/student/dashboard"
+                status={{
+                  text: "Active",
+                  color: "bg-emerald-100 text-emerald-800",
+                }}
                 color="from-blue-500 to-cyan-500"
               />
             )}
 
-            {/* Tutor Role Card (only if no incomplete tutor app) */}
-            {hasTutorRole && !hasTutorApp && (
+            {/* Tutor Role Card (only if approved and no incomplete tutor app) */}
+            {hasActiveTutorRole && (
               <RoleCard
                 title="Tutor"
                 icon={
@@ -351,8 +294,8 @@ export default function DashboardPage() {
               />
             )}
 
-            {/* Community Role Card (only if no incomplete community app) */}
-            {hasCommunityRole && !hasCommunityApp && (
+            {/* Community Role Card (only if approved and no incomplete community app) */}
+            {hasActiveCommunityRole && (
               <RoleCard
                 title="Community"
                 icon={
@@ -379,6 +322,35 @@ export default function DashboardPage() {
                 color="from-purple-500 to-violet-500"
               />
             )}
+
+            {/* Affiliate Role Card - Show if affiliate role is active */}
+            {hasActiveAffiliateRole && (
+              <RoleCard
+                title="Affiliate"
+                icon={
+                  <svg
+                    className="w-8 h-8"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.5"
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                }
+                description="Earn commissions by referring tutors to SomoHub"
+                href="/affiliate/dashboard"
+                status={{
+                  text: "Active",
+                  color: "bg-emerald-100 text-emerald-800",
+                }}
+                color="from-pink-500 to-rose-500"
+              />
+            )}
           </div>
         </div>
 
@@ -387,7 +359,7 @@ export default function DashboardPage() {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
             Quick Overview
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               title="Active Sessions"
               value={
@@ -416,18 +388,24 @@ export default function DashboardPage() {
             />
             <StatCard
               title="Account Type"
-              value={(() => {
-                const roles = [];
-                if (hasTutorRole && !hasTutorApp) roles.push("Tutor");
-                if (hasCommunityRole && !hasCommunityApp)
-                  roles.push("Community");
-                if (hasStudentRole) roles.push("Student");
-                return roles.length > 1 ? "Multi-role" : roles[0] || "Student";
-              })()}
+              value={
+                activeRoles.length > 1
+                  ? "Multi-role"
+                  : activeRoles[0] || "Student"
+              }
               description="Your active roles"
               icon="👤"
               color="bg-purple-50 text-purple-600"
             />
+            {hasActiveAffiliateRole && (
+              <StatCard
+                title="Affiliate Earnings"
+                value={`KES ${(userStatus.affiliateData?.total_earnings || 0).toLocaleString()}`}
+                description="Total commissions earned"
+                icon="💰"
+                color="bg-pink-50 text-pink-600"
+              />
+            )}
           </div>
         </div>
 
@@ -455,7 +433,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Add mobile-friendly styles */}
       <style jsx global>{`
         /* Mobile fullscreen dropdown styles */
         .mobile-fullscreen {
@@ -519,7 +496,7 @@ export default function DashboardPage() {
         @media (max-width: 768px) {
           .dropdown-trigger {
             padding: 10px;
-            min-height: 44px; /* Minimum touch target size */
+            min-height: 44px;
           }
 
           .dropdown-menu .items {
@@ -611,14 +588,11 @@ function ApplicationCard({
     ) {
       // TODO: Implement API call to delete application
       console.log(`Delete ${type} application`);
-      // Show loading state
       const button = document.activeElement as HTMLButtonElement;
       if (button) {
         button.disabled = true;
         button.innerHTML = "Deleting...";
       }
-
-      // Simulate API call
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -729,14 +703,12 @@ function RoleCard({ title, icon, description, href, status, color }: any) {
       className="group block bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-200 hover:border-gray-300"
     >
       <div className="p-8">
-        {/* Icon with gradient background */}
         <div
           className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-300`}
         >
           <div className="text-white">{icon}</div>
         </div>
 
-        {/* Title and Status */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
           {status && (
@@ -748,10 +720,8 @@ function RoleCard({ title, icon, description, href, status, color }: any) {
           )}
         </div>
 
-        {/* Description */}
         <p className="text-gray-600 mb-6 leading-relaxed">{description}</p>
 
-        {/* Action Button */}
         <div className="flex items-center text-blue-600 font-medium group-hover:text-blue-800 transition-colors">
           <span>Go to Dashboard</span>
           <svg

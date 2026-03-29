@@ -40,6 +40,18 @@ import {
   Linkedin,
   Mail as MailIcon,
   Link2,
+  BookOpen,
+  Award,
+  Target,
+  BookMarked,
+  Library,
+  Users,
+  CircleCheckBig,
+  XCircle,
+  Timer,
+  CircleDollarSign,
+  Code,
+  Sun,
 } from "lucide-react";
 
 interface PaymentInitResponse {
@@ -123,7 +135,7 @@ const PaymentModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-gray-900/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -300,18 +312,18 @@ const ShareModal = ({
   onClose,
   title,
   description,
-  sessionId,
+  sessionUuid,
 }: {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   description?: string;
-  sessionId: number;
+  sessionUuid: string;
 }) => {
   const [copySuccess, setCopySuccess] = useState(false);
 
   const getShareUrl = () => {
-    return `${window.location.origin}/tuitions/${sessionId}`;
+    return `${window.location.origin}/tuitions/${sessionUuid}`;
   };
 
   const getShareTitle = () => {
@@ -366,7 +378,7 @@ const ShareModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-gray-900/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full p-6 relative animate-fadeIn">
         <button
           onClick={onClose}
@@ -495,9 +507,10 @@ export default function TuitionDetailPage() {
   const [loveLoading, setLoveLoading] = useState(false);
   const [loveCount, setLoveCount] = useState(0);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [wishlistInitialized, setWishlistInitialized] = useState(false);
 
   const ITEMS_PER_PAGE = 10;
-  const sessionId = parseInt(params.id as string);
+  const sessionUuid = params.id as string;
 
   // Check for payment callback from Paystack
   useEffect(() => {
@@ -510,25 +523,35 @@ export default function TuitionDetailPage() {
     }
   }, []);
 
-  // Initial fetch
+  // Initial fetch - load session details first
   useEffect(() => {
-    if (sessionId) {
+    if (sessionUuid) {
       fetchSessionDetails();
-      checkIfLoved();
-      fetchLoveCount();
     }
-  }, [sessionId]);
+  }, [sessionUuid]);
 
-  // Refetch when auth loading completes and user is available
+  // Fetch wishlist data once session and user are available
   useEffect(() => {
-    if (!authLoading && sessionId) {
-      fetchSessionDetails();
+    if (!authLoading && session && user) {
+      console.log("🔄 Fetching wishlist data for session:", session.id);
       checkIfLoved();
       fetchLoveCount();
     }
-  }, [authLoading, user?.uuid, sessionId]);
+  }, [authLoading, session, user]);
+
+  // Also fetch wishlist data when session loads but user might already be loaded
+  useEffect(() => {
+    if (session && user && !authLoading && !wishlistInitialized) {
+      console.log("🔄 Session loaded with user, fetching wishlist data");
+      checkIfLoved();
+      fetchLoveCount();
+      setWishlistInitialized(true);
+    }
+  }, [session, user, authLoading]);
 
   const handlePaymentCallback = async (reference: string) => {
+    if (!session) return;
+
     try {
       setEnrolling(true);
       toast.loading("Verifying payment...", { id: "payment-verification" });
@@ -540,7 +563,7 @@ export default function TuitionDetailPage() {
       if (verifyResponse.success) {
         if (verifyResponse.data?.status === "success") {
           const enrollResponse = await tuitionApi.enrollInSession(
-            sessionId,
+            sessionUuid,
             reference,
           );
 
@@ -580,16 +603,19 @@ export default function TuitionDetailPage() {
 
   // Check if session is in user's wishlist
   const checkIfLoved = async () => {
-    if (!user) {
+    if (!user || !session) {
+      console.log("❌ Cannot check wishlist - missing user or session");
       setIsLoved(false);
       return;
     }
 
     try {
-      // FIXED: Use checkSession instead of checkTutor
-      const response = await wishlistApi.checkSession(sessionId);
+      console.log("🔍 Checking if session is loved:", session.id);
+      const response = await wishlistApi.checkSession(session.id);
+      console.log("✅ Wishlist check response:", response);
       if (response.data && typeof response.data.isLoved === "boolean") {
         setIsLoved(response.data.isLoved);
+        console.log("❤️ Is loved:", response.data.isLoved);
       } else {
         setIsLoved(false);
       }
@@ -601,11 +627,18 @@ export default function TuitionDetailPage() {
 
   // Fetch love count
   const fetchLoveCount = async () => {
+    if (!session) {
+      console.log("❌ Cannot fetch love count - no session");
+      return;
+    }
+
     try {
-      // FIXED: Use getSessionLoveCount instead of getTutorLoveCount
-      const response = await wishlistApi.getSessionLoveCount(sessionId);
+      console.log("🔍 Fetching love count for session:", session.id);
+      const response = await wishlistApi.getSessionLoveCount(session.id);
+      console.log("✅ Love count response:", response);
       if (response.data && typeof response.data.count === "number") {
         setLoveCount(response.data.count);
+        console.log("❤️ Love count:", response.data.count);
       } else {
         setLoveCount(0);
       }
@@ -628,14 +661,14 @@ export default function TuitionDetailPage() {
       setLoveLoading(true);
 
       if (isLoved) {
-        // FIXED: Use removeSession instead of removeTutor
-        await wishlistApi.removeSession(sessionId);
+        console.log("Removing from wishlist:", session.id);
+        await wishlistApi.removeSession(session.id);
         setIsLoved(false);
         setLoveCount((prev) => Math.max(0, prev - 1));
         toast.success("Removed from favorites");
       } else {
-        // FIXED: Use addSession instead of addTutor
-        await wishlistApi.addSession(sessionId);
+        console.log("Adding to wishlist:", session.id);
+        await wishlistApi.addSession(session.id);
         setIsLoved(true);
         setLoveCount((prev) => prev + 1);
         toast.success("Added to favorites");
@@ -648,29 +681,18 @@ export default function TuitionDetailPage() {
     }
   };
 
-  const formatLevel = (level?: string) => {
-    if (!level) return null;
-
-    const levelMap: Record<string, string> = {
-      primary: "Primary",
-      junior_high: "Junior High",
-      senior_high: "Senior High",
-      university: "University",
-      adult: "Adult",
-      all: "All Levels",
-    };
-
-    return levelMap[level] || level;
-  };
-
   const fetchSessionDetails = async () => {
     try {
       setLoading(true);
-      const response = await tuitionApi.getSessionById(sessionId);
+      console.log("📖 Fetching session with UUID:", sessionUuid);
+
+      const response = await tuitionApi.getSessionByUuid(sessionUuid);
 
       if (response.success && response.data) {
+        console.log("✅ Session loaded:", response.data.name);
         setSession(response.data);
       } else {
+        console.error("❌ Session not found:", response.message);
         toast.error("Session not found");
         router.push("/sessions");
         setLoading(false);
@@ -688,7 +710,7 @@ export default function TuitionDetailPage() {
 
       try {
         const eligibilityRes =
-          await tuitionApi.checkEnrollmentEligibility(sessionId);
+          await tuitionApi.checkEnrollmentEligibility(sessionUuid);
 
         if (eligibilityRes.success && eligibilityRes.data) {
           setEligibility(eligibilityRes.data);
@@ -736,9 +758,11 @@ export default function TuitionDetailPage() {
   };
 
   const handleFreeEnrollment = async () => {
+    if (!session) return;
+
     try {
       setEnrolling(true);
-      const response = await tuitionApi.enrollInSession(sessionId);
+      const response = await tuitionApi.enrollInSession(sessionUuid);
 
       if (response.success) {
         toast.success("Successfully enrolled in session!");
@@ -758,9 +782,8 @@ export default function TuitionDetailPage() {
 
   const handleLoginSuccess = () => {
     setShowLoginModal(false);
+    setWishlistInitialized(false);
     fetchSessionDetails();
-    checkIfLoved();
-    fetchLoveCount();
   };
 
   const formatCurrency = (amount: number, currency: string = "KES") => {
@@ -778,54 +801,6 @@ export default function TuitionDetailPage() {
       month: "long",
       day: "numeric",
     });
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getSortedSchedules = () => {
-    if (!session?.schedules || !Array.isArray(session.schedules)) {
-      return [];
-    }
-
-    const validSchedules = session.schedules
-      .map((schedule, index) => {
-        if (!schedule.date) {
-          return null;
-        }
-
-        const startDate = new Date(schedule.date);
-
-        if (isNaN(startDate.getTime())) {
-          return null;
-        }
-
-        const endDate = new Date(startDate);
-        endDate.setMinutes(
-          endDate.getMinutes() + (session.class_duration_minutes || 90),
-        );
-
-        return {
-          id: schedule.id || index,
-          start_time: startDate.toISOString(),
-          end_time: endDate.toISOString(),
-          original_date: schedule.date,
-          title: schedule.title || "",
-          description: schedule.description || "",
-        };
-      })
-      .filter((schedule) => schedule !== null)
-      .sort((a, b) => {
-        return (
-          new Date(a!.start_time).getTime() - new Date(b!.start_time).getTime()
-        );
-      });
-
-    return validSchedules;
   };
 
   const formatScheduleDate = (dateString: string) => {
@@ -873,6 +848,47 @@ export default function TuitionDetailPage() {
     }
   };
 
+  const getSortedSchedules = () => {
+    if (!session?.schedules || !Array.isArray(session.schedules)) {
+      return [];
+    }
+
+    const validSchedules = session.schedules
+      .map((schedule, index) => {
+        if (!schedule.date) {
+          return null;
+        }
+
+        const startDate = new Date(schedule.date);
+
+        if (isNaN(startDate.getTime())) {
+          return null;
+        }
+
+        const endDate = new Date(startDate);
+        endDate.setMinutes(
+          endDate.getMinutes() + (session.class_duration_minutes || 90),
+        );
+
+        return {
+          id: schedule.id || index,
+          start_time: startDate.toISOString(),
+          end_time: endDate.toISOString(),
+          original_date: schedule.date,
+          title: schedule.title || "",
+          description: schedule.description || "",
+        };
+      })
+      .filter((schedule) => schedule !== null)
+      .sort((a, b) => {
+        return (
+          new Date(a!.start_time).getTime() - new Date(b!.start_time).getTime()
+        );
+      });
+
+    return validSchedules;
+  };
+
   const ScheduleModal = () => {
     const schedules = getSortedSchedules();
 
@@ -892,7 +908,7 @@ export default function TuitionDetailPage() {
 
     if (schedules.length === 0) {
       return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-900/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
@@ -933,7 +949,7 @@ export default function TuitionDetailPage() {
     }
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-gray-900/40 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
@@ -951,19 +967,31 @@ export default function TuitionDetailPage() {
           </div>
 
           <div className="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
-            <div className="mb-4 p-4 bg-purple-50 rounded-xl">
-              <p className="text-sm text-purple-700">
-                <span className="font-medium">Total Classes:</span>{" "}
-                {schedules.length} sessions
-              </p>
+            <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
+              <div className="flex items-center gap-2">
+                <CalendarRange className="w-5 h-5 text-purple-600" />
+                <p className="text-sm text-purple-700">
+                  <span className="font-medium">Total Classes:</span>{" "}
+                  {schedules.length} sessions
+                </p>
+              </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center gap-4 text-sm text-gray-600 pb-2 border-b border-gray-200">
                 <span className="w-8 font-medium text-center">#</span>
-                <span className="w-32 font-medium">Date</span>
-                <span className="w-24 font-medium">Day</span>
-                <span className="flex-1 font-medium">Time</span>
+                <span className="w-32 font-medium flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  Date
+                </span>
+                <span className="w-24 font-medium flex items-center gap-1">
+                  <Sun className="w-3 h-3" />
+                  Day
+                </span>
+                <span className="flex-1 font-medium flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Time
+                </span>
               </div>
 
               {currentSchedules.map((schedule, index) => {
@@ -976,13 +1004,16 @@ export default function TuitionDetailPage() {
                     <span className="w-8 text-center text-gray-500 font-mono">
                       {globalIndex}
                     </span>
-                    <span className="w-32 text-gray-900 font-medium">
+                    <span className="w-32 text-gray-900 font-medium flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-gray-400" />
                       {formatScheduleDate(schedule.start_time)}
                     </span>
-                    <span className="w-24 text-gray-600">
+                    <span className="w-24 text-gray-600 flex items-center gap-1">
+                      <Sun className="w-3 h-3 text-yellow-500" />
                       {formatScheduleDay(schedule.start_time)}
                     </span>
-                    <span className="flex-1 text-gray-600">
+                    <span className="flex-1 text-gray-600 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-blue-500" />
                       {formatScheduleTime(schedule.start_time)} -{" "}
                       {formatScheduleTime(
                         schedule.end_time || schedule.start_time,
@@ -1131,8 +1162,8 @@ export default function TuitionDetailPage() {
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         title={session.name}
-        description={session.description || session.course_description}
-        sessionId={sessionId}
+        description={session.description}
+        sessionUuid={sessionUuid}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1157,54 +1188,53 @@ export default function TuitionDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content - Left Column */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Session Header */}
+            {/* Session Header - RESTRUCTURED WITH WISHLIST/SHARE IN HEADER */}
             <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span
-                      className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
-                        session.session_type === "one_on_one"
-                          ? "bg-purple-100 text-purple-700"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {session.session_type === "one_on_one"
-                        ? "One-on-One Session"
-                        : "Group Session"}
-                    </span>
-                    {session.course_level && (
-                      <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                        {formatLevel(session.course_level)}
-                      </span>
+              {/* Header Row with Badges and Action Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                {/* Left side - Badges */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${
+                      session.session_type === "one_on_one"
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
+                    {session.session_type === "one_on_one" ? (
+                      <>
+                        <User className="w-3 h-3" />
+                        One-on-One Session
+                      </>
+                    ) : (
+                      <>
+                        <Users className="w-3 h-3" />
+                        Group Session
+                      </>
                     )}
-                    <span
-                      className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
-                        session.enrollment_status === "open"
-                          ? "bg-green-100 text-green-700"
-                          : session.enrollment_status === "waiting_list"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {session.enrollment_status.replace("_", " ")}
-                    </span>
-                  </div>
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 w-full">
-                    {session.name}
-                  </h1>
-                  <p className="text-sm sm:text-base text-gray-500 mt-2">
-                    {session.course_title}
-                  </p>
-                  {session.course_subject && (
-                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                      Subject: {session.course_subject}
-                    </p>
-                  )}
+                  </span>
+                  <span
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${
+                      session.enrollment_status === "open"
+                        ? "bg-green-100 text-green-700"
+                        : session.enrollment_status === "waiting_list"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {session.enrollment_status === "open" ? (
+                      <CircleCheckBig className="w-3 h-3" />
+                    ) : session.enrollment_status === "waiting_list" ? (
+                      <Clock className="w-3 h-3" />
+                    ) : (
+                      <XCircle className="w-3 h-3" />
+                    )}
+                    {session.enrollment_status.replace("_", " ")}
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
-                  {/* Love/Favorite Button with count */}
+                {/* Right side - Wishlist and Share Buttons */}
+                <div className="flex items-center gap-2">
                   <div className="flex items-center">
                     <button
                       onClick={toggleLove}
@@ -1229,7 +1259,6 @@ export default function TuitionDetailPage() {
                     </span>
                   </div>
 
-                  {/* Share Button */}
                   <button
                     onClick={() => setShowShareModal(true)}
                     className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -1240,7 +1269,63 @@ export default function TuitionDetailPage() {
                 </div>
               </div>
 
-              {/* Session Meta */}
+              {/* Session Name - Full Width */}
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 mb-4">
+                {session.name}
+              </h1>
+
+              {/* Session Details Grid - Full Width */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                {/* Subject */}
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500">Subject</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {session.subject}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tutor Level */}
+                {session.tutor_level_name && (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <GraduationCap className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-500">Tutor Level</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {session.tutor_level_name}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Curriculum */}
+                {session.curriculum_name && (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <Library className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-500">Curriculum</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {session.curriculum_name}
+                        {session.curriculum_level_name && (
+                          <span className="text-xs text-gray-500 ml-1">
+                            ({session.curriculum_level_name})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Session Meta - Price, Duration, Classes per Week */}
               <div className="grid grid-cols-3 gap-2 sm:gap-4 py-4 border-t border-gray-200">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Price</p>
@@ -1265,20 +1350,67 @@ export default function TuitionDetailPage() {
 
             {/* Description */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-purple-600" />
                 About This Session
               </h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                {session.description ||
-                  session.course_description ||
-                  "No description provided."}
+                {session.description || "No description provided."}
               </p>
             </div>
+
+            {/* Prerequisites */}
+            {session.prerequisites && session.prerequisites.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <BookMarked className="w-5 h-5 text-purple-600" />
+                  Prerequisites
+                </h2>
+                <div className="space-y-2">
+                  {session.prerequisites.map((prereq, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3 h-3 text-purple-600" />
+                      </div>
+                      <span className="text-gray-700">{prereq}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Learning Outcomes */}
+            {session.learning_outcomes &&
+              session.learning_outcomes.length > 0 && (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Target className="w-5 h-5 text-purple-600" />
+                    Learning Outcomes
+                  </h2>
+                  <div className="space-y-2">
+                    {session.learning_outcomes.map((outcome, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start gap-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg hover:shadow-sm transition-shadow"
+                      >
+                        <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center flex-shrink-0">
+                          <Award className="w-3 h-3 text-amber-700" />
+                        </div>
+                        <span className="text-gray-700">{outcome}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             {/* Schedule */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <CalendarRange className="w-5 h-5 text-purple-600" />
                   Schedule
                 </h2>
                 <button
@@ -1292,9 +1424,11 @@ export default function TuitionDetailPage() {
                   Show Full Schedule ({session.schedules?.length || 0} classes)
                 </button>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Calendar className="w-4 h-4 text-purple-600" />
+                  </div>
                   <div>
                     <p className="text-sm text-gray-500">Start Date</p>
                     <p className="font-medium text-gray-900">
@@ -1302,8 +1436,10 @@ export default function TuitionDetailPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <CalendarDays className="w-5 h-5 text-gray-400 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <CalendarDays className="w-4 h-4 text-blue-600" />
+                  </div>
                   <div>
                     <p className="text-sm text-gray-500">End Date</p>
                     <p className="font-medium text-gray-900">
@@ -1311,8 +1447,10 @@ export default function TuitionDetailPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                  </div>
                   <div>
                     <p className="text-sm text-gray-500">Session Times</p>
                     <p className="font-medium text-gray-900">
@@ -1321,20 +1459,34 @@ export default function TuitionDetailPage() {
                     </p>
                   </div>
                 </div>
+                {session.total_duration_string && (
+                  <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                    <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                      <Timer className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Total Duration</p>
+                      <p className="font-medium text-gray-900">
+                        {session.total_duration_string}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Tutor Section */}
             {session.tutor_id && (
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-purple-600" />
                   Your Tutor
                 </h2>
                 <div
                   onClick={() => router.push(`/tutors/${session.tutor_id}`)}
-                  className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                  className="flex items-start gap-4 p-4 bg-gradient-to-r from-gray-50 to-purple-50 rounded-xl hover:from-purple-50 hover:to-purple-100 transition-all cursor-pointer group"
                 >
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 overflow-hidden flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 overflow-hidden flex-shrink-0 border-2 border-white shadow-md">
                     {session.tutor_avatar ? (
                       <img
                         src={session.tutor_avatar}
@@ -1348,25 +1500,35 @@ export default function TuitionDetailPage() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 hover:text-purple-600 transition-colors">
+                    <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors text-lg">
                       {session.tutor_name || "Tutor"}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                    <div className="flex flex-wrap items-center gap-3 mt-2">
+                      {session.tutor_rating && session.tutor_rating > 0 && (
+                        <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs font-medium text-gray-700">
+                            {session.tutor_rating &&
+                              parseFloat(
+                                session.tutor_rating.toString(),
+                              ).toFixed(1)}
+                          </span>
+                        </div>
+                      )}
+                      {session.tutor_level_name && (
+                        <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full">
+                          <GraduationCap className="w-3 h-3 text-blue-600" />
+                          <span className="text-xs font-medium text-gray-700">
+                            {session.tutor_level_name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2 line-clamp-2">
                       {session.tutor_bio}
                     </p>
-                    {session.tutor_rating && session.tutor_rating > 0 && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium text-gray-700">
-                          {session.tutor_rating &&
-                            parseFloat(session.tutor_rating.toString()).toFixed(
-                              1,
-                            )}
-                        </span>
-                      </div>
-                    )}
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
                 </div>
               </div>
             )}
@@ -1376,8 +1538,12 @@ export default function TuitionDetailPage() {
           <div className="lg:col-span-1 space-y-6">
             {/* Enrollment Card */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 sticky top-4">
+              {/* Price */}
               <div className="text-center mb-6">
-                <p className="text-3xl font-semibold text-gray-900">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-purple-100 to-blue-100 mb-3">
+                  <CircleDollarSign className="w-8 h-8 text-purple-600" />
+                </div>
+                <p className="text-2xl font-semibold text-gray-900">
                   {formatCurrency(session.fee_amount, session.fee_currency)}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">per student</p>
@@ -1386,7 +1552,10 @@ export default function TuitionDetailPage() {
               {/* Enrollment Status */}
               <div className="mb-6">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-gray-600">Availability</span>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-600">Availability</span>
+                  </div>
                   <span className="font-medium text-gray-900">
                     {session.max_students - session.current_enrollment} spots
                     left
@@ -1394,12 +1563,16 @@ export default function TuitionDetailPage() {
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-purple-600 rounded-full h-2"
+                    className="bg-purple-600 rounded-full h-2 transition-all duration-500"
                     style={{
                       width: `${(session.current_enrollment / session.max_students) * 100}%`,
                     }}
                   />
                 </div>
+                {/* <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>{session.current_enrollment} enrolled</span>
+                  <span>{session.max_students} capacity</span>
+                </div> */}
               </div>
 
               {/* Enrollment Button */}
@@ -1478,27 +1651,41 @@ export default function TuitionDetailPage() {
 
               {/* Session Info */}
               <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <Video className="w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-3 text-sm p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Video className="w-4 h-4 text-blue-600" />
+                  </div>
                   <span className="text-gray-600">Live online sessions</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <FileText className="w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-3 text-sm p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-green-600" />
+                  </div>
                   <span className="text-gray-600">
                     Course materials included
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-sm p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Award className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <span className="text-gray-600">
+                    Certificate of completion
                   </span>
                 </div>
               </div>
 
               {/* Session Code */}
-              <div
-                className="bg-transparent mt-14"
-                style={{ top: "calc(4rem + 380px)" }}
-              >
-                <p className="text-xs text-gray-500 mb-1">Session Code</p>
-                <p className="font-mono text-lg font-semibold text-gray-900 break-all">
-                  {session.session_code}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                  <Code className="w-3 h-3" />
+                  Session Code
                 </p>
+                <div className="bg-gray-50 rounded-lg p-2 text-center">
+                  <p className="font-mono text-sm font-semibold text-gray-900 break-all">
+                    {session.session_code}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1515,7 +1702,7 @@ export default function TuitionDetailPage() {
           onClose={() => setShowPaymentModal(false)}
           amount={session.fee_amount}
           currency={session.fee_currency}
-          sessionId={sessionId}
+          sessionId={session.id}
           sessionName={session.name}
           onPaymentComplete={handlePaymentComplete}
         />

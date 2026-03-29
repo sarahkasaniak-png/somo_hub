@@ -1,83 +1,28 @@
 // src/types/tuition.types.ts
-
-
-// src/types/tuition.types.ts
-
-export interface TutorSession {
+export interface TutorLevel {
   id: number;
-  tutor_course_id: number;
-  name: string;
-  description: string;
-  batch_name: string | null;
-  session_type: 'one_on_one' | 'group';
-  max_students: number;
-  current_enrollment: number;
-  start_date: string;
-  end_date: string;
-  session_code: string;
-  enrollment_status: 'open' | 'waiting_list' | 'closed' | 'completed';
-  fee_amount: number;
-  fee_currency: string;
-  status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
-  created_at: string;
-  
-  // Joined fields
-  course_title?: string;
-  course_description?: string;
-  course_subject?: string;
-  course_level?: string;
-  course_thumbnail?: string;
-  tutor_id?: number;
-  tutor_name?: string;
-  tutor_avatar?: string;
-  tutor_bio?: string;
-  tutor_rating?: number;
-  total_sessions?: number;
-  
-  // Tutor level fields
-  tutor_level_id?: number;
-  tutor_level_name?: string;
-  tutor_level_description?: string;
-  
-  // New fields from schedules
-  classes_per_week?: number;
-  class_duration_minutes?: number;
-  total_duration_hours?: number;
-  total_duration_minutes?: number;
-  total_duration_string?: string;
-  schedules_count?: number;
-  schedules?: TutorSessionSchedule[];
-  schedules_by_week?: Record<number, TutorSessionSchedule[]>;
+  level_name: string;
+  level_description: string;
+  requires_admission_letter: boolean;
+  requires_tsc_number: boolean;
+  requires_portfolio: boolean;
 }
 
-export interface Tutor {
+export interface CurriculumLevel {
   id: number;
-  user_id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  avatar_url: string | null;
-  bio: string | null;
-  headline: string | null;
-  rating: number;
-  total_sessions: number;
-  total_students: number;
-  response_rate: number;
-  response_time: string;
-  hourly_rate: number;
-  currency: string;
-  subjects: TutorSubject[];
-  languages: TutorLanguage[];
-  is_featured: boolean;
-  is_available: boolean;
-  tutor_level_id?: number;
-  tutor_level?: {
-    id: number;
-    level_name: string;
-    level_description: string;
-  };
-  love_count?: number;           // Total number of users who love this tutor
-  is_loved_by_current_user?: boolean; // Whether the current user loves this tutor
+  name: string;
+  code: string;
+  order_index: number;
+}
+
+export interface Curriculum {
+  id: number;
+  uuid: string;
+  name: string;
+  code: string;
+  description: string;
+  country: string;
+  levels: CurriculumLevel[];
 }
 
 export interface TutorSessionSchedule {
@@ -103,13 +48,34 @@ export interface TutorSessionSchedule {
   recorded_session_url: string | null;
 }
 
-// src/types/tuition.types.ts
-
 export interface TutorSession {
   id: number;
-  tutor_course_id: number;
+  uuid: string;
+  tutor_id: number;
+  tutor_level_id?: number;
   name: string;
   description: string;
+  subject: string;
+  curriculum_id?: number;
+  curriculum_level_id?: number;
+  prerequisites: string[];
+  learning_outcomes: string[];
+  curriculum_data: Array<{
+    week: number;
+    topic: string;
+    objectives?: string[];
+    materials?: string[];
+  }>;
+
+  // Joined fields
+  tutor_level_name?: string;
+  tutor_level_description?: string;
+  curriculum_name?: string;
+  curriculum_code?: string;
+  curriculum_level_name?: string;
+  curriculum_level_code?: string;
+
+  // Session-specific fields
   batch_name: string | null;
   session_type: 'one_on_one' | 'group';
   max_students: number;
@@ -120,28 +86,16 @@ export interface TutorSession {
   enrollment_status: 'open' | 'waiting_list' | 'closed' | 'completed';
   fee_amount: number;
   fee_currency: string;
-  status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
+  session_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
   created_at: string;
-  
+
   // Joined fields
-  course_title?: string;
-  course_description?: string;
-  course_subject?: string;
-  course_level?: string;
-  course_thumbnail?: string;
-  tutor_id?: number;
   tutor_name?: string;
   tutor_avatar?: string;
   tutor_bio?: string;
   tutor_rating?: number;
-  total_sessions?: number;
-  
-  // Tutor level fields
-  tutor_level_id?: number;
-  tutor_level_name?: string;
-  tutor_level_description?: string;
-  
-  // New fields from schedules
+
+  // Schedule fields
   classes_per_week?: number;
   class_duration_minutes?: number;
   total_duration_hours?: number;
@@ -150,6 +104,20 @@ export interface TutorSession {
   schedules_count?: number;
   schedules?: TutorSessionSchedule[];
   schedules_by_week?: Record<number, TutorSessionSchedule[]>;
+}
+
+export interface TutorSubject {
+  id: number;
+  subject: string;
+  hourly_rate: number;
+  experience_years: number;
+  levels: string[];
+  is_verified: boolean;
+}
+
+export interface TutorLanguage {
+  language: string;
+  proficiency: string;
 }
 
 export interface Tutor {
@@ -173,25 +141,18 @@ export interface Tutor {
   is_featured: boolean;
   is_available: boolean;
   tutor_level_id?: number;
-  tutor_level?: {
+  tutor_level?: TutorLevel;
+  love_count?: number;
+  is_loved_by_current_user?: boolean;
+   curriculums?: Array<{
     id: number;
-    level_name: string;
-    level_description: string;
-  };
-}
-
-export interface TutorSubject {
-  id: number;
-  subject: string;
-  hourly_rate: number;
-  experience_years: number;
-  levels: string[];
-  is_verified: boolean;
-}
-
-export interface TutorLanguage {
-  language: string;
-  proficiency: string;
+    curriculum_id: number;
+    curriculum_name: string;
+    curriculum_code: string;
+    curriculum_level_id: number | null;
+    curriculum_level_name: string | null;
+  }>;
+  curriculum_ids?: number[]; // For filtering
 }
 
 export interface Community {
@@ -215,6 +176,9 @@ export interface TuitionFilters {
   price_max?: number;
   session_type?: 'one_on_one' | 'group';
   tutor_id?: number;
+  tutor_level_id?: number;
+  curriculum_id?: number;
+  curriculum_level_id?: number;
   search?: string;
   sort?: 'popular' | 'newest' | 'price_low' | 'price_high' | 'rating';
   curriculum?: string;
@@ -225,4 +189,18 @@ export interface SearchResults {
   sessions: TutorSession[];
   tutors: Tutor[];
   communities: Community[];
+}
+
+// Add curriculum type for search
+export interface CurriculumOption {
+  id: number;
+  name: string;
+  code: string;
+  levels: CurriculumLevelOption[];
+}
+
+export interface CurriculumLevelOption {
+  id: number;
+  name: string;
+  code: string;
 }

@@ -74,6 +74,7 @@ interface DashboardStats {
   learningHours: number;
 }
 
+// Updated Enrollment interface to match API response
 interface Enrollment {
   id: number;
   tutor_course_session_id: number;
@@ -93,20 +94,18 @@ interface Enrollment {
   session: {
     id: number;
     name: string;
+    description?: string | null;
     session_code: string;
+    session_type?: string;
     start_date: string;
     end_date: string;
     max_students: number;
     fee_amount: number;
     fee_currency: string;
     status: string;
-    course: {
-      id: number;
-      title: string;
-      subject: string;
-      level: string;
-      thumbnail_url: string | null;
-    };
+    subject?: string;
+    level?: string;
+    thumbnail_url: string | null;
     tutor: {
       id: number;
       first_name: string;
@@ -209,15 +208,6 @@ export default function StudentDashboard() {
     const displayName = formatDisplayName();
     setStudentName(displayName);
 
-    // Debug logs (commented out in production)
-    // console.log("📊 Student Dashboard - profileData:", {
-    //   first_name: profileData?.first_name,
-    //   last_name: profileData?.last_name,
-    //   email: profileData?.email,
-    //   stats: profileData?.stats,
-    // });
-    // console.log("📊 Student Dashboard - formatted name:", displayName);
-
     fetchDashboardData();
   }, [user, profileData]);
 
@@ -246,7 +236,19 @@ export default function StudentDashboard() {
         enrollmentsResponse.value.success
       ) {
         const enrollmentsData = enrollmentsResponse.value.data;
-        setRecentEnrollments(enrollmentsData?.enrollments || []);
+        // Cast to any to handle potential type mismatches, then map to our interface
+        const enrollments = (enrollmentsData?.enrollments || []).map(
+          (enrollment: any) => ({
+            ...enrollment,
+            session: {
+              ...enrollment.session,
+              subject: enrollment.session.subject || "",
+              level: enrollment.session.level || "",
+              thumbnail_url: enrollment.session.thumbnail_url || null,
+            },
+          }),
+        );
+        setRecentEnrollments(enrollments);
         setStats((prev) => ({
           ...prev,
           enrolledCourses: enrollmentsData?.total || 0,
@@ -269,7 +271,6 @@ export default function StudentDashboard() {
       // Process dashboard stats
       if (statsResponse.status === "fulfilled" && statsResponse.value.success) {
         const statsData = statsResponse.value.data;
-        console.log("stats data:", statsData);
         setStats((prev) => ({
           ...prev,
           activeEnrollments:
@@ -335,13 +336,13 @@ export default function StudentDashboard() {
     const metadata = activity.metadata || {};
 
     if (action.includes("enrollment_created"))
-      return `Enrolled in: ${metadata.course_title || ""}`;
+      return `Enrolled in: ${metadata.session_name || ""}`;
     if (action.includes("payment_completed"))
       return `Payment completed: ${metadata.amount || ""}`;
     if (action.includes("session_attended"))
       return `Attended: ${metadata.session_name || ""}`;
     if (action.includes("review_submitted"))
-      return `Left a review for ${metadata.course_title || ""}`;
+      return `Left a review for ${metadata.session_name || ""}`;
 
     return action
       .replace(/_/g, " ")
@@ -386,6 +387,100 @@ export default function StudentDashboard() {
     await refreshUserData();
     await fetchDashboardData();
     toast.success("Dashboard refreshed");
+  };
+
+  // Helper function to check if session can be joined
+  const canJoinSession = (schedule: Schedule): boolean => {
+    // Only scheduled or ongoing sessions can be joined
+    if (!["scheduled", "ongoing"].includes(schedule.status)) {
+      return false;
+    }
+
+    // Get current time
+    const now = new Date();
+
+    // Create date-time objects for session start and end
+    const sessionDate = new Date(schedule.date);
+    const [startHour, startMinute] = schedule.start_time.split(":").map(Number);
+    const [endHour, endMinute] = schedule.end_time.split(":").map(Number);
+
+    const sessionStart = new Date(sessionDate);
+    sessionStart.setHours(startHour, startMinute, 0, 0);
+
+    const sessionEnd = new Date(sessionDate);
+    sessionEnd.setHours(endHour, endMinute, 0, 0);
+
+    // Allow joining only if current time is within 15 minutes before start or during the session
+    const joinWindowStart = new Date(sessionStart);
+    joinWindowStart.setMinutes(sessionStart.getMinutes() - 15);
+
+    return now >= joinWindowStart && now <= sessionEnd;
+  };
+
+  // Helper function to get join button text
+  const getJoinButtonText = (schedule: Schedule): string => {
+    if (schedule.status === "ongoing") {
+      return "Join Live";
+    }
+
+    // Check if session is in the future but within join window
+    const now = new Date();
+    const sessionDate = new Date(schedule.date);
+    const [startHour, startMinute] = schedule.start_time.split(":").map(Number);
+    const sessionStart = new Date(sessionDate);
+    sessionStart.setHours(startHour, startMinute, 0, 0);
+
+    const joinWindowStart = new Date(sessionStart);
+    joinWindowStart.setMinutes(sessionStart.getMinutes() - 15);
+
+    if (now >= joinWindowStart && now < sessionStart) {
+      return "Join (Starts Soon)";
+    }
+
+    const isToday = schedule.date === new Date().toISOString().split("T")[0];
+    if (isToday && now < sessionStart) {
+      const [hour, minute] = schedule.start_time.split(":").map(Number);
+      const startTime = new Date();
+      startTime.setHours(hour, minute, 0, 0);
+      const minutesUntilStart = Math.ceil(
+        (startTime.getTime() - now.getTime()) / 60000,
+      );
+      if (minutesUntilStart <= 15) {
+        return `Join in ${minutesUntilStart} min`;
+      }
+      return `Join at ${formatTime(schedule.start_time)}`;
+    }
+
+    return "Join";
+  };
+
+  // Helper function to get when the join button will be available
+  const getJoinAvailabilityText = (schedule: Schedule): string => {
+    const now = new Date();
+    const sessionDate = new Date(schedule.date);
+    const [startHour, startMinute] = schedule.start_time.split(":").map(Number);
+    const sessionStart = new Date(sessionDate);
+    sessionStart.setHours(startHour, startMinute, 0, 0);
+
+    const joinWindowStart = new Date(sessionStart);
+    joinWindowStart.setMinutes(sessionStart.getMinutes() - 15);
+
+    if (now < joinWindowStart) {
+      const minutesUntilWindow = Math.ceil(
+        (joinWindowStart.getTime() - now.getTime()) / 60000,
+      );
+      if (minutesUntilWindow < 60) {
+        return `Available in ${minutesUntilWindow} minutes`;
+      } else if (minutesUntilWindow < 1440) {
+        const hours = Math.floor(minutesUntilWindow / 60);
+        const minutes = minutesUntilWindow % 60;
+        return `Available in ${hours}h ${minutes}m`;
+      } else {
+        return `Join Link Available on ${formatDate(schedule.date)} at ${formatTime(schedule.start_time)}`;
+      }
+    }
+
+    return `Join at ${formatTime(schedule.start_time)}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -445,13 +540,13 @@ export default function StudentDashboard() {
 
   const statCards = [
     {
-      title: "Enrolled Courses",
+      title: "Enrolled Sessions",
       value: stats.enrolledCourses,
       icon: BookOpen,
       color: "blue",
       bgLight: "bg-blue-50",
       iconColor: "text-blue-600",
-      link: "/student/courses",
+      link: "/student/sessions",
       subtext: `${stats.activeEnrollments} active`,
     },
     {
@@ -463,16 +558,6 @@ export default function StudentDashboard() {
       iconColor: "text-amber-600",
       link: "/student/schedule",
       subtext: "Next 7 days",
-    },
-    {
-      title: "Completed",
-      value: stats.completedCourses,
-      icon: Award,
-      color: "purple",
-      bgLight: "bg-purple-50",
-      iconColor: "text-purple-600",
-      link: "/student/history",
-      subtext: `${stats.completedSessions} sessions`,
     },
     {
       title: "Total Spent",
@@ -512,8 +597,8 @@ export default function StudentDashboard() {
               {stats.upcomingSessions > 0
                 ? `You have ${stats.upcomingSessions} upcoming session${stats.upcomingSessions > 1 ? "s" : ""} to attend`
                 : stats.activeEnrollments > 0
-                  ? `You're enrolled in ${stats.activeEnrollments} active course${stats.activeEnrollments > 1 ? "s" : ""}`
-                  : "Ready to start learning? Browse our courses!"}
+                  ? `You're enrolled in ${stats.activeEnrollments} active session${stats.activeEnrollments > 1 ? "s" : ""}`
+                  : "Ready to start learning? Browse our sessions!"}
             </p>
           </div>
           <div className="flex gap-3">
@@ -529,13 +614,13 @@ export default function StudentDashboard() {
               className="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg shadow-purple-600/25"
             >
               <BookOpen className="w-4 h-4 mr-2" />
-              Browse Courses
+              Browse Sessions
             </Link>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
             return (
@@ -601,9 +686,9 @@ export default function StudentDashboard() {
                     const isToday =
                       schedule.date === new Date().toISOString().split("T")[0];
                     const isOngoing = schedule.status === "ongoing";
-                    const canJoin = ["scheduled", "ongoing"].includes(
-                      schedule.status,
-                    );
+                    const canJoin = canJoinSession(schedule);
+                    const joinButtonText = getJoinButtonText(schedule);
+                    const availabilityText = getJoinAvailabilityText(schedule);
 
                     return (
                       <div
@@ -678,7 +763,7 @@ export default function StudentDashboard() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {canJoin && (
+                            {canJoin ? (
                               <button
                                 onClick={() => handleJoinSession(schedule.id)}
                                 disabled={joiningId === schedule.id}
@@ -692,14 +777,30 @@ export default function StudentDashboard() {
                               >
                                 {joiningId === schedule.id ? (
                                   <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : isOngoing ? (
-                                  "Join Live"
-                                ) : isToday ? (
-                                  "Join Today"
                                 ) : (
-                                  "Join"
+                                  joinButtonText
                                 )}
                               </button>
+                            ) : (
+                              schedule.status === "scheduled" && (
+                                <div className="flex flex-col items-end gap-1">
+                                  <button
+                                    disabled
+                                    className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-500 cursor-not-allowed"
+                                    title={availabilityText}
+                                  >
+                                    {isToday
+                                      ? `Join at ${formatTime(schedule.start_time)}`
+                                      : formatDate(schedule.date) === "Tomorrow"
+                                        ? `Tomorrow ${formatTime(schedule.start_time)}`
+                                        : formatDate(schedule.date)}
+                                  </button>
+                                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <Info className="w-3 h-3" />
+                                    <span>{availabilityText}</span>
+                                  </div>
+                                </div>
+                              )
                             )}
                             <Link
                               href={`/student/sessions/${schedule.tutor_course_session_id}`}
@@ -727,7 +828,7 @@ export default function StudentDashboard() {
                       href="/"
                       className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                     >
-                      Browse Courses
+                      Browse Sessions
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Link>
                   </div>
@@ -744,11 +845,11 @@ export default function StudentDashboard() {
                       Recent Enrollments
                     </h2>
                     <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                      Your latest course enrollments
+                      Your latest session enrollments
                     </p>
                   </div>
                   <Link
-                    href="/student/courses"
+                    href="/student/sessions"
                     className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
                   >
                     View All
@@ -765,12 +866,12 @@ export default function StudentDashboard() {
                       className="p-4 sm:p-6 hover:bg-gray-50 transition-colors group"
                     >
                       <div className="flex items-start gap-4">
-                        {/* Course Thumbnail */}
+                        {/* Session Thumbnail */}
                         <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          {enrollment.session.course.thumbnail_url ? (
+                          {enrollment.session.thumbnail_url ? (
                             <img
-                              src={enrollment.session.course.thumbnail_url}
-                              alt={enrollment.session.course.title}
+                              src={enrollment.session.thumbnail_url}
+                              alt={enrollment.session.name}
                               className="w-full h-full object-cover rounded-lg"
                             />
                           ) : (
@@ -782,11 +883,12 @@ export default function StudentDashboard() {
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                             <div>
                               <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                                {enrollment.session.course.title}
+                                {enrollment.session.name}
                               </h3>
                               <p className="text-sm text-gray-600 mt-1">
-                                {enrollment.session.name} •{" "}
-                                {enrollment.session.session_code}
+                                {enrollment.session.subject ||
+                                  enrollment.session.name}{" "}
+                                • {enrollment.session.session_code}
                               </p>
                             </div>
                             <span
@@ -847,13 +949,13 @@ export default function StudentDashboard() {
                       No enrollments yet
                     </h3>
                     <p className="text-gray-600 mb-6">
-                      Start your learning journey by enrolling in a course
+                      Start your learning journey by enrolling in a session
                     </p>
                     <Link
                       href="/"
                       className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                     >
-                      Browse Courses
+                      Browse Sessions
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Link>
                   </div>
@@ -862,127 +964,8 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* Right Column - Activity and Stats */}
+          {/* Right Column - Quick Actions */}
           <div className="space-y-6 sm:space-y-8">
-            {/* Recent Activity */}
-            {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 sm:p-6 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  Recent Activity
-                </h2>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                Your latest actions
-              </p>
-            </div>
-
-            <div className="divide-y divide-gray-200">
-              {recentActivity.length > 0 ? (
-                recentActivity.map((activity) => {
-                  const icons = {
-                    enrollment: (
-                      <BookOpen className="w-4 h-4 text-emerald-600" />
-                    ),
-                    payment: <DollarSign className="w-4 h-4 text-blue-600" />,
-                    session: <Video className="w-4 h-4 text-purple-600" />,
-                    course: (
-                      <GraduationCap className="w-4 h-4 text-amber-600" />
-                    ),
-                    review: <Star className="w-4 h-4 text-yellow-600" />,
-                  };
-                  const bgColors = {
-                    enrollment: "bg-emerald-100",
-                    payment: "bg-blue-100",
-                    session: "bg-purple-100",
-                    course: "bg-amber-100",
-                    review: "bg-yellow-100",
-                  };
-
-                  return (
-                    <div
-                      key={activity.id}
-                      className="p-4 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${bgColors[activity.type]}`}
-                        >
-                          {icons[activity.type]}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900">
-                            {activity.description}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {activity.timestamp}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="p-8 text-center">
-                  <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                    <TrendingUp className="w-6 h-6 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-600">No recent activity</p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 bg-gray-50 border-t border-gray-200">
-              <Link
-                href="/student/activity"
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center justify-center gap-1"
-              >
-                View All Activity
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div> */}
-
-            {/* Quick Stats from Profile - Using profileData */}
-            {/* <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl p-6 text-white">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <Award className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Learning Stats</h3>
-                <p className="text-sm text-white/80 mt-1">
-                  Your progress summary
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-2xl font-bold">{stats.learningHours}</p>
-                <p className="text-xs text-white/80">Hours Learned</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.completedSessions}</p>
-                <p className="text-xs text-white/80">Sessions Completed</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.certificates}</p>
-                <p className="text-xs text-white/80">Certificates</p>
-              </div>
-              <div>
-                <div className="flex items-center gap-1">
-                  <p className="text-2xl font-bold">
-                    {stats.averageRating.toFixed(1)}
-                  </p>
-                  <Star className="w-4 h-4 fill-current text-yellow-300" />
-                </div>
-                <p className="text-xs text-white/80">Average Rating</p>
-              </div>
-            </div>
-          </div> */}
-
             {/* Quick Actions */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-900 mb-4">
@@ -1042,7 +1025,7 @@ export default function StudentDashboard() {
                     Check out our student resources and FAQs
                   </p>
                   <Link
-                    href="/help"
+                    href="/help/student"
                     className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
                   >
                     Visit Help Center

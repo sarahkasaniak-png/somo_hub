@@ -37,6 +37,8 @@ export default function TutorsContent() {
   const levelFilter = searchParams.get("level") || "all";
   const searchQuery = searchParams.get("q") || "";
   const subjectFilter = searchParams.get("subject") || "";
+  const curriculumIdFilter = searchParams.get("curriculum_id");
+  const curriculumLevelIdFilter = searchParams.get("curriculum_level_id");
 
   const [filters, setFilters] = useState({
     category: categoryFilter,
@@ -44,6 +46,13 @@ export default function TutorsContent() {
     subject: subjectFilter,
     search: searchQuery,
   });
+
+  const [curriculumId, setCurriculumId] = useState<string | null>(
+    curriculumIdFilter,
+  );
+  const [curriculumLevelId, setCurriculumLevelId] = useState<string | null>(
+    curriculumLevelIdFilter,
+  );
 
   // Update filters when URL params change
   useEffect(() => {
@@ -53,18 +62,33 @@ export default function TutorsContent() {
       subject: subjectFilter,
       search: searchQuery,
     });
-  }, [categoryFilter, levelFilter, subjectFilter, searchQuery]);
+    setCurriculumId(curriculumIdFilter);
+    setCurriculumLevelId(curriculumLevelIdFilter);
+  }, [
+    categoryFilter,
+    levelFilter,
+    subjectFilter,
+    searchQuery,
+    curriculumIdFilter,
+    curriculumLevelIdFilter,
+  ]);
 
   // Fetch tutors when filters change
   useEffect(() => {
     fetchTutors(1, true);
-  }, [filters.category, filters.level, filters.subject, filters.search]);
+  }, [
+    filters.category,
+    filters.level,
+    filters.subject,
+    filters.search,
+    curriculumId,
+    curriculumLevelId,
+  ]);
 
   const fetchTutors = async (pageNum: number, reset = false) => {
     try {
       setLoading(true);
 
-      // Build API params based on filters
       const params: any = {
         page: pageNum,
         limit: 12,
@@ -74,6 +98,18 @@ export default function TutorsContent() {
       if (filters.subject) params.subject = filters.subject;
       if (filters.level && filters.level !== "all")
         params.level = filters.level;
+
+      // Add curriculum filtering
+      if (curriculumId && curriculumId !== "all" && curriculumId !== "null") {
+        params.curriculum_id = curriculumId;
+        if (
+          curriculumLevelId &&
+          curriculumLevelId !== "all" &&
+          curriculumLevelId !== "null"
+        ) {
+          params.curriculum_level_id = curriculumLevelId;
+        }
+      }
 
       // Category mapping to API params
       if (filters.category && filters.category !== "all") {
@@ -86,6 +122,7 @@ export default function TutorsContent() {
         }
       }
 
+      console.log("Fetching tutors with params:", params);
       const response = await tuitionApi.getTutors(params);
 
       if (response.success) {
@@ -125,6 +162,9 @@ export default function TutorsContent() {
       params.delete("q");
     } else if (type === "subject") {
       params.delete("subject");
+    } else if (type === "curriculum") {
+      params.delete("curriculum_id");
+      params.delete("curriculum_level_id");
     }
 
     const queryString = params.toString();
@@ -175,6 +215,14 @@ export default function TutorsContent() {
       adult: "Adult Education",
     };
     return map[level] || level;
+  };
+
+  // Curriculum display
+  const getCurriculumDisplay = () => {
+    if (curriculumId && curriculumId !== "null") {
+      return `Curriculum: ${curriculumId}${curriculumLevelId ? ` - Level ${curriculumLevelId}` : ""}`;
+    }
+    return null;
   };
 
   const TutorCard = ({ tutor }: { tutor: Tutor }) => {
@@ -242,6 +290,27 @@ export default function TutorsContent() {
             </div>
           )}
 
+          {/* Curriculum badges if available */}
+          {tutor.curriculums && tutor.curriculums.length > 0 && (
+            <div className="mb-3">
+              <div className="flex flex-wrap gap-1">
+                {tutor.curriculums.slice(0, 2).map((curriculum, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-1 bg-green-50 text-green-600 text-xs rounded-full"
+                  >
+                    {curriculum.curriculum_name}
+                  </span>
+                ))}
+                {tutor.curriculums.length > 2 && (
+                  <span className="px-2 py-1 bg-green-50 text-green-600 text-xs rounded-full">
+                    +{tutor.curriculums.length - 2}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
             <div className="flex items-center gap-1">
@@ -266,6 +335,8 @@ export default function TutorsContent() {
     );
   };
 
+  const curriculumDisplay = getCurriculumDisplay();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -281,7 +352,8 @@ export default function TutorsContent() {
         {(filters.category !== "all" ||
           filters.level !== "all" ||
           filters.search ||
-          filters.subject) && (
+          filters.subject ||
+          curriculumDisplay) && (
           <div className="mb-6 flex flex-wrap items-center gap-2">
             <span className="text-sm text-gray-500">Active filters:</span>
             {filters.category !== "all" && (
@@ -308,12 +380,24 @@ export default function TutorsContent() {
                 </button>
               </span>
             )}
-            {filters.search && (
+            {curriculumDisplay && (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 text-sm rounded-full">
+                <BookOpen className="w-3 h-3" />
+                {curriculumDisplay}
+                <button
+                  onClick={() => removeFilter("curriculum")}
+                  className="ml-1 p-0.5 hover:bg-green-200 rounded-full transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.search && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-50 text-yellow-700 text-sm rounded-full">
                 <Search className="w-3 h-3" />"{filters.search}"
                 <button
                   onClick={() => removeFilter("search")}
-                  className="ml-1 p-0.5 hover:bg-green-200 rounded-full transition-colors"
+                  className="ml-1 p-0.5 hover:bg-yellow-200 rounded-full transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>

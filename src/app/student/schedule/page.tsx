@@ -14,7 +14,6 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  CalendarDays,
   Sun,
   Moon,
   Sunrise,
@@ -22,13 +21,13 @@ import {
   ExternalLink,
   ArrowRight,
   RefreshCw,
-  Info,
   Users,
   BookOpen,
   MapPinned,
   Wifi,
   Copy,
   Check,
+  Info,
 } from "lucide-react";
 
 interface Schedule {
@@ -54,11 +53,10 @@ interface Schedule {
   recorded_session_url: string | null;
   attendance_taken: boolean;
 
-  // Joined fields
-  course_title?: string;
-  course_subject?: string;
+  // Joined fields from backend
   session_name?: string;
   session_code?: string;
+  course_subject?: string;
   tutor_name?: string;
 }
 
@@ -71,9 +69,6 @@ export default function StudentSchedulePage() {
   const [joiningId, setJoiningId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0],
-  );
 
   useEffect(() => {
     fetchSchedules();
@@ -88,8 +83,13 @@ export default function StudentSchedulePage() {
       setLoading(true);
       const response = await studentApi.getUpcomingSessions(50);
 
+      console.log("Schedule response:", response);
+
       if (response.success) {
-        setSchedules(response.data || []);
+        const schedulesData = response.data || [];
+        setSchedules(schedulesData);
+      } else {
+        toast.error(response.message || "Failed to load schedule");
       }
     } catch (error) {
       console.error("Failed to fetch schedules:", error);
@@ -116,7 +116,6 @@ export default function StudentSchedulePage() {
       grouped[schedule.date].push(schedule);
     });
 
-    // Sort schedules within each day by time
     Object.keys(grouped).forEach((date) => {
       grouped[date].sort((a, b) => a.start_time.localeCompare(b.start_time));
     });
@@ -130,7 +129,7 @@ export default function StudentSchedulePage() {
       const response = await studentApi.joinSession(scheduleId);
 
       if (response.success && response.data?.meeting_link) {
-        window.open(response.data?.meeting_link, "_blank");
+        window.open(response.data.meeting_link, "_blank");
         toast.success("Joining session...");
         setTimeout(() => fetchSchedules(), 2000);
       } else {
@@ -186,6 +185,102 @@ export default function StudentSchedulePage() {
     const date = new Date(dateString);
     const today = new Date();
     return date.toDateString() === today.toDateString();
+  };
+
+  // Helper function to check if session can be joined
+  const canJoinSession = (schedule: Schedule): boolean => {
+    // Only scheduled or ongoing sessions can be joined
+    if (!["scheduled", "ongoing"].includes(schedule.status)) {
+      return false;
+    }
+
+    // Get current time
+    const now = new Date();
+
+    // Create date-time objects for session start and end
+    const sessionDate = new Date(schedule.date);
+    const [startHour, startMinute] = schedule.start_time.split(":").map(Number);
+    const [endHour, endMinute] = schedule.end_time.split(":").map(Number);
+
+    const sessionStart = new Date(sessionDate);
+    sessionStart.setHours(startHour, startMinute, 0, 0);
+
+    const sessionEnd = new Date(sessionDate);
+    sessionEnd.setHours(endHour, endMinute, 0, 0);
+
+    // Allow joining only if current time is within 15 minutes before start or during the session
+    const joinWindowStart = new Date(sessionStart);
+    joinWindowStart.setMinutes(sessionStart.getMinutes() - 15);
+
+    return now >= joinWindowStart && now <= sessionEnd;
+  };
+
+  // Helper function to get join button text
+  const getJoinButtonText = (schedule: Schedule): string => {
+    if (schedule.status === "ongoing") {
+      return "Join Live";
+    }
+
+    // Check if session is in the future but within join window
+    const now = new Date();
+    const sessionDate = new Date(schedule.date);
+    const [startHour, startMinute] = schedule.start_time.split(":").map(Number);
+    const sessionStart = new Date(sessionDate);
+    sessionStart.setHours(startHour, startMinute, 0, 0);
+
+    const joinWindowStart = new Date(sessionStart);
+    joinWindowStart.setMinutes(sessionStart.getMinutes() - 15);
+
+    if (now >= joinWindowStart && now < sessionStart) {
+      return "Join (Starts Soon)";
+    }
+
+    if (isToday(schedule.date)) {
+      const [hour, minute] = schedule.start_time.split(":").map(Number);
+      const startTime = new Date();
+      startTime.setHours(hour, minute, 0, 0);
+
+      if (now < startTime) {
+        const minutesUntilStart = Math.ceil(
+          (startTime.getTime() - now.getTime()) / 60000,
+        );
+        if (minutesUntilStart <= 15) {
+          return `Join in ${minutesUntilStart} min`;
+        }
+        return `Join at ${formatTime(schedule.start_time)}`;
+      }
+    }
+
+    return "Join";
+  };
+
+  // Helper function to get when the join button will be available
+  const getJoinAvailabilityText = (schedule: Schedule): string => {
+    const now = new Date();
+    const sessionDate = new Date(schedule.date);
+    const [startHour, startMinute] = schedule.start_time.split(":").map(Number);
+    const sessionStart = new Date(sessionDate);
+    sessionStart.setHours(startHour, startMinute, 0, 0);
+
+    const joinWindowStart = new Date(sessionStart);
+    joinWindowStart.setMinutes(sessionStart.getMinutes() - 15);
+
+    if (now < joinWindowStart) {
+      const minutesUntilWindow = Math.ceil(
+        (joinWindowStart.getTime() - now.getTime()) / 60000,
+      );
+      if (minutesUntilWindow < 60) {
+        return `Available in ${minutesUntilWindow} minutes`;
+      } else if (minutesUntilWindow < 1440) {
+        const hours = Math.floor(minutesUntilWindow / 60);
+        const minutes = minutesUntilWindow % 60;
+        return `Available in ${hours}h ${minutes}m`;
+      } else {
+        return `Class Join Link available on ${formatDate(schedule.date)} at ${formatTime(schedule.start_time)}`;
+      }
+    }
+
+    return `Join at ${formatTime(schedule.start_time)}`;
   };
 
   const getTimeIcon = (time: string) => {
@@ -394,10 +489,10 @@ export default function StudentSchedulePage() {
 
                 <div className="divide-y divide-gray-200">
                   {daySchedules.map((schedule) => {
-                    const canJoin = ["scheduled", "ongoing"].includes(
-                      schedule.status,
-                    );
+                    const canJoin = canJoinSession(schedule);
                     const isOngoing = schedule.status === "ongoing";
+                    const joinButtonText = getJoinButtonText(schedule);
+                    const availabilityText = getJoinAvailabilityText(schedule);
 
                     return (
                       <div
@@ -426,8 +521,10 @@ export default function StudentSchedulePage() {
                                   {schedule.title}
                                 </h3>
                                 <p className="text-sm text-gray-600 mt-1">
-                                  {schedule.course_title} • Class{" "}
-                                  {schedule.class_number}
+                                  {schedule.session_name ||
+                                    schedule.course_subject ||
+                                    "Session"}{" "}
+                                  • Class {schedule.class_number}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-4 mt-3">
                                   <div className="flex items-center gap-1.5 text-sm text-gray-600">
@@ -442,7 +539,9 @@ export default function StudentSchedulePage() {
                                   </div>
                                   <div className="flex items-center gap-1.5 text-sm text-gray-600">
                                     <BookOpen className="w-4 h-4" />
-                                    <span>{schedule.session_name}</span>
+                                    <span>
+                                      {schedule.session_name || "Session"}
+                                    </span>
                                   </div>
                                 </div>
 
@@ -483,57 +582,75 @@ export default function StudentSchedulePage() {
                           </div>
 
                           {/* Right side - Actions */}
-                          <div className="flex items-center gap-2 lg:self-center">
-                            {canJoin && (
-                              <button
-                                onClick={() => handleJoinSession(schedule.id)}
-                                disabled={joiningId === schedule.id}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                  isOngoing
-                                    ? "bg-green-600 text-white hover:bg-green-700 animate-pulse"
-                                    : today
-                                      ? "bg-amber-600 text-white hover:bg-amber-700"
-                                      : "bg-blue-600 text-white hover:bg-blue-700"
-                                } disabled:opacity-50`}
-                              >
-                                {joiningId === schedule.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : isOngoing ? (
-                                  "Join Live"
-                                ) : today ? (
-                                  "Join Today"
-                                ) : (
-                                  "Join"
-                                )}
-                              </button>
-                            )}
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex items-center gap-2">
+                              {canJoin && (
+                                <button
+                                  onClick={() => handleJoinSession(schedule.id)}
+                                  disabled={joiningId === schedule.id}
+                                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                    isOngoing
+                                      ? "bg-green-600 text-white hover:bg-green-700 animate-pulse"
+                                      : today
+                                        ? "bg-amber-600 text-white hover:bg-amber-700"
+                                        : "bg-blue-600 text-white hover:bg-blue-700"
+                                  } disabled:opacity-50`}
+                                >
+                                  {joiningId === schedule.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    joinButtonText
+                                  )}
+                                </button>
+                              )}
 
-                            {schedule.student_meeting_link && canJoin && (
-                              <button
-                                onClick={() =>
-                                  handleCopyLink(
-                                    schedule.student_meeting_link!,
-                                    schedule.id,
-                                  )
-                                }
+                              {!canJoin && schedule.status === "scheduled" && (
+                                <div className="flex flex-col items-end gap-1">
+                                  <button
+                                    disabled
+                                    className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-500 cursor-not-allowed"
+                                    title={availabilityText}
+                                  >
+                                    {isToday(schedule.date)
+                                      ? `Join at ${formatTime(schedule.start_time)}`
+                                      : formatDate(schedule.date) === "Tomorrow"
+                                        ? `Tomorrow ${formatTime(schedule.start_time)}`
+                                        : formatDate(schedule.date)}
+                                  </button>
+                                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <Info className="w-3 h-3" />
+                                    <span>{availabilityText}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {schedule.student_meeting_link && canJoin && (
+                                <button
+                                  onClick={() =>
+                                    handleCopyLink(
+                                      schedule.student_meeting_link!,
+                                      schedule.id,
+                                    )
+                                  }
+                                  className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                  title="Copy meeting link"
+                                >
+                                  {copiedId === schedule.id ? (
+                                    <Check className="w-4 h-4 text-green-600" />
+                                  ) : (
+                                    <Copy className="w-4 h-4" />
+                                  )}
+                                </button>
+                              )}
+
+                              <Link
+                                href={`/student/sessions/${schedule.tutor_course_session_id}`}
                                 className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                                title="Copy meeting link"
+                                title="View session details"
                               >
-                                {copiedId === schedule.id ? (
-                                  <Check className="w-4 h-4 text-green-600" />
-                                ) : (
-                                  <Copy className="w-4 h-4" />
-                                )}
-                              </button>
-                            )}
-
-                            <Link
-                              href={`/student/sessions/${schedule.tutor_course_session_id}`}
-                              className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                              title="View session details"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Link>
+                                <ExternalLink className="w-4 h-4" />
+                              </Link>
+                            </div>
                           </div>
                         </div>
 
@@ -570,13 +687,13 @@ export default function StudentSchedulePage() {
           </h3>
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
             You don't have any scheduled classes at the moment. Enroll in a
-            course to get started!
+            session to get started!
           </p>
           <Link
             href="/"
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Browse Courses
+            Browse Sessions
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

@@ -47,15 +47,22 @@ export default function SessionsContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Get filter values from URL - match what Navbar sends
+  // Get filter values from URL
   const categoryFilter = searchParams.get("category") || "all";
   const levelFilter = searchParams.get("level") || "all";
   const searchQuery = searchParams.get("q") || "";
+  const curriculumIdFilter = searchParams.get("curriculum_id") || null;
+  const curriculumLevelIdFilter =
+    searchParams.get("curriculum_level_id") || null;
+  const noCurriculumFilter = searchParams.get("no_curriculum") === "true";
 
   const [filters, setFilters] = useState({
     category: categoryFilter,
     level: levelFilter,
     search: searchQuery,
+    curriculum_id: curriculumIdFilter,
+    curriculum_level_id: curriculumLevelIdFilter,
+    no_curriculum: noCurriculumFilter,
   });
 
   // Update filters when URL params change
@@ -64,37 +71,65 @@ export default function SessionsContent() {
       category: categoryFilter,
       level: levelFilter,
       search: searchQuery,
+      curriculum_id: curriculumIdFilter,
+      curriculum_level_id: curriculumLevelIdFilter,
+      no_curriculum: noCurriculumFilter,
     });
-  }, [categoryFilter, levelFilter, searchQuery]);
+  }, [
+    categoryFilter,
+    levelFilter,
+    searchQuery,
+    curriculumIdFilter,
+    curriculumLevelIdFilter,
+    noCurriculumFilter,
+  ]);
 
   // Fetch sessions when filters change
   useEffect(() => {
     fetchSessions(1, true);
-  }, [filters.category, filters.level, filters.search]);
+  }, [
+    filters.category,
+    filters.level,
+    filters.search,
+    filters.curriculum_id,
+    filters.curriculum_level_id,
+    filters.no_curriculum,
+  ]);
 
   const fetchSessions = async (pageNum: number, reset = false) => {
     try {
       setLoading(true);
 
-      // Build API params based on filters
       const params: any = {
         page: pageNum,
         limit: 12,
       };
 
-      // Map the filters to what the API expects
       if (filters.search) params.search = filters.search;
-
-      // Map level filter
       if (filters.level && filters.level !== "all") {
         params.level = filters.level;
       }
-
-      // Map category to session_type if needed
       if (filters.category && filters.category !== "all") {
-        // If category is group or one_on_one, map to session_type
         if (filters.category === "group" || filters.category === "one_on_one") {
           params.session_type = filters.category;
+        }
+      }
+
+      // Handle curriculum filtering
+      if (filters.no_curriculum) {
+        params.no_curriculum = "true";
+      } else if (
+        filters.curriculum_id &&
+        filters.curriculum_id !== "all" &&
+        filters.curriculum_id !== "null"
+      ) {
+        params.curriculum_id = filters.curriculum_id;
+        if (
+          filters.curriculum_level_id &&
+          filters.curriculum_level_id !== "all" &&
+          filters.curriculum_level_id !== "null"
+        ) {
+          params.curriculum_level_id = filters.curriculum_level_id;
         }
       }
 
@@ -103,7 +138,6 @@ export default function SessionsContent() {
       const response = await tuitionApi.getSessions(params);
 
       if (response.success) {
-        // Use non-null assertion operator since we know data exists on success
         const data = response.data!;
 
         if (reset) {
@@ -132,7 +166,6 @@ export default function SessionsContent() {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
 
-    // Update URL params
     const params = new URLSearchParams();
     if (newFilters.category && newFilters.category !== "all") {
       params.append("category", newFilters.category);
@@ -142,6 +175,23 @@ export default function SessionsContent() {
     }
     if (newFilters.search) {
       params.append("q", newFilters.search);
+    }
+    if (
+      newFilters.curriculum_id &&
+      newFilters.curriculum_id !== "all" &&
+      newFilters.curriculum_id !== "null"
+    ) {
+      params.append("curriculum_id", newFilters.curriculum_id);
+    }
+    if (
+      newFilters.curriculum_level_id &&
+      newFilters.curriculum_level_id !== "all" &&
+      newFilters.curriculum_level_id !== "null"
+    ) {
+      params.append("curriculum_level_id", newFilters.curriculum_level_id);
+    }
+    if (newFilters.no_curriculum) {
+      params.append("no_curriculum", "true");
     }
 
     const queryString = params.toString();
@@ -155,6 +205,9 @@ export default function SessionsContent() {
       category: "all",
       level: "all",
       search: "",
+      curriculum_id: null,
+      curriculum_level_id: null,
+      no_curriculum: false,
     });
     router.replace("/sessions", { scroll: false });
   };
@@ -165,6 +218,10 @@ export default function SessionsContent() {
       newFilters.category = "all";
     } else if (type === "level") {
       newFilters.level = "all";
+    } else if (type === "curriculum") {
+      newFilters.curriculum_id = null;
+      newFilters.curriculum_level_id = null;
+      newFilters.no_curriculum = false;
     } else if (type === "search") {
       newFilters.search = "";
     }
@@ -179,6 +236,23 @@ export default function SessionsContent() {
     }
     if (newFilters.search) {
       params.append("q", newFilters.search);
+    }
+    if (
+      newFilters.curriculum_id &&
+      newFilters.curriculum_id !== "all" &&
+      newFilters.curriculum_id !== "null"
+    ) {
+      params.append("curriculum_id", newFilters.curriculum_id);
+    }
+    if (
+      newFilters.curriculum_level_id &&
+      newFilters.curriculum_level_id !== "all" &&
+      newFilters.curriculum_level_id !== "null"
+    ) {
+      params.append("curriculum_level_id", newFilters.curriculum_level_id);
+    }
+    if (newFilters.no_curriculum) {
+      params.append("no_curriculum", "true");
     }
 
     const queryString = params.toString();
@@ -209,7 +283,6 @@ export default function SessionsContent() {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  // Helper function to safely parse numeric values
   const parseRating = (rating: any): number => {
     if (!rating) return 0;
     const parsed = parseFloat(rating);
@@ -222,7 +295,6 @@ export default function SessionsContent() {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // Category display mapping
   const getCategoryDisplay = (category: string) => {
     const map: Record<string, string> = {
       all: "All Sessions",
@@ -232,7 +304,6 @@ export default function SessionsContent() {
     return map[category] || category;
   };
 
-  // Level display mapping
   const getLevelDisplay = (level: string) => {
     const map: Record<string, string> = {
       all: "All Levels",
@@ -240,9 +311,19 @@ export default function SessionsContent() {
       junior_high: "Junior High School",
       senior_high: "Senior High School",
       university: "University",
-      adult: "Adult Education",
+      adult: "Adult / Professional",
     };
     return map[level] || level;
+  };
+
+  const getCurriculumDisplay = () => {
+    if (filters.no_curriculum) {
+      return "Professional / No Curriculum";
+    }
+    if (filters.curriculum_id && filters.curriculum_id !== "null") {
+      return `Curriculum: ${filters.curriculum_id}${filters.curriculum_level_id ? ` - Level ${filters.curriculum_level_id}` : ""}`;
+    }
+    return null;
   };
 
   const SessionCard = ({ session }: { session: TutorSession }) => {
@@ -251,7 +332,6 @@ export default function SessionsContent() {
     const classesPerWeek = parseNumber(session.classes_per_week) || 1;
     const duration = parseNumber(session.class_duration_minutes) || 90;
 
-    // Helper function to capitalize names properly
     const capitalizeName = (name: string): string => {
       if (!name) return "";
       return name
@@ -262,28 +342,21 @@ export default function SessionsContent() {
         .join(" ");
     };
 
-    const formatLevel = (level?: string) => {
-      if (!level) return null;
-      const levelMap: Record<string, string> = {
-        primary: "Primary",
-        junior_high: "Junior High",
-        senior_high: "Senior High",
-        university: "University",
-        adult: "Adult",
-        all: "All Levels",
-      };
-      return levelMap[level] || level;
-    };
-
-    const courseLevel = formatLevel(session.course_level);
-
-    // Capitalize tutor name and session name
     const capitalizedTutorName = capitalizeName(session.tutor_name || "Tutor");
     const capitalizedSessionName = capitalizeName(session.name);
 
+    const handleCardClick = () => {
+      if (session.uuid) {
+        router.push(`/tuitions/${session.uuid}`);
+      } else {
+        console.error("Session has no UUID:", session);
+        toast.error("Unable to open session");
+      }
+    };
+
     return (
       <div
-        onClick={() => router.push(`/tuitions/${session.id}`)}
+        onClick={handleCardClick}
         className="group bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
       >
         <div className="p-3 flex items-center gap-2 border-b border-gray-100">
@@ -315,11 +388,6 @@ export default function SessionsContent() {
               >
                 {session.session_type === "one_on_one" ? "1:1" : "Group"}
               </span>
-              {courseLevel && (
-                <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                  {courseLevel}
-                </span>
-              )}
               {tutorRating > 0 && (
                 <div className="flex items-center gap-0.5">
                   <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -338,8 +406,24 @@ export default function SessionsContent() {
           </h3>
 
           <p className="text-xs text-gray-500 line-clamp-2 mb-2">
-            {session.course_title || session.description}
+            {session.subject && `Subject: ${session.subject}`}
           </p>
+
+          {/* Curriculum Badge */}
+          {session.curriculum_name && (
+            <div className="mb-2">
+              <span className="inline-flex items-center gap-1 text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full">
+                <Globe className="w-3 h-3" />
+                {session.curriculum_name}
+                {session.curriculum_level_name && (
+                  <span className="text-green-500">
+                    {" "}
+                    - {session.curriculum_level_name}
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-1 text-xs text-gray-500 mb-2">
             <div className="flex items-center gap-1">
@@ -355,14 +439,6 @@ export default function SessionsContent() {
               <span>{Math.floor(duration * classesPerWeek)}min</span>
             </div>
           </div>
-
-          {courseLevel && (
-            <div className="mb-2">
-              <span className="text-xs px-2 py-1 bg-purple-50 text-zinc-700 rounded">
-                {courseLevel} Level
-              </span>
-            </div>
-          )}
 
           <div className="text-left">
             <p className="text-sm text-gray-700">
@@ -380,7 +456,6 @@ export default function SessionsContent() {
     const classesPerWeek = parseNumber(session.classes_per_week) || 1;
     const duration = parseNumber(session.class_duration_minutes) || 90;
 
-    // Helper function to capitalize names properly
     const capitalizeName = (name: string): string => {
       if (!name) return "";
       return name
@@ -391,28 +466,21 @@ export default function SessionsContent() {
         .join(" ");
     };
 
-    const formatLevel = (level?: string) => {
-      if (!level) return null;
-      const levelMap: Record<string, string> = {
-        primary: "Primary",
-        junior_high: "Junior High",
-        senior_high: "Senior High",
-        university: "University",
-        adult: "Adult",
-        all: "All Levels",
-      };
-      return levelMap[level] || level;
-    };
-
-    const courseLevel = formatLevel(session.course_level);
-
-    // Capitalize tutor name and session name
     const capitalizedTutorName = capitalizeName(session.tutor_name || "Tutor");
     const capitalizedSessionName = capitalizeName(session.name);
 
+    const handleCardClick = () => {
+      if (session.uuid) {
+        router.push(`/tuitions/${session.uuid}`);
+      } else {
+        console.error("Session has no UUID:", session);
+        toast.error("Unable to open session");
+      }
+    };
+
     return (
       <div
-        onClick={() => router.push(`/tuitions/${session.id}`)}
+        onClick={handleCardClick}
         className="group bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
       >
         <div className="p-4 flex items-start gap-4">
@@ -441,11 +509,6 @@ export default function SessionsContent() {
               >
                 {session.session_type === "one_on_one" ? "1:1" : "Group"}
               </span>
-              {courseLevel && (
-                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                  {courseLevel}
-                </span>
-              )}
               <span className="text-sm font-medium text-gray-900">
                 {capitalizedTutorName}
               </span>
@@ -464,8 +527,24 @@ export default function SessionsContent() {
             </h3>
 
             <p className="text-sm text-gray-500 line-clamp-1 mb-2">
-              {session.course_title || session.description}
+              {session.subject && `Subject: ${session.subject}`}
             </p>
+
+            {/* Curriculum Badge for List View */}
+            {session.curriculum_name && (
+              <div className="mb-2">
+                <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-600 px-2 py-1 rounded-full">
+                  <Globe className="w-3 h-3" />
+                  {session.curriculum_name}
+                  {session.curriculum_level_name && (
+                    <span className="text-green-500">
+                      {" "}
+                      - {session.curriculum_level_name}
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
 
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <div className="flex items-center gap-1">
@@ -503,7 +582,6 @@ export default function SessionsContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Sessions</h1>
           <p className="text-gray-500 mt-1">
@@ -511,12 +589,14 @@ export default function SessionsContent() {
           </p>
         </div>
 
-        {/* Active Filters */}
         {(filters.category !== "all" ||
           filters.level !== "all" ||
-          filters.search) && (
+          filters.search ||
+          filters.curriculum_id ||
+          filters.no_curriculum) && (
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="text-sm text-gray-500">Active filters:</span>
+
             {filters.category !== "all" && (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-50 text-main text-sm rounded-full">
                 <Award className="w-3 h-3" />
@@ -529,6 +609,7 @@ export default function SessionsContent() {
                 </button>
               </span>
             )}
+
             {filters.level !== "all" && (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
                 <GraduationCap className="w-3 h-3" />
@@ -541,17 +622,51 @@ export default function SessionsContent() {
                 </button>
               </span>
             )}
-            {filters.search && (
+
+            {filters.no_curriculum && (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 text-sm rounded-full">
-                <Search className="w-3 h-3" />"{filters.search}"
+                <Globe className="w-3 h-3" />
+                Professional / No Curriculum
                 <button
-                  onClick={() => removeFilter("search")}
+                  onClick={() => removeFilter("curriculum")}
                   className="ml-1 p-0.5 hover:bg-green-200 rounded-full transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
+
+            {filters.curriculum_id &&
+              filters.curriculum_id !== "all" &&
+              filters.curriculum_id !== "null" &&
+              !filters.no_curriculum && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 text-sm rounded-full">
+                  <BookOpen className="w-3 h-3" />
+                  Curriculum: {filters.curriculum_id}
+                  {filters.curriculum_level_id &&
+                    filters.curriculum_level_id !== "all" &&
+                    ` - Level ${filters.curriculum_level_id}`}
+                  <button
+                    onClick={() => removeFilter("curriculum")}
+                    className="ml-1 p-0.5 hover:bg-green-200 rounded-full transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+            {filters.search && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-50 text-yellow-700 text-sm rounded-full">
+                <Search className="w-3 h-3" />"{filters.search}"
+                <button
+                  onClick={() => removeFilter("search")}
+                  className="ml-1 p-0.5 hover:bg-yellow-200 rounded-full transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
             <button
               onClick={clearFilters}
               className="text-sm text-main hover:text-purple-700 font-medium ml-2"
@@ -561,76 +676,25 @@ export default function SessionsContent() {
           </div>
         )}
 
-        {/* Filters Panel */}
-        {/* <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center justify-between w-full"
-          >
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-gray-500" />
-              <span className="font-medium text-gray-700">Filters</span>
-            </div>
-            <ChevronRight
-              className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
-                showFilters ? "rotate-90" : ""
-              }`}
-            />
-          </button>
-
-          {showFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium text-gray-900">Filter Options</h3>
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-main hover:text-purple-700"
-                >
-                  Clear all
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Session Type
-                  </label>
-                  <select
-                    value={filters.category}
-                    onChange={(e) =>
-                      handleFilterChange("category", e.target.value)
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
-                  >
-                    <option value="all">All Sessions</option>
-                    <option value="group">Group Sessions</option>
-                    <option value="one_on_one">One-on-One</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Level
-                  </label>
-                  <select
-                    value={filters.level}
-                    onChange={(e) =>
-                      handleFilterChange("level", e.target.value)
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
-                  >
-                    <option value="all">All Levels</option>
-                    <option value="primary">Primary School</option>
-                    <option value="junior_high">Junior High School</option>
-                    <option value="senior_high">Senior High School</option>
-                    <option value="university">University</option>
-                    <option value="adult">Adult Education</option>
-                  </select>
-                </div>
+        {/* Adult Education Info Banner */}
+        {filters.level === "adult" && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Globe className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-blue-800">
+                  Professional & Adult Education
+                </p>
+                <p className="text-xs text-blue-700 mt-0.5">
+                  Showing professional courses, certifications, and specialized
+                  training programs designed for adult learners and career
+                  advancement.
+                </p>
               </div>
             </div>
-          )}
-        </div> */}
+          </div>
+        )}
 
-        {/* Results Count and View Toggle */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">
             Showing {sessions.length} of {total} session{total !== 1 ? "s" : ""}
@@ -651,7 +715,6 @@ export default function SessionsContent() {
           </div>
         </div>
 
-        {/* Sessions Grid/List */}
         {loading && sessions.length === 0 ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-main" />
@@ -688,7 +751,6 @@ export default function SessionsContent() {
               </div>
             )}
 
-            {/* Load More */}
             {hasMore && (
               <div className="flex justify-center mt-8">
                 <button

@@ -875,7 +875,7 @@ export default function StudentHelpPage() {
     {
       title: "Find a Tutor",
       icon: SearchIcon,
-      link: "/find-tutors",
+      link: "/tutors",
       color: "blue",
     },
     {
@@ -887,13 +887,13 @@ export default function StudentHelpPage() {
     {
       title: "Enroll in Course",
       icon: UserPlusIcon,
-      link: "/courses",
+      link: "/sessions",
       color: "emerald",
     },
     {
       title: "Payment History",
       icon: CreditCardIcon,
-      link: "/payment-history",
+      link: "/student/payments",
       color: "amber",
     },
     // {
@@ -1022,7 +1022,7 @@ export default function StudentHelpPage() {
         </div>
 
         {/* Category Tabs */}
-        <div className="border-b border-gray-200">
+        {/* <div className="border-b border-gray-200">
           <nav className="flex space-x-8 overflow-x-auto pb-1">
             <button
               onClick={() => setActiveTab("all")}
@@ -1075,9 +1075,8 @@ export default function StudentHelpPage() {
               Account Settings
             </button>
           </nav>
-        </div>
-
-        {/* Help Sections */}
+        </div> */}
+        <div className="m-7"></div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-4">

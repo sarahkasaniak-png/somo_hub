@@ -10,6 +10,7 @@ import {
   getEducationLevelDisplay,
   formatApplicationForDisplay,
 } from "@/lib/api/tutor";
+import { getCurriculums, Curriculum } from "@/lib/api/curriculum";
 import paymentApi, { VerifyPaymentResponse } from "@/lib/api/payment";
 import { useAuth } from "@/app/context/AuthContext";
 
@@ -46,12 +47,31 @@ export default function ApplicationSummary({
   const [termsAccepted, setTermsAccepted] = useState(true);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentButtonEnabled, setPaymentButtonEnabled] = useState(false);
+  const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
+  const [loadingCurriculums, setLoadingCurriculums] = useState(true);
 
   // Add ref to prevent duplicate processing
   const hasProcessedPayment = useRef<boolean>(false);
 
   // Get user email from AuthContext
   const userEmail = user?.email || "";
+
+  // Fetch curriculums for display
+  useEffect(() => {
+    const fetchCurriculums = async () => {
+      try {
+        setLoadingCurriculums(true);
+        const data = await getCurriculums();
+        setCurriculums(data);
+      } catch (error) {
+        console.error("Failed to fetch curriculums:", error);
+      } finally {
+        setLoadingCurriculums(false);
+      }
+    };
+
+    fetchCurriculums();
+  }, []);
 
   // Check if payment button should be enabled
   useEffect(() => {
@@ -125,7 +145,6 @@ export default function ApplicationSummary({
 
         // Redirect to home page
         router.push("/");
-        // router.push("/onboarding/tutor/status");
 
         // Clean up URL
         window.history.replaceState(
@@ -188,6 +207,50 @@ export default function ApplicationSummary({
       });
     }
   };
+
+  // Parse selected curriculums
+  const getSelectedCurriculums = () => {
+    if (!application.selected_curriculums) return null;
+
+    try {
+      let selected =
+        typeof application.selected_curriculums === "string"
+          ? JSON.parse(application.selected_curriculums)
+          : application.selected_curriculums;
+
+      // Ensure it's an array
+      if (!Array.isArray(selected)) {
+        return null;
+      }
+
+      return selected;
+    } catch (error) {
+      console.error("Error parsing selected_curriculums:", error);
+      return null;
+    }
+  };
+
+  // Helper function to get curriculum name by ID
+  const getCurriculumName = (curriculumId: number): string => {
+    const curriculum = curriculums.find((c) => c.id === curriculumId);
+    return curriculum
+      ? `${curriculum.name} (${curriculum.code})`
+      : `Curriculum ID: ${curriculumId}`;
+  };
+
+  // Helper function to get curriculum level name
+  const getCurriculumLevelName = (
+    curriculumId: number,
+    levelId: number | null,
+  ): string | null => {
+    if (!levelId) return null;
+    const curriculum = curriculums.find((c) => c.id === curriculumId);
+    if (!curriculum || !curriculum.levels) return null;
+    const level = curriculum.levels.find((l) => l.id === levelId);
+    return level ? `${level.name} (${level.code})` : null;
+  };
+
+  const selectedCurriculums = getSelectedCurriculums();
 
   return (
     <div className="space-y-8">
@@ -408,6 +471,64 @@ export default function ApplicationSummary({
           </div>
         </div>
 
+        {/* Qualified Curriculums - Updated to show names instead of IDs */}
+        {selectedCurriculums && selectedCurriculums.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Qualified to Teach
+            </h3>
+            {loadingCurriculums ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {selectedCurriculums.map((curr: any, idx: number) => {
+                  const curriculumName = getCurriculumName(curr.curriculum_id);
+                  const levelName = getCurriculumLevelName(
+                    curr.curriculum_id,
+                    curr.curriculum_level_id,
+                  );
+
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg"
+                    >
+                      <div className="flex-shrink-0 mt-1">
+                        <svg
+                          className="w-5 h-5 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">
+                          {curriculumName}
+                        </p>
+                        {levelName && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            <span className="font-medium">Level:</span>{" "}
+                            {levelName}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Teaching Experience */}
         <div className="bg-white border border-gray-200 rounded-xl p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -498,6 +619,36 @@ export default function ApplicationSummary({
           </div>
         </div>
 
+        {/* Affiliate Code - Using affiliate_code field */}
+        {application.affiliate_code && (
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Affiliate/Referral Information
+            </h3>
+            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+              <svg
+                className="w-5 h-5 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+              <div>
+                <p className="text-sm text-gray-500">Referral Code</p>
+                <p className="font-medium text-gray-900">
+                  {application.affiliate_code}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Terms and Conditions */}
         <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
           <div className="flex items-start">
@@ -539,15 +690,15 @@ export default function ApplicationSummary({
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-yellow-700">
-                An application fee of{" "}
-                <span className="font-bold">KES 500t</span> is required
+                An application fee of <span className="font-bold">KES 565</span>{" "}
+                is required
               </p>
               <p className="text-sm text-yellow-600 mt-1">
                 This fee covers the cost of processing and verification
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-yellow-800">KES 500</p>
+              <p className="text-2xl font-bold text-yellow-800">KES 565</p>
             </div>
           </div>
 
@@ -591,7 +742,7 @@ export default function ApplicationSummary({
               </div>
 
               <PaystackPayment
-                amount={500}
+                amount={565}
                 email={userEmail}
                 applicationId={application.id}
                 onPaymentSuccess={handlePaymentSuccess}
