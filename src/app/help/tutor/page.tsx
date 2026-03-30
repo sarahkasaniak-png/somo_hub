@@ -1,4 +1,4 @@
-// src/app/tutor/help/page.tsx
+// src/app/help/tutor/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -144,11 +144,13 @@ export default function TutorHelpPage() {
             "The tutor application process involves 4 steps to verify your qualifications and identity.",
           steps: [
             "Navigate to the 'Become a Tutor' section from your dashboard",
-            "Step 1: Select your tutor level (College Student, Junior High Teacher, Senior High Teacher, Skilled Professional, University Lecturer, Private Tutor)",
+            "Step 1: Select your tutor level (College Student, Primary School Teacher, Senior High Teacher, Skilled Professional, University Lecturer, Private Tutor)",
             "Step 2: Provide your personal information and upload National ID photos (front and back)",
             "Step 3: Add your education details (highest education level: high school, diploma, bachelor's, master's, PhD) and upload relevant certificates",
             "Step 4: Document your teaching experience (years of experience, previous institutions)",
-            "Pay the application fee (KES 1,160) to complete your submission",
+            "Select the curriculum(s) you're qualified to teach (required for school teachers and university students, optional for others)",
+            "Enter an affiliate/referral code if you were referred by an existing tutor",
+            "Pay the application fee (KES 565) to complete your submission",
             "Wait for admin approval (usually within 24-48 hours)",
           ],
           tips: [
@@ -157,6 +159,7 @@ export default function TutorHelpPage() {
             "Prepare your portfolio URL if you're a skilled professional or university lecturer",
             "Your admission letter is required for higher education levels (diploma, bachelor's, master's, PhD)",
             "National ID photos are mandatory for identity verification",
+            "Select your qualified curricula carefully - this helps students find you",
           ],
           warning:
             "Make sure all information matches your official documents exactly as they appear.",
@@ -177,6 +180,7 @@ export default function TutorHelpPage() {
             "Upload your certificates and qualifications",
             "Set your hourly rate (e.g., KES 1,500 per hour)",
             "Configure your availability schedule",
+            "Ensure your curriculum selections are up to date",
           ],
           tips: [
             "Use a clear, professional photo",
@@ -190,106 +194,71 @@ export default function TutorHelpPage() {
       ],
     },
     {
-      id: "courses",
-      title: "Creating & Managing Courses",
-      icon: BookOpen,
-      description: "Learn how to create engaging courses that students love",
-      articles: [
-        {
-          id: "create-course",
-          title: "How to Create a New Course",
-          description: "Step-by-step guide to creating your first course",
-          content:
-            "Courses are the foundation of your tutoring business. Here's how to create one.",
-          steps: [
-            "Go to Tutor Dashboard → Courses → Create New Course",
-            "Enter course title (e.g., 'Mathematics for High School')",
-            "Write a detailed description of what students will learn",
-            "Select subject (e.g., Mathematics, Physics, Computer Studies) and level (primary, junior high, senior high, university, adult)",
-            "Set course duration: total weeks and classes per week",
-            "Choose class duration (60, 90, or 120 minutes)",
-            "Select teaching mode: virtual, in-person, or hybrid",
-            "Set maximum students per session",
-            "Define total price and currency (KES, USD)",
-            "Add prerequisites and learning outcomes",
-            "Create curriculum with weekly topics",
-            "Upload thumbnail and syllabus (optional)",
-            "Save as draft or publish immediately (You can only add tuition/sessions for courses you have published)",
-          ],
-          tips: [
-            "Use descriptive titles that include the subject and level",
-            "Break down curriculum into manageable weekly topics",
-            "Include specific learning outcomes to attract students",
-            "Set competitive prices based on market rates (KES 2,000 - 8,000 for 4-8 week courses)",
-          ],
-          warning:
-            "Courses may require admin approval before they can be published, especially for new tutors.",
-          example:
-            "August Grade 4 Mathematics - 4 weeks, 2 class/week, 90 min classes, KES 8,000",
-          link: "/tutor/courses/create",
-        },
-        {
-          id: "manage-courses",
-          title: "Managing Your Courses",
-          description: "Edit, update, and organize your course offerings",
-          content:
-            "Keep your courses up-to-date and organized. Course status can be: draft, published, enrolling, ongoing, completed, cancelled.",
-          steps: [
-            "View all courses from the Courses dashboard",
-            "Filter by status: Draft, Published, Enrolling, Ongoing, Completed",
-            "Click on any course to edit details",
-            "Update curriculum, pricing, or description",
-            "Publish draft courses when ready",
-            "Archive completed or outdated courses",
-          ],
-          tips: [
-            "Regularly update course content based on student feedback",
-            "Monitor enrollment numbers to adjust pricing",
-            "Use analytics to see which courses perform best",
-            "Published courses appear in student search results",
-          ],
-          link: "/tutor/courses",
-        },
-      ],
-    },
-    {
       id: "sessions",
-      title: "Sessions & Scheduling",
+      title: "Creating & Managing Sessions",
       icon: Calendar,
-      description:
-        "Master the art of scheduling and managing teaching sessions",
+      description: "Learn how to create engaging sessions that students love",
       articles: [
         {
           id: "create-session",
-          title: "Creating a New Session",
-          description: "How to schedule sessions for your courses",
+          title: "How to Create a New Session",
+          description: "Step-by-step guide to creating your first session",
           content:
-            "Sessions are specific instances of your courses with fixed dates and times.",
+            "Sessions are the foundation of your tutoring business. Here's how to create one.",
           steps: [
-            "Go to a course and click 'Create Session'",
-            "Name your session (e.g., 'April Grade 4 Maths')",
-            "Add description and batch name (optional)",
-            "Choose session type: one-on-one or group",
-            "Set maximum number of students (group sessions) or 1 for one-on-one",
-            "Define start date and end date",
-            "Set session fee (can be different from course price)",
+            "Go to Tutor Dashboard → Sessions → Create New Session",
+            "Enter session name (e.g., 'April 2024 Mathematics')",
+            "Write a detailed description of what students will learn",
+            "Select subject (e.g., Mathematics, Physics, Computer Studies)",
+            "Choose curriculum (KCSE, Cambridge, IB, etc.) and level (Form 1-4, Grade 1-8, etc.)",
+            "Set session type: Group or One-on-One",
+            "Define maximum students (for group sessions) or 1 for one-on-one",
+            "Set session fee (total cost for the entire session)",
+            "Select start and end dates",
             "Add schedule configurations:",
-            "  - Select days of the week",
+            "  - Choose days of the week",
             "  - Set start and end times (e.g., 09:00 - 10:30)",
             "  - Duration is auto-calculated",
-            "System generates unique session code automatically",
-            "Review and create the session",
+            "Add prerequisites and learning outcomes",
+            "Create curriculum with weekly topics",
+            "Save as draft or publish immediately",
+            "Once published, students can enroll and pay the full session fee upfront",
           ],
           tips: [
-            "Create sessions in batches for different terms (Jan-April, May-August, Sept-Dec)",
-            "Consider time zones when scheduling",
-            "Leave buffer time between sessions",
-            "Use batch names to organize different intakes",
+            "Use descriptive names that include the subject and level",
+            "Break down curriculum into manageable weekly topics",
+            "Include specific learning outcomes to attract students",
+            "Set competitive prices based on market rates (KES 8,000 - 20,000 for 4-8 week sessions)",
+            "Consider that students pay upfront but you receive weekly payments after teaching",
           ],
-          note: "Sessions automatically generate individual classes based on your schedule configuration",
+          warning:
+            "Sessions may require admin approval before they can be published, especially for new tutors.",
           example:
-            "A 4-week session with Monday and Wednesday at 9 AM creates 8 individual classes (2 per week × 4 weeks)",
+            "April Grade 4 Mathematics - 4 weeks, 2 classes/week, 90 min classes, KES 8,000 total",
           link: "/tutor/sessions/create",
+        },
+        {
+          id: "manage-sessions",
+          title: "Managing Your Sessions",
+          description: "Edit, update, and organize your session offerings",
+          content:
+            "Keep your sessions up-to-date and organized. Session status can be: draft, scheduled, ongoing, completed, cancelled.",
+          steps: [
+            "View all sessions from the Sessions dashboard",
+            "Filter by status: Draft, Scheduled, Ongoing, Completed",
+            "Click on any session to edit details",
+            "Update curriculum, pricing, or description",
+            "Publish draft sessions when ready",
+            "Monitor enrollment numbers",
+            "Archive completed or outdated sessions",
+          ],
+          tips: [
+            "Regularly update session content based on student feedback",
+            "Monitor enrollment numbers to adjust pricing",
+            "Use analytics to see which sessions perform best",
+            "Published sessions appear in student search results",
+          ],
+          link: "/tutor/sessions",
         },
         {
           id: "session-schedules",
@@ -418,7 +387,7 @@ export default function TutorHelpPage() {
           title: "Managing Student Payments",
           description: "Record and track payments from students",
           content:
-            "Students pay the full session fee upfront at enrollment. Keep accurate records of all payments received.",
+            "Students pay the full session fee upfront at enrollment. Keep accurate records of all payments received. You'll receive weekly payments after completing each week's classes.",
           steps: [
             "From enrollment detail page, view payment status",
             "Record new payments with:",
@@ -428,15 +397,13 @@ export default function TutorHelpPage() {
             "System updates payment status automatically",
             "View complete payment history",
             "Send payment reminders for pending payments",
-            "Payment types: tutor onboarding, session enrollment, community membership, course purchase",
           ],
           tips: [
             "Always record payment references for tracking",
             "Issue receipts for all payments",
             "Follow up on partial payments promptly",
-            "Payment status can be: pending, paid, partial, refunded",
           ],
-          note: "Remember: Students pay the full session fee upfront, but you'll receive weekly payments after teaching each week's classes.",
+          note: "Students pay the full session fee upfront. Funds are held securely by SomoHub, and you'll receive weekly payments after teaching each week's classes.",
           link: "/tutor/enrollments",
         },
         {
@@ -468,66 +435,6 @@ export default function TutorHelpPage() {
       ],
     },
     {
-      id: "community",
-      title: "Community Features",
-      icon: Users,
-      description: "Engage with communities and create community courses",
-      articles: [
-        {
-          id: "join-community",
-          title: "Joining Communities",
-          description: "How to find and join relevant communities",
-          content:
-            "Communities are groups of educators, alumni, or professionals sharing resources.",
-          steps: [
-            "Browse available communities from the Communities page",
-            "Filter by category: Primary School, High School, College/University, NGO/Non-Profit, Private Tutor Group, Study Group, Professional Association, Other",
-            "Click on a community to view details",
-            "Check member count and description",
-            "Request to join (if approval required)",
-            "Wait for admin approval",
-            "Once approved, you become a member with a role (member, moderator, admin, or tutor)",
-            "Participate in discussions and share materials",
-          ],
-          tips: [
-            "Join communities relevant to your subjects",
-            "Engage actively to build your network",
-            "Share resources and learn from peers",
-          ],
-          example: "Starehe High School Alumni community with 125 members",
-          link: "/communities",
-        },
-        {
-          id: "create-community-course",
-          title: "Creating Community Courses",
-          description: "Offer courses within communities",
-          content:
-            "Approved community members can create courses for community members.",
-          steps: [
-            "Go to your community page",
-            "Navigate to Courses section",
-            "Click 'Create Community Course'",
-            "Fill in course details similar to tutor courses",
-            "Set subject category and level (beginner, intermediate, advanced, all)",
-            "Define total hours, total weeks, classes per week",
-            "Set maximum students",
-            "Create curriculum with weekly topics",
-            "Publish for community members only",
-            "Create sessions for your community course",
-            "Manage enrollments within the community",
-          ],
-          tips: [
-            "Tailor content to community needs",
-            "Offer discounts for community members",
-            "Collaborate with other community tutors",
-          ],
-          example:
-            "KCSE Mathematics Revision Course with 12 weeks, 2 classes per week",
-          link: "/communities/my",
-        },
-      ],
-    },
-    {
       id: "earnings",
       title: "Earnings & Payouts",
       icon: DollarSign,
@@ -540,21 +447,57 @@ export default function TutorHelpPage() {
           content:
             "Students pay the full session fee upfront, but tutor payments are released weekly after classes are completed. This ensures quality delivery and protects both parties.",
           steps: [
-            "Student pays full session fee at enrollment",
+            "Student pays the full session fee at enrollment",
             "Funds are held securely by SomoHub",
-            "Each week after you complete your classes, your earnings for that week are calculated",
-            "Weekly earnings are added to your available balance",
+            "Each week after you complete all your scheduled classes for that week, your earnings for that week are calculated",
+            "From your weekly earnings:",
+            "  - 25% platform fee is deducted (covers platform maintenance, support, and marketing)",
+            "  - 5% tax withholding (remitted to tax authorities)",
+            "  - Remaining 70% is deposited to your preferred account",
+            "Weekly earnings are added to your available balance after fee deductions",
             "You can withdraw accumulated earnings anytime after they're available",
           ],
           tips: [
             "Weekly payments are calculated based on the proportion of the total session cost",
-            "Example: For a 4-week session costing KES 8,000, you earn KES 2,000 per week after completing that week's classes",
-            "Track your weekly earnings to forecast your income",
+            "Example: For a 4-week session costing KES 8,000, the weekly payment before fees is KES 2,000",
+            "After fees (25% platform + 5% tax): KES 2,000 × 0.70 = KES 1,400 deposited weekly",
             "Complete all scheduled classes to ensure full payment",
+            "Track your weekly earnings to forecast your income",
           ],
-          example:
-            "4-week session at KES 8,000 total → KES 2,000 released after each completed week",
-          note: "Payments are only released for weeks where you've completed all scheduled classes. Partial weeks are pro-rated.",
+          examples: [
+            "4-week session at KES 8,000 total → KES 2,000 weekly before fees → KES 1,400 after fees (70%)",
+            "8-week session at KES 12,000 total → KES 1,500 weekly before fees → KES 1,050 after fees (70%)",
+            "12-week session at KES 18,000 total → KES 1,500 weekly before fees → KES 1,050 after fees (70%)",
+          ],
+          note: "Payments are only released for weeks where you've completed all scheduled classes. Partial weeks are pro-rated based on number of classes completed.",
+          link: "/tutor/earnings",
+        },
+        {
+          id: "payment-breakdown",
+          title: "Understanding the Payment Breakdown",
+          description: "What fees are deducted and why",
+          content:
+            "Here's a detailed explanation of how your earnings are calculated.",
+          steps: [
+            "Total session fee from student: 100%",
+            "Weekly allocation: Total fee ÷ Number of weeks in session",
+            "After completing each week's classes:",
+            "  - 25% platform fee (covers platform maintenance, payment processing, support, and marketing)",
+            "  - 5% tax withholding (remitted to relevant tax authorities)",
+            "  - 70% deposited to your account (your net earnings)",
+            "Example calculation for a KES 10,000, 5-week session:",
+            "  - Weekly gross: KES 2,000",
+            "  - Platform fee (25%): KES 500",
+            "  - Tax withholding (5%): KES 100",
+            "  - Your net weekly payout: KES 1,400",
+            "  - Total net earnings after 5 weeks: KES 7,000",
+          ],
+          tips: [
+            "Keep records of all payments for tax purposes",
+            "The platform fee supports ongoing platform improvements and student acquisition",
+            "Tax withholding helps ensure compliance with tax regulations",
+            "You'll receive monthly tax statements for your records",
+          ],
           link: "/tutor/earnings",
         },
         {
@@ -566,40 +509,20 @@ export default function TutorHelpPage() {
           steps: [
             "Go to Tutor Dashboard → Earnings",
             "View total lifetime earnings from all paid enrollments",
-            "See pending balance (earnings from current in-progress sessions)",
-            "Check available balance (funds ready for withdrawal)",
-            "View weekly breakdown of earnings per session",
+            "See pending balance (earnings from current in-progress sessions that will be paid weekly)",
+            "Check available balance (funds ready for withdrawal after fee deductions)",
+            "View weekly breakdown of earnings per session with fee details",
             "Filter earnings by date range or specific course",
             "See payment history and transaction details",
-            "Download earnings reports for your records",
+            "Download earnings reports and tax statements for your records",
           ],
           tips: [
             "Review earnings weekly to track your income",
             "Save reports for tax purposes",
-            "Monitor which courses generate the most revenue",
+            "Monitor which sessions generate the most revenue",
             "Check pending balance to see what's coming",
+            "View detailed fee breakdowns for each payment",
           ],
-          link: "/tutor/earnings",
-        },
-        {
-          id: "payment-calculation",
-          title: "How Weekly Payments Are Calculated",
-          description: "Detailed breakdown of payment calculations",
-          content:
-            "Your weekly payment is calculated based on the proportion of the total session fee relative to the session duration.",
-          steps: [
-            "Total session fee is divided by number of weeks in the session",
-            "After completing all classes in a week, that week's amount is released",
-            "If a session has multiple classes per week, all must be completed for full weekly payment",
-            "Partial weeks (start or end of session) are pro-rated based on number of classes",
-          ],
-          examples: [
-            "4-week session at KES 8,000 = KES 2,000 per week",
-            "8-week session at KES 12,000 = KES 1,500 per week",
-            "6-week session at KES 9,000 = KES 1,500 per week",
-            "12-week session at KES 18,000 = KES 1,500 per week",
-          ],
-          note: "You don't need to wait until the session ends to get paid. Funds are released weekly as you teach, providing steady cash flow throughout the session.",
           link: "/tutor/earnings",
         },
         {
@@ -640,38 +563,62 @@ export default function TutorHelpPage() {
       ],
     },
     {
-      id: "materials",
-      title: "Teaching Materials",
-      icon: FileText,
-      description: "Upload and manage your teaching resources",
+      id: "community",
+      title: "Community Features",
+      icon: Users,
+      description: "Engage with communities and create community sessions",
       articles: [
         {
-          id: "upload-materials",
-          title: "Uploading Course Materials",
-          description: "Share resources with your students",
+          id: "join-community",
+          title: "Joining Communities",
+          description: "How to find and join relevant communities",
           content:
-            "Provide additional learning materials to enhance your courses.",
+            "Communities are groups of educators, alumni, or professionals sharing resources.",
           steps: [
-            "Go to Materials section",
-            "Click 'Upload New Material'",
-            "Select file (PDF, video, presentation, etc.)",
-            "File is uploaded to the server",
-            "Add title and description",
-            "Set document type: national ID, certificate, admission letter, TSC certificate, experience letter, community verification",
-            "Link to specific course or session",
-            "Set visibility (all students or specific session)",
-            "Upload and organize in folders",
-            "Share with enrolled students",
-            "Track verification status: pending, verified, rejected",
+            "Browse available communities from the Communities page",
+            "Filter by category: Primary School, High School, College/University, NGO/Non-Profit, Private Tutor Group, Study Group, Professional Association, Other",
+            "Click on a community to view details",
+            "Check member count and description",
+            "Request to join (if approval required)",
+            "Wait for admin approval",
+            "Once approved, you become a member with a role (member, moderator, admin, or tutor)",
+            "Participate in discussions and share materials",
           ],
           tips: [
-            "Organize materials by course and week",
-            "Include practice exercises and solutions",
-            "Add video recordings of past sessions",
-            "Use descriptive file names",
-            "Keep file sizes reasonable for students to download",
+            "Join communities relevant to your subjects",
+            "Engage actively to build your network",
+            "Share resources and learn from peers",
           ],
-          link: "/tutor/materials",
+          example: "Starehe High School Alumni community with 125 members",
+          link: "/communities",
+        },
+        {
+          id: "create-community-session",
+          title: "Creating Community Sessions",
+          description: "Offer sessions within communities",
+          content:
+            "Approved community members can create sessions for community members.",
+          steps: [
+            "Go to your community page",
+            "Navigate to Sessions section",
+            "Click 'Create Community Session'",
+            "Fill in session details similar to tutor sessions",
+            "Set subject category and level",
+            "Define total weeks, classes per week, and class duration",
+            "Set maximum students",
+            "Create curriculum with weekly topics",
+            "Publish for community members only",
+            "Create schedule configurations for your community session",
+            "Manage enrollments within the community",
+          ],
+          tips: [
+            "Tailor content to community needs",
+            "Offer discounts for community members",
+            "Collaborate with other community tutors",
+          ],
+          example:
+            "KCSE Mathematics Revision Session with 12 weeks, 2 classes per week",
+          link: "/communities/my",
         },
       ],
     },
@@ -696,6 +643,7 @@ export default function TutorHelpPage() {
             "Update hourly rate and currency",
             "Add languages and proficiency levels",
             "Update education and certifications",
+            "Update your qualified curricula",
             "Set timezone",
             "Save changes",
           ],
@@ -704,6 +652,7 @@ export default function TutorHelpPage() {
             "Add new certifications as you earn them",
             "Keep your availability schedule current",
             "Profile completion affects visibility in searches",
+            "Regularly update your curriculum selections",
           ],
           link: "/tutor/profile",
         },
@@ -719,6 +668,7 @@ export default function TutorHelpPage() {
             "  - Payments received",
             "  - Upcoming sessions",
             "  - New enrollments",
+            "  - Weekly payment confirmations",
             "  - Community activities",
             "  - Tutor-specific updates",
             "  - System announcements",
@@ -732,7 +682,7 @@ export default function TutorHelpPage() {
           ],
           tips: [
             "Enable reminders for upcoming sessions",
-            "Get notified immediately for new payments",
+            "Get notified immediately for new payments and weekly payouts",
             "Review notification settings periodically",
           ],
           link: "/settings/notifications",
@@ -748,7 +698,7 @@ export default function TutorHelpPage() {
             "See login events and timestamps",
             "Track application submissions and status changes",
             "Monitor session activity and attendance",
-            "Review enrollment actions",
+            "Review enrollment actions and payment processing",
             "Each log includes: action type, IP address, timestamp, and additional context",
           ],
           tips: [
@@ -766,13 +716,7 @@ export default function TutorHelpPage() {
 
   const quickLinks = [
     {
-      title: "Create a Course",
-      icon: BookOpen,
-      link: "/tutor/courses/create",
-      color: "blue",
-    },
-    {
-      title: "Schedule a Session",
+      title: "Create a Session",
       icon: Calendar,
       link: "/tutor/sessions/create",
       color: "purple",
@@ -789,12 +733,6 @@ export default function TutorHelpPage() {
       link: "/tutor/earnings",
       color: "amber",
     },
-    // {
-    //   title: "Upload Materials",
-    //   icon: FileText,
-    //   link: "/tutor/materials",
-    //   color: "red",
-    // },
     {
       title: "Edit Profile",
       icon: User,
@@ -822,17 +760,17 @@ export default function TutorHelpPage() {
     {
       question: "How and when do I get paid?",
       answer:
-        "Students pay the full session fee upfront, but you receive payments weekly. After you complete each week's classes, your earnings for that week are released to your available balance. You can then withdraw funds via bank transfer or M-Pesa anytime (minimum KES 500).",
+        "Students pay the full session fee upfront, but you receive payments weekly. After you complete each week's classes, your earnings for that week are calculated. From your weekly earnings, 25% platform fee and 5% tax withholding are deducted, and the remaining 70% is deposited to your preferred account. You can withdraw funds anytime (minimum KES 500).",
     },
     {
       question: "How is my weekly payment calculated?",
       answer:
-        "Your weekly payment is the total session fee divided by the number of weeks. For example, a 4-week session at KES 8,000 pays KES 2,000 per week after you complete that week's classes. Partial weeks at the start or end of a session are pro-rated based on the number of classes.",
+        "Your weekly gross payment is the total session fee divided by the number of weeks. For example, a 4-week session at KES 8,000 pays KES 2,000 gross per week. After fees (25% platform + 5% tax), you receive KES 1,400 net (70% of gross) each week after completing that week's classes.",
     },
     {
       question: "Do I have to wait until the session ends to get paid?",
       answer:
-        "No! Unlike students who pay upfront, you get paid weekly as you teach. After completing each week's classes, that week's portion of the fee is released to your available balance. This gives you steady cash flow throughout the session.",
+        "No! Students pay upfront, but you get paid weekly as you teach. After completing each week's classes, that week's portion of the fee (minus platform fees and tax) is deposited to your account. This gives you steady cash flow throughout the session.",
     },
     {
       question: "What happens if a student misses a class?",
@@ -844,11 +782,11 @@ export default function TutorHelpPage() {
       answer:
         "If you cancel a class, that week's payment may be adjusted. It's best to reschedule rather than cancel to ensure you receive full weekly payment. Communicate with your students and admin if issues arise.",
     },
-    // {
-    //   question: "Can I teach in multiple communities?",
-    //   answer:
-    //     "Yes, you can join multiple communities and create courses for each one if you're an approved member. Your memberships are tracked with appropriate roles.",
-    // },
+    {
+      question: "What is the platform fee for?",
+      answer:
+        "The 25% platform fee covers platform maintenance, payment processing, customer support, marketing to bring students to the platform, and ongoing feature development.",
+    },
   ];
 
   const filteredSections = helpSections
@@ -894,7 +832,7 @@ export default function TutorHelpPage() {
         </div>
 
         {/* Quick Links */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-8">
           {quickLinks.map((link, index) => {
             const Icon = link.icon;
             const colorClasses = {
@@ -917,52 +855,6 @@ export default function TutorHelpPage() {
               </Link>
             );
           })}
-        </div>
-
-        {/* Role Tabs */}
-        <div className="border-b border-gray-200">
-          {/* <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "all"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              All Topics
-            </button>
-            <button
-              onClick={() => setActiveTab("tutor")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "tutor"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Tutor Guides
-            </button>
-            <button
-              onClick={() => setActiveTab("community")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "community"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Community
-            </button>
-            <button
-              onClick={() => setActiveTab("student")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "student"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              For Students
-            </button>
-          </nav> */}
         </div>
 
         {/* Help Sections */}
@@ -1176,33 +1068,6 @@ export default function TutorHelpPage() {
               </div>
             </div>
 
-            {/* Video Tutorials */}
-            {/* <div className="bg-gradient-to-br from-blue-300 to-indigo-00 rounded-xl p-6 text-zinc-700">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <PlayCircle className="w-5 h-5" />
-                Video Tutorials
-              </h3>
-              <p className="text-sm text-zinc-600 mb-4">
-                Watch step-by-step video guides for common tasks
-              </p>
-              <div className="space-y-3">
-                <button className="w-full flex items-center gap-3 p-3 bg-blue-700/10 rounded-lg hover:bg-blue-500/10 transition-colors cursor-pointer">
-                  <PlayCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">
-                    How to Create Your First Course
-                  </span>
-                </button>
-                <button className="w-full flex items-center gap-3 p-3 bg-blue-700/10 rounded-lg hover:bg-blue-500/10 transition-colors cursor-pointer">
-                  <PlayCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">Scheduling Sessions with BBB</span>
-                </button>
-                <button className="w-full flex items-center gap-3 p-3 bg-blue-700/10 rounded-lg hover:bg-blue-500/10 transition-colors cursor-pointer">
-                  <PlayCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">Understanding Your Earnings</span>
-                </button>
-              </div>
-            </div> */}
-
             {/* Contact Support */}
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1220,72 +1085,11 @@ export default function TutorHelpPage() {
                   <Mail className="w-5 h-5 text-blue-600" />
                   <span className="text-sm font-medium">Email Support</span>
                 </Link>
-                {/* <Link
-                  href="/chat"
-                  className="flex items-center gap-3 p-3 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <MessageSquare className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm font-medium">Live Chat</span>
-                </Link>
-                <a
-                  href="tel:+254700000000"
-                  className="flex items-center gap-3 p-3 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <Phone className="w-5 h-5 text-green-600" />
-                  <span className="text-sm font-medium">
-                    Call Us: +254 700 000 000
-                  </span>
-                </a> */}
               </div>
               <p className="text-xs text-gray-500 mt-4">
                 Available Mon-Fri, 8:00 AM - 6:00 PM EAT
               </p>
             </div>
-
-            {/* Resources */}
-            {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">
-                Useful Resources
-              </h3>
-              <ul className="space-y-3">
-                <li>
-                  <Link
-                    href="/tutor/handbook.pdf"
-                    className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600"
-                  >
-                    <Download className="w-4 h-4" />
-                    Tutor Handbook (PDF)
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/tutor/templates"
-                    className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Lesson Plan Templates
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/community/forum"
-                    className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600"
-                  >
-                    <Users className="w-4 h-4" />
-                    Tutor Forum
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/webinars"
-                    className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600"
-                  >
-                    <Video className="w-4 h-4" />
-                    Upcoming Webinars
-                  </Link>
-                </li>
-              </ul>
-            </div> */}
           </div>
         </div>
 
@@ -1306,13 +1110,6 @@ export default function TutorHelpPage() {
               <Mail className="w-5 h-5 mr-2" />
               Contact Support
             </Link>
-            {/* <Link
-              href="/community/forum"
-              className="inline-flex items-center justify-center px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-400 transition-colors"
-            >
-              <Users className="w-5 h-5 mr-2" />
-              Ask the Community
-            </Link> */}
           </div>
         </div>
       </div>

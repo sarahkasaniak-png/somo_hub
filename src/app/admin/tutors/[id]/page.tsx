@@ -457,7 +457,7 @@ export default function AdminTutorDetailPage({
               <Star className="w-5 h-5 text-purple-600" />
             </div>
             <span className="text-2xl font-bold text-gray-900">
-              {(tutor.rating || 0).toFixed(1)}
+              {tutor?.rating || (tutor?.rating || 0).toFixed(1)}
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-2">Rating</p>

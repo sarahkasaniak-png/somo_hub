@@ -39,10 +39,14 @@ export default function AffiliateReferralsPage() {
     try {
       setLoading(true);
       const response = await affiliateApi.getReferrals(pagination.page, 20);
+      console.log("response", response);
 
       if (response.success && response.data) {
-        // Safely get referrals data with fallback
-        const referralsData = response.data.data || [];
+        // Extract the referrals array from the 'referrals' property
+        const data = response.data as any;
+        const referralsData = data.referrals || [];
+        console.log("referrals data", referralsData);
+
         setReferrals(referralsData);
         setPagination({
           page: response.data.page || pagination.page,
@@ -50,7 +54,6 @@ export default function AffiliateReferralsPage() {
           totalPages: response.data.totalPages || 1,
         });
       } else {
-        // Handle case where response is successful but no data
         setReferrals([]);
       }
     } catch (error) {

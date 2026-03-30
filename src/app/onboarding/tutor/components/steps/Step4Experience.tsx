@@ -16,6 +16,30 @@ interface Certificate {
   issued_date?: string;
 }
 
+// Base schema without curriculum
+const baseExperienceSchema = z.object({
+  has_teaching_experience: z.boolean().default(false),
+  tsc_number: z.string().optional().or(z.literal("")),
+  teaching_experience_years: z.number().min(0).max(50).optional().or(z.null()),
+  previous_institutions: z.array(z.string()).optional().default([]),
+  professional_experience: z.string().max(1000).optional().or(z.literal("")),
+  portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
+  certificates: z.any().optional().default([]),
+  affiliate_code: z.string().max(100).optional().or(z.literal("")),
+});
+
+// Schema with required curriculum
+const requiredCurriculumSchema = baseExperienceSchema.extend({
+  selected_curriculums: z
+    .array(z.any())
+    .min(1, "Please select at least one curriculum you're qualified to teach"),
+});
+
+// Schema with optional curriculum
+const optionalCurriculumSchema = baseExperienceSchema.extend({
+  selected_curriculums: z.array(z.any()).optional().default([]),
+});
+
 // Schema factory based on tutor level
 const createExperienceSchema = (tutorLevel: string) => {
   const isSchoolTeacher = [
@@ -23,8 +47,8 @@ const createExperienceSchema = (tutorLevel: string) => {
     "senior_high_teacher",
   ].includes(tutorLevel);
   const isUniversityStudent = tutorLevel === "college_student";
-  const isUniversityLecturer = tutorLevel === "university_lecturer";
   const isSkilledProfessional = tutorLevel === "skilled_professional";
+  const isUniversityLecturer = tutorLevel === "university_lecturer";
   const isPrivateTutor = tutorLevel === "private_tutor";
 
   // Curriculum is REQUIRED for school teachers and university students
@@ -37,75 +61,15 @@ const createExperienceSchema = (tutorLevel: string) => {
   const curriculumOptional = isPrivateTutor;
 
   if (curriculumNotAvailable) {
-    // No curriculum validation - curriculum field not used
-    return z.object({
-      has_teaching_experience: z.boolean().default(false),
-      tsc_number: z.string().optional().or(z.literal("")),
-      teaching_experience_years: z
-        .number()
-        .min(0)
-        .max(50)
-        .optional()
-        .or(z.null()),
-      previous_institutions: z.array(z.string()).optional().default([]),
-      professional_experience: z
-        .string()
-        .max(1000)
-        .optional()
-        .or(z.literal("")),
-      portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
-      certificates: z.any().optional().default([]),
-      affiliate_code: z.string().max(100).optional().or(z.literal("")),
-    });
+    return baseExperienceSchema;
   } else if (requiresCurriculum) {
-    return z.object({
-      has_teaching_experience: z.boolean().default(false),
-      tsc_number: z.string().optional().or(z.literal("")),
-      teaching_experience_years: z
-        .number()
-        .min(0)
-        .max(50)
-        .optional()
-        .or(z.null()),
-      previous_institutions: z.array(z.string()).optional().default([]),
-      professional_experience: z
-        .string()
-        .max(1000)
-        .optional()
-        .or(z.literal("")),
-      portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
-      certificates: z.any().optional().default([]),
-      affiliate_code: z.string().max(100).optional().or(z.literal("")),
-      selected_curriculums: z
-        .array(z.any())
-        .min(
-          1,
-          "Please select at least one curriculum you're qualified to teach",
-        ),
-    });
-  } else {
-    // Curriculum optional for private tutors
-    return z.object({
-      has_teaching_experience: z.boolean().default(false),
-      tsc_number: z.string().optional().or(z.literal("")),
-      teaching_experience_years: z
-        .number()
-        .min(0)
-        .max(50)
-        .optional()
-        .or(z.null()),
-      previous_institutions: z.array(z.string()).optional().default([]),
-      professional_experience: z
-        .string()
-        .max(1000)
-        .optional()
-        .or(z.literal("")),
-      portfolio_url: z.string().url().optional().or(z.literal("")).or(z.null()),
-      certificates: z.any().optional().default([]),
-      affiliate_code: z.string().max(100).optional().or(z.literal("")),
-      selected_curriculums: z.array(z.any()).optional().default([]),
-    });
+    return requiredCurriculumSchema;
+  } else if (curriculumOptional) {
+    return optionalCurriculumSchema;
   }
+
+  // Default fallback (should not happen)
+  return baseExperienceSchema;
 };
 
 type ExperienceFormData = z.infer<ReturnType<typeof createExperienceSchema>>;
@@ -154,6 +118,30 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
 
     const schema = createExperienceSchema(actualTutorLevel);
 
+    // Conditionally build default values
+    const getDefaultValues = () => {
+      const baseDefaults = {
+        has_teaching_experience: initialData?.has_teaching_experience || false,
+        tsc_number: initialData?.tsc_number || "",
+        teaching_experience_years: initialData?.teaching_experience_years || 0,
+        previous_institutions: initialData?.previous_institutions || [],
+        professional_experience: initialData?.professional_experience || "",
+        portfolio_url: initialData?.portfolio_url || "",
+        certificates: initialData?.certificates || [],
+        affiliate_code: initialData?.affiliate_code || "",
+      };
+
+      // Add selected_curriculums only if curriculum is relevant
+      if (requiresCurriculum || curriculumOptional) {
+        return {
+          ...baseDefaults,
+          selected_curriculums: initialData?.selected_curriculums || [],
+        };
+      }
+
+      return baseDefaults;
+    };
+
     const {
       register,
       handleSubmit,
@@ -165,44 +153,44 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     } = useForm<ExperienceFormData>({
       resolver: zodResolver(schema),
       mode: "onChange",
-      defaultValues: {
-        has_teaching_experience: initialData?.has_teaching_experience || false,
-        tsc_number: initialData?.tsc_number || "",
-        teaching_experience_years: initialData?.teaching_experience_years || 0,
-        previous_institutions: initialData?.previous_institutions || [],
-        professional_experience: initialData?.professional_experience || "",
-        portfolio_url: initialData?.portfolio_url || "",
-        certificates: initialData?.certificates || [],
-        affiliate_code: initialData?.affiliate_code || "",
-        selected_curriculums: initialData?.selected_curriculums || [],
-      },
+      defaultValues: getDefaultValues(),
     });
 
     const { fields, append, remove } = useFieldArray({
       control,
-      name: "certificates",
+      name: "certificates" as any,
     });
 
-    const hasExperience = watch("has_teaching_experience");
-    const tscNumber = watch("tsc_number");
-    const experienceYears = watch("teaching_experience_years");
-    const selectedCurriculums = watch("selected_curriculums");
+    // Use type assertion for watched values to avoid undefined issues
+    const hasExperience = watch("has_teaching_experience") ?? false;
+    const tscNumber = watch("tsc_number") ?? "";
+    const experienceYears = watch("teaching_experience_years") ?? 0;
 
-    // Update form validity state
+    // Use type assertion for selectedCurriculums since it may not exist in all schemas
+    const selectedCurriculums = (watch as any)("selected_curriculums") as
+      | any[]
+      | undefined;
+
+    // Update form validity state - FIXED: ensure all values are booleans
     useEffect(() => {
       const checkFormValidity = () => {
-        const hasExperienceStatus = typeof hasExperience !== "undefined";
+        // hasExperience is now guaranteed to be boolean (default false if undefined)
+        const hasExperienceStatus = hasExperience !== undefined;
 
-        // Check curriculum requirement
-        let curriculumValid = true;
+        // Check curriculum requirement - ensure boolean result
+        let curriculumValid: boolean = true;
         if (requiresCurriculum) {
-          curriculumValid =
-            selectedCurriculums && selectedCurriculums.length > 0;
+          // Explicitly check if selectedCurriculums exists and has length > 0
+          curriculumValid = !!(
+            selectedCurriculums && selectedCurriculums.length > 0
+          );
         }
 
         if (hasExperience) {
-          const hasExperienceDetails =
-            (tscNumber?.trim() ? true : false) || (experienceYears || 0) > 0;
+          const hasExperienceDetails = !!(
+            tscNumber?.trim() ||
+            (experienceYears && experienceYears > 0)
+          );
           setIsFormValid(
             hasExperienceStatus && hasExperienceDetails && curriculumValid,
           );
@@ -223,13 +211,13 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
     // Handle curriculum selection
     const handleCurriculumChange = (curriculums: SelectedCurriculum[]) => {
       console.log("🎯 Curriculum selection changed:", curriculums);
-      setValue("selected_curriculums", curriculums, {
+      (setValue as any)("selected_curriculums", curriculums, {
         shouldValidate: true,
         shouldDirty: true,
       });
 
       setTimeout(() => {
-        trigger("selected_curriculums");
+        (trigger as any)("selected_curriculums");
         trigger();
       }, 50);
     };
@@ -244,9 +232,9 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
 
         const updatedCertificates = [...certificates, newCert];
         setCertificates(updatedCertificates);
-        setValue("certificates", updatedCertificates);
-        await trigger("certificates");
-        append(newCert);
+        setValue("certificates", updatedCertificates as any);
+        await trigger("certificates" as any);
+        append(newCert as any);
       }
     };
 
@@ -254,8 +242,8 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
       remove(index);
       const updatedCertificates = certificates.filter((_, i) => i !== index);
       setCertificates(updatedCertificates);
-      setValue("certificates", updatedCertificates);
-      trigger("certificates");
+      setValue("certificates", updatedCertificates as any);
+      trigger("certificates" as any);
     };
 
     const ensureCertificatesArray = (certs: any): any[] => {
@@ -290,7 +278,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
 
         // Validate curriculum requirement
         if (requiresCurriculum) {
-          const currentCurriculums = data.selected_curriculums;
+          const currentCurriculums = (data as any).selected_curriculums;
           if (!currentCurriculums || currentCurriculums.length === 0) {
             alert(
               "Please select at least one curriculum you're qualified to teach",
@@ -300,7 +288,9 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
           }
         }
 
-        const certificatesArray = ensureCertificatesArray(data.certificates);
+        const certificatesArray = ensureCertificatesArray(
+          (data as any).certificates,
+        );
 
         const cleanedData = {
           ...data,
@@ -315,7 +305,7 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
 
         console.log(
           "📤 Submitting experience data with curriculums:",
-          cleanedData.selected_curriculums,
+          (cleanedData as any).selected_curriculums,
         );
         await onNext(cleanedData);
       } catch (error) {
@@ -350,16 +340,6 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
         default:
           return "";
       }
-    };
-
-    const getCurriculumSectionTitle = () => {
-      if (requiresCurriculum) {
-        return "Curriculum Qualifications *";
-      }
-      if (curriculumOptional) {
-        return "Curriculum Qualifications (Optional)";
-      }
-      return "";
     };
 
     // Render info for professional/lecturer tutors about why curriculum is not shown
@@ -485,7 +465,9 @@ const Step4Experience = forwardRef<HTMLFormElement, Step4ExperienceProps>(
               <CurriculumSelector
                 tutorLevel={actualTutorLevel}
                 onChange={handleCurriculumChange}
-                initialValue={selectedCurriculums || []}
+                initialValue={
+                  (selectedCurriculums || []) as SelectedCurriculum[]
+                }
                 disabled={isLoading || isSubmitting}
                 required={requiresCurriculum}
               />

@@ -29,6 +29,7 @@ import {
   Check,
   Info,
 } from "lucide-react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 interface Schedule {
   id: number;
@@ -403,301 +404,310 @@ export default function StudentSchedulePage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link
-              href="/student/dashboard"
-              className="hover:text-blue-600 transition-colors"
-            >
-              Dashboard
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 font-medium">My Schedule</span>
-          </div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            My Class Schedule
-          </h1>
-          <p className="text-gray-600 mt-1">
-            View and join your scheduled classes
-          </p>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="p-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
-          title="Refresh"
-        >
-          <RefreshCw
-            className={`w-5 h-5 text-gray-600 ${refreshing ? "animate-spin" : ""}`}
-          />
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-          <p className="text-sm text-gray-500">Total Classes</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-1">
-            {schedules.length}
-          </p>
-        </div>
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-          <p className="text-sm text-gray-500">Upcoming</p>
-          <p className="text-2xl font-semibold text-blue-600 mt-1">
-            {schedules.filter((s) => s.status === "scheduled").length}
-          </p>
-        </div>
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-          <p className="text-sm text-gray-500">Live Now</p>
-          <p className="text-2xl font-semibold text-emerald-600 mt-1">
-            {schedules.filter((s) => s.status === "ongoing").length}
-          </p>
-        </div>
-      </div>
-
-      {/* Schedule by Date */}
-      {sortedDates.length > 0 ? (
-        <div className="space-y-6">
-          {sortedDates.map((date) => {
-            const daySchedules = groupedSchedules[date];
-            const today = isToday(date);
-
-            return (
-              <div
-                key={date}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+    <ProtectedRoute>
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+              <Link
+                href="/student/dashboard"
+                className="hover:text-blue-600 transition-colors"
               >
+                Dashboard
+              </Link>
+              <ChevronRight className="w-4 h-4" />
+              <span className="text-gray-900 font-medium">My Schedule</span>
+            </div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              My Class Schedule
+            </h1>
+            <p className="text-gray-600 mt-1">
+              View and join your scheduled classes
+            </p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Refresh"
+          >
+            <RefreshCw
+              className={`w-5 h-5 text-gray-600 ${refreshing ? "animate-spin" : ""}`}
+            />
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Total Classes</p>
+            <p className="text-2xl font-semibold text-gray-900 mt-1">
+              {schedules.length}
+            </p>
+          </div>
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Upcoming</p>
+            <p className="text-2xl font-semibold text-blue-600 mt-1">
+              {schedules.filter((s) => s.status === "scheduled").length}
+            </p>
+          </div>
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <p className="text-sm text-gray-500">Live Now</p>
+            <p className="text-2xl font-semibold text-emerald-600 mt-1">
+              {schedules.filter((s) => s.status === "ongoing").length}
+            </p>
+          </div>
+        </div>
+
+        {/* Schedule by Date */}
+        {sortedDates.length > 0 ? (
+          <div className="space-y-6">
+            {sortedDates.map((date) => {
+              const daySchedules = groupedSchedules[date];
+              const today = isToday(date);
+
+              return (
                 <div
-                  className={`px-6 py-4 border-b border-gray-200 ${today ? "bg-amber-50" : "bg-gray-50"}`}
+                  key={date}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                 >
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {formatDate(date)}
-                    {today && (
-                      <span className="ml-2 px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
-                        Today
-                      </span>
-                    )}
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {daySchedules.length} class
-                    {daySchedules.length !== 1 ? "es" : ""}
-                  </p>
-                </div>
+                  <div
+                    className={`px-6 py-4 border-b border-gray-200 ${today ? "bg-amber-50" : "bg-gray-50"}`}
+                  >
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {formatDate(date)}
+                      {today && (
+                        <span className="ml-2 px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                          Today
+                        </span>
+                      )}
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {daySchedules.length} class
+                      {daySchedules.length !== 1 ? "es" : ""}
+                    </p>
+                  </div>
 
-                <div className="divide-y divide-gray-200">
-                  {daySchedules.map((schedule) => {
-                    const canJoin = canJoinSession(schedule);
-                    const isOngoing = schedule.status === "ongoing";
-                    const joinButtonText = getJoinButtonText(schedule);
-                    const availabilityText = getJoinAvailabilityText(schedule);
+                  <div className="divide-y divide-gray-200">
+                    {daySchedules.map((schedule) => {
+                      const canJoin = canJoinSession(schedule);
+                      const isOngoing = schedule.status === "ongoing";
+                      const joinButtonText = getJoinButtonText(schedule);
+                      const availabilityText =
+                        getJoinAvailabilityText(schedule);
 
-                    return (
-                      <div
-                        key={schedule.id}
-                        className="p-6 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                          {/* Left side - Class info */}
-                          <div className="flex-1">
-                            <div className="flex items-start gap-4">
-                              {/* Time Icon */}
-                              <div
-                                className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                                  isOngoing
-                                    ? "bg-green-100"
-                                    : today
-                                      ? "bg-amber-100"
-                                      : "bg-blue-100"
-                                }`}
-                              >
-                                {getTimeIcon(schedule.start_time)}
-                              </div>
-
-                              <div>
-                                <h3 className="font-semibold text-gray-900">
-                                  {schedule.title}
-                                </h3>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  {schedule.session_name ||
-                                    schedule.course_subject ||
-                                    "Session"}{" "}
-                                  • Class {schedule.class_number}
-                                </p>
-                                <div className="flex flex-wrap items-center gap-4 mt-3">
-                                  <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                                    <Clock className="w-4 h-4" />
-                                    <span>
-                                      {formatTime(schedule.start_time)} -{" "}
-                                      {formatTime(schedule.end_time)}
-                                    </span>
-                                    <span className="text-xs text-gray-400">
-                                      ({schedule.duration_minutes} min)
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                                    <BookOpen className="w-4 h-4" />
-                                    <span>
-                                      {schedule.session_name || "Session"}
-                                    </span>
-                                  </div>
+                      return (
+                        <div
+                          key={schedule.id}
+                          className="p-6 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                            {/* Left side - Class info */}
+                            <div className="flex-1">
+                              <div className="flex items-start gap-4">
+                                {/* Time Icon */}
+                                <div
+                                  className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                                    isOngoing
+                                      ? "bg-green-100"
+                                      : today
+                                        ? "bg-amber-100"
+                                        : "bg-blue-100"
+                                  }`}
+                                >
+                                  {getTimeIcon(schedule.start_time)}
                                 </div>
 
-                                {/* Badges */}
-                                <div className="flex flex-wrap items-center gap-2 mt-3">
-                                  {getStatusBadge(schedule.status)}
-                                  {getModeBadge(schedule.mode)}
-                                  {schedule.location &&
-                                    schedule.mode === "in_person" && (
-                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-gray-50 text-gray-700 border-gray-200">
-                                        <MapPinned className="w-3.5 h-3.5" />
-                                        {schedule.location}
+                                <div>
+                                  <h3 className="font-semibold text-gray-900">
+                                    {schedule.title}
+                                  </h3>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    {schedule.session_name ||
+                                      schedule.course_subject ||
+                                      "Session"}{" "}
+                                    • Class {schedule.class_number}
+                                  </p>
+                                  <div className="flex flex-wrap items-center gap-4 mt-3">
+                                    <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                                      <Clock className="w-4 h-4" />
+                                      <span>
+                                        {formatTime(schedule.start_time)} -{" "}
+                                        {formatTime(schedule.end_time)}
                                       </span>
+                                      <span className="text-xs text-gray-400">
+                                        ({schedule.duration_minutes} min)
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                                      <BookOpen className="w-4 h-4" />
+                                      <span>
+                                        {schedule.session_name || "Session"}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Badges */}
+                                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                                    {getStatusBadge(schedule.status)}
+                                    {getModeBadge(schedule.mode)}
+                                    {schedule.location &&
+                                      schedule.mode === "in_person" && (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-gray-50 text-gray-700 border-gray-200">
+                                          <MapPinned className="w-3.5 h-3.5" />
+                                          {schedule.location}
+                                        </span>
+                                      )}
+                                  </div>
+
+                                  {/* Topics */}
+                                  {schedule.topics &&
+                                    schedule.topics.length > 0 && (
+                                      <div className="mt-3">
+                                        <p className="text-xs text-gray-500 mb-1">
+                                          Topics:
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {schedule.topics.map(
+                                            (topic, index) => (
+                                              <span
+                                                key={index}
+                                                className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full"
+                                              >
+                                                {topic}
+                                              </span>
+                                            ),
+                                          )}
+                                        </div>
+                                      </div>
                                     )}
                                 </div>
+                              </div>
+                            </div>
 
-                                {/* Topics */}
-                                {schedule.topics &&
-                                  schedule.topics.length > 0 && (
-                                    <div className="mt-3">
-                                      <p className="text-xs text-gray-500 mb-1">
-                                        Topics:
-                                      </p>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {schedule.topics.map((topic, index) => (
-                                          <span
-                                            key={index}
-                                            className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full"
-                                          >
-                                            {topic}
-                                          </span>
-                                        ))}
+                            {/* Right side - Actions */}
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="flex items-center gap-2">
+                                {canJoin && (
+                                  <button
+                                    onClick={() =>
+                                      handleJoinSession(schedule.id)
+                                    }
+                                    disabled={joiningId === schedule.id}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                      isOngoing
+                                        ? "bg-green-600 text-white hover:bg-green-700 animate-pulse"
+                                        : today
+                                          ? "bg-amber-600 text-white hover:bg-amber-700"
+                                          : "bg-blue-600 text-white hover:bg-blue-700"
+                                    } disabled:opacity-50`}
+                                  >
+                                    {joiningId === schedule.id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      joinButtonText
+                                    )}
+                                  </button>
+                                )}
+
+                                {!canJoin &&
+                                  schedule.status === "scheduled" && (
+                                    <div className="flex flex-col items-end gap-1">
+                                      <button
+                                        disabled
+                                        className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-500 cursor-not-allowed"
+                                        title={availabilityText}
+                                      >
+                                        {isToday(schedule.date)
+                                          ? `Join at ${formatTime(schedule.start_time)}`
+                                          : formatDate(schedule.date) ===
+                                              "Tomorrow"
+                                            ? `Tomorrow ${formatTime(schedule.start_time)}`
+                                            : formatDate(schedule.date)}
+                                      </button>
+                                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                                        <Info className="w-3 h-3" />
+                                        <span>{availabilityText}</span>
                                       </div>
                                     </div>
                                   )}
+
+                                {schedule.student_meeting_link && canJoin && (
+                                  <button
+                                    onClick={() =>
+                                      handleCopyLink(
+                                        schedule.student_meeting_link!,
+                                        schedule.id,
+                                      )
+                                    }
+                                    className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                    title="Copy meeting link"
+                                  >
+                                    {copiedId === schedule.id ? (
+                                      <Check className="w-4 h-4 text-green-600" />
+                                    ) : (
+                                      <Copy className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                )}
+
+                                <Link
+                                  href={`/student/sessions/${schedule.tutor_course_session_id}`}
+                                  className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                  title="View session details"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Link>
                               </div>
                             </div>
                           </div>
 
-                          {/* Right side - Actions */}
-                          <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center gap-2">
-                              {canJoin && (
-                                <button
-                                  onClick={() => handleJoinSession(schedule.id)}
-                                  disabled={joiningId === schedule.id}
-                                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                    isOngoing
-                                      ? "bg-green-600 text-white hover:bg-green-700 animate-pulse"
-                                      : today
-                                        ? "bg-amber-600 text-white hover:bg-amber-700"
-                                        : "bg-blue-600 text-white hover:bg-blue-700"
-                                  } disabled:opacity-50`}
+                          {/* Recorded session link */}
+                          {schedule.status === "completed" &&
+                            schedule.recorded_session_url && (
+                              <div className="mt-4 pt-3 border-t border-gray-100">
+                                <a
+                                  href={schedule.recorded_session_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"
                                 >
-                                  {joiningId === schedule.id ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    joinButtonText
-                                  )}
-                                </button>
-                              )}
-
-                              {!canJoin && schedule.status === "scheduled" && (
-                                <div className="flex flex-col items-end gap-1">
-                                  <button
-                                    disabled
-                                    className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-500 cursor-not-allowed"
-                                    title={availabilityText}
-                                  >
-                                    {isToday(schedule.date)
-                                      ? `Join at ${formatTime(schedule.start_time)}`
-                                      : formatDate(schedule.date) === "Tomorrow"
-                                        ? `Tomorrow ${formatTime(schedule.start_time)}`
-                                        : formatDate(schedule.date)}
-                                  </button>
-                                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                                    <Info className="w-3 h-3" />
-                                    <span>{availabilityText}</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {schedule.student_meeting_link && canJoin && (
-                                <button
-                                  onClick={() =>
-                                    handleCopyLink(
-                                      schedule.student_meeting_link!,
-                                      schedule.id,
-                                    )
-                                  }
-                                  className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                                  title="Copy meeting link"
-                                >
-                                  {copiedId === schedule.id ? (
-                                    <Check className="w-4 h-4 text-green-600" />
-                                  ) : (
-                                    <Copy className="w-4 h-4" />
-                                  )}
-                                </button>
-                              )}
-
-                              <Link
-                                href={`/student/sessions/${schedule.tutor_course_session_id}`}
-                                className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                                title="View session details"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </Link>
-                            </div>
-                          </div>
+                                  <PlayCircle className="w-4 h-4" />
+                                  Watch Recording
+                                </a>
+                              </div>
+                            )}
                         </div>
-
-                        {/* Recorded session link */}
-                        {schedule.status === "completed" &&
-                          schedule.recorded_session_url && (
-                            <div className="mt-4 pt-3 border-t border-gray-100">
-                              <a
-                                href={schedule.recorded_session_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"
-                              >
-                                <PlayCircle className="w-4 h-4" />
-                                Watch Recording
-                              </a>
-                            </div>
-                          )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Calendar className="w-10 h-10 text-gray-400" />
+              );
+            })}
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No upcoming classes
-          </h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            You don't have any scheduled classes at the moment. Enroll in a
-            session to get started!
-          </p>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Browse Sessions
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      )}
-    </div>
+        ) : (
+          <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-10 h-10 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No upcoming classes
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              You don't have any scheduled classes at the moment. Enroll in a
+              session to get started!
+            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Browse Sessions
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
+      </div>
+    </ProtectedRoute>
   );
 }

@@ -75,6 +75,7 @@ import {
   ProfileData as ApiProfileData,
   Document as ApiDocument,
 } from "@/types/tutor-profile.types";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 interface ProfileData {
   // Basic Info
@@ -1122,1499 +1123,1102 @@ export default function TutorProfile() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1 sm:py-1">
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-          <Link
-            href="/tutor/dashboard"
-            className="hover:text-blue-600 transition-colors cursor-pointer"
-          >
-            Dashboard
-          </Link>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-900 font-medium">Profile</span>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-2xl font-semibold text-gray-900">
-              My Profile
-            </h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">
-              Manage your tutor profile and professional information
-            </p>
+    <ProtectedRoute>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1 sm:py-1">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+            <Link
+              href="/tutor/dashboard"
+              className="hover:text-blue-600 transition-colors cursor-pointer"
+            >
+              Dashboard
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <span className="text-gray-900 font-medium">Profile</span>
           </div>
-          <div className="flex gap-3">
-            {!isEditing && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/25"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Profile
-              </button>
-            )}
-          </div>
-        </div>
 
-        {/* Profile Completion Bar */}
-        {profileCompletion < 100 && !isEditing && (
-          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-4 h-4 text-amber-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-amber-800 mb-1">
-                  Complete Your Profile
-                </h3>
-                <p className="text-sm text-amber-700 mb-3">
-                  Your profile is {profileCompletion}% complete. Complete the
-                  following to become more visible to students:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {missingFields.map((field) => (
-                    <span
-                      key={field}
-                      className="inline-flex items-center px-2.5 py-1 bg-white rounded-lg text-xs font-medium text-amber-700 border border-amber-200"
-                    >
-                      {field}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-3 w-full bg-amber-200 rounded-full h-2">
-                  <div
-                    className="bg-amber-600 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${profileCompletion}%` }}
-                  ></div>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-4 py-2 bg-white text-amber-700 text-sm font-medium rounded-lg hover:bg-amber-50 transition-colors border border-amber-200"
-              >
-                Complete Now
-              </button>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-2xl font-semibold text-gray-900">
+                My Profile
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
+                Manage your tutor profile and professional information
+              </p>
+            </div>
+            <div className="flex gap-3">
+              {!isEditing && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/25"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </button>
+              )}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-4">
-            {/* Profile Summary */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex flex-col items-center text-center">
-                <div className="relative group mb-4">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
-                    {profile?.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt={`${profile.first_name} ${profile.last_name}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-2xl font-bold text-blue-600">
-                        {getInitials(
-                          profile?.first_name || "",
-                          profile?.last_name || "",
-                        ) || "T"}
+          {/* Profile Completion Bar */}
+          {profileCompletion < 100 && !isEditing && (
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-800 mb-1">
+                    Complete Your Profile
+                  </h3>
+                  <p className="text-sm text-amber-700 mb-3">
+                    Your profile is {profileCompletion}% complete. Complete the
+                    following to become more visible to students:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {missingFields.map((field) => (
+                      <span
+                        key={field}
+                        className="inline-flex items-center px-2.5 py-1 bg-white rounded-lg text-xs font-medium text-amber-700 border border-amber-200"
+                      >
+                        {field}
                       </span>
+                    ))}
+                  </div>
+                  <div className="mt-3 w-full bg-amber-200 rounded-full h-2">
+                    <div
+                      className="bg-amber-600 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${profileCompletion}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-white text-amber-700 text-sm font-medium rounded-lg hover:bg-amber-50 transition-colors border border-amber-200"
+                >
+                  Complete Now
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-4">
+              {/* Profile Summary */}
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative group mb-4">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt={`${profile.first_name} ${profile.last_name}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold text-blue-600">
+                          {getInitials(
+                            profile?.first_name || "",
+                            profile?.last_name || "",
+                          ) || "T"}
+                        </span>
+                      )}
+                    </div>
+                    {isEditing && (
+                      <label className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition-colors shadow-lg">
+                        <Camera className="w-4 h-4 text-white" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleAvatarUpload}
+                        />
+                      </label>
                     )}
                   </div>
-                  {isEditing && (
-                    <label className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition-colors shadow-lg">
-                      <Camera className="w-4 h-4 text-white" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleAvatarUpload}
-                      />
-                    </label>
-                  )}
+
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {profile?.first_name} {profile?.last_name}
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {profile?.headline || "Tutor"}
+                  </p>
                 </div>
 
-                <h2 className="text-lg font-semibold text-gray-900">
-                  {profile?.first_name} {profile?.last_name}
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  {profile?.headline || "Tutor"}
-                </p>
-              </div>
-
-              <div className="mt-6 space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <span className="truncate">{profile?.email}</span>
-                  {profile?.verification.email_verified && (
-                    <BadgeCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                  )}
-                </div>
-                {profile?.phone && (
+                <div className="mt-6 space-y-3">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <span>{profile.phone}</span>
-                    {profile.verification.phone_verified && (
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span className="truncate">{profile?.email}</span>
+                    {profile?.verification.email_verified && (
                       <BadgeCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     )}
                   </div>
-                )}
-                {profile?.country && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    <span>
-                      {profile.city ? `${profile.city}, ` : ""}
-                      {profile.country}
-                    </span>
-                  </div>
-                )}
+                  {profile?.phone && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Phone className="w-4 h-4 text-gray-400" />
+                      <span>{profile.phone}</span>
+                      {profile.verification.phone_verified && (
+                        <BadgeCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      )}
+                    </div>
+                  )}
+                  {profile?.country && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <span>
+                        {profile.city ? `${profile.city}, ` : ""}
+                        {profile.country}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Verification Status */}
-            <div className="p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">
-                Verification
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Email</span>
-                  {profile?.verification.email_verified ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
-                      <CheckCircle className="w-3 h-3" />
-                      Verified
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
-                      <AlertCircle className="w-3 h-3" />
-                      Pending
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Phone</span>
-                  {profile?.verification.phone_verified ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
-                      <CheckCircle className="w-3 h-3" />
-                      Verified
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
-                      <AlertCircle className="w-3 h-3" />
-                      Pending
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Identity</span>
-                  {profile?.verification.identity_verified ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
-                      <CheckCircle className="w-3 h-3" />
-                      Verified
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
-                      <AlertCircle className="w-3 h-3" />
-                      Pending
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Documents</span>
-                  {documents.some((doc) => doc.verified) ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
-                      <CheckCircle className="w-3 h-3" />
-                      Verified
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
-                      <AlertCircle className="w-3 h-3" />
-                      Pending
-                    </span>
-                  )}
+              {/* Verification Status */}
+              <div className="p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                  Verification
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Email</span>
+                    {profile?.verification.email_verified ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                        <CheckCircle className="w-3 h-3" />
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                        <AlertCircle className="w-3 h-3" />
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Phone</span>
+                    {profile?.verification.phone_verified ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                        <CheckCircle className="w-3 h-3" />
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                        <AlertCircle className="w-3 h-3" />
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Identity</span>
+                    {profile?.verification.identity_verified ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                        <CheckCircle className="w-3 h-3" />
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                        <AlertCircle className="w-3 h-3" />
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Documents</span>
+                    {documents.some((doc) => doc.verified) ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                        <CheckCircle className="w-3 h-3" />
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                        <AlertCircle className="w-3 h-3" />
+                        Pending
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Main Content Area */}
-        <div className="lg:col-span-3">
-          {/* Tabs */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-            <div className="border-b border-gray-200 overflow-x-auto">
-              <div className="flex">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 px-4 sm:px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                        activeTab === tab.id
-                          ? "border-blue-600 text-blue-600"
-                          : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {tab.label}
-                    </button>
-                  );
-                })}
+          {/* Main Content Area */}
+          <div className="lg:col-span-3">
+            {/* Tabs */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+              <div className="border-b border-gray-200 overflow-x-auto">
+                <div className="flex">
+                  {tabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex items-center gap-2 px-4 sm:px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                          activeTab === tab.id
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            <div className="p-4 sm:p-6">
-              {isEditing ? (
-                <form onSubmit={handleSubmit}>
-                  {/* Profile Tab - Edit Mode */}
-                  {activeTab === "profile" && (
-                    <div className="space-y-6">
-                      {/* Basic Information */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Basic Information
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              First Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              name="first_name"
-                              value={formData?.first_name || ""}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Last Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              name="last_name"
-                              value={formData?.last_name || ""}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Phone Number{" "}
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="tel"
-                              name="phone"
-                              value={formData?.phone || ""}
-                              onChange={handleInputChange}
-                              placeholder="+254 700 000 000"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Date of Birth
-                            </label>
-                            <input
-                              type="date"
-                              name="date_of_birth"
-                              value={formData?.date_of_birth || ""}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Location & Language */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Location & Language
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Country <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                              name="country"
-                              value={formData?.country || ""}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              required
-                            >
-                              <option value="">Select country</option>
-                              <option value="Kenya">Kenya</option>
-                              <option value="Uganda">Uganda</option>
-                              <option value="Tanzania">Tanzania</option>
-                              <option value="Rwanda">Rwanda</option>
-                              <option value="Other">Other</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              City
-                            </label>
-                            <input
-                              type="text"
-                              name="city"
-                              value={formData?.city || ""}
-                              onChange={handleInputChange}
-                              placeholder="e.g., Nairobi"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                            />
-                          </div>
-
-                          {/* Languages - Tag Input */}
-                          <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Languages <span className="text-red-500">*</span>
-                            </label>
-
-                            {/* Language Tags */}
-                            {formData?.languages &&
-                              formData.languages.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mb-3">
-                                  {formData.languages.map((lang, index) => (
-                                    <span
-                                      key={index}
-                                      className="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-800 text-sm rounded-full"
-                                    >
-                                      {lang}
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleRemoveLanguage(index)
-                                        }
-                                        className="ml-1.5 hover:text-blue-900 focus:outline-none"
-                                      >
-                                        <X className="w-3.5 h-3.5" />
-                                      </button>
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-
-                            {/* Add Language Input */}
-                            <div className="flex gap-2">
+              <div className="p-4 sm:p-6">
+                {isEditing ? (
+                  <form onSubmit={handleSubmit}>
+                    {/* Profile Tab - Edit Mode */}
+                    {activeTab === "profile" && (
+                      <div className="space-y-6">
+                        {/* Basic Information */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Basic Information
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                First Name{" "}
+                                <span className="text-red-500">*</span>
+                              </label>
                               <input
                                 type="text"
-                                value={newLanguage}
-                                onChange={(e) => setNewLanguage(e.target.value)}
-                                onKeyDown={(e) => handleKeyDown(e, "language")}
-                                placeholder="Type a language and press Enter or comma"
-                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                name="first_name"
+                                value={formData?.first_name || ""}
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                required
                               />
-                              <button
-                                type="button"
-                                onClick={handleAddLanguage}
-                                className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                              >
-                                <Plus className="w-5 h-5" />
-                              </button>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                              Type a language and press Enter or comma to add
-                              it. Click the × to remove.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Professional Information */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Professional Information
-                        </h3>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Professional Headline{" "}
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              name="headline"
-                              value={formData?.headline || ""}
-                              onChange={handleInputChange}
-                              placeholder="e.g., Experienced Mathematics Tutor Specializing in KCSE"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Bio <span className="text-red-500">*</span>
-                            </label>
-                            <textarea
-                              name="bio"
-                              value={formData?.bio || ""}
-                              onChange={handleInputChange}
-                              rows={4}
-                              placeholder="Tell students about yourself, your teaching style, and experience..."
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              required
-                            />
-                          </div>
-
-                          {/* Subjects - Tag Input */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Subjects <span className="text-red-500">*</span>
-                            </label>
-
-                            {/* Subject Tags */}
-                            {formData?.subjects &&
-                              formData.subjects.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mb-3">
-                                  {formData.subjects.map((subject, index) => (
-                                    <span
-                                      key={index}
-                                      className="inline-flex items-center px-3 py-1.5 bg-green-100 text-green-800 text-sm rounded-full"
-                                    >
-                                      {subject}
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleRemoveSubject(index)
-                                        }
-                                        className="ml-1.5 hover:text-green-900 focus:outline-none"
-                                      >
-                                        <X className="w-3.5 h-3.5" />
-                                      </button>
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-
-                            {/* Add Subject Input */}
-                            <div className="flex gap-2">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Last Name{" "}
+                                <span className="text-red-500">*</span>
+                              </label>
                               <input
                                 type="text"
-                                value={newSubject}
-                                onChange={(e) => setNewSubject(e.target.value)}
-                                onKeyDown={(e) => handleKeyDown(e, "subject")}
-                                placeholder="Type a subject and press Enter or comma"
-                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                name="last_name"
+                                value={formData?.last_name || ""}
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                required
                               />
-                              <button
-                                type="button"
-                                onClick={handleAddSubject}
-                                className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                              >
-                                <Plus className="w-5 h-5" />
-                              </button>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                              Type a subject and press Enter or comma to add it.
-                              Click the × to remove.
-                            </p>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Phone Number{" "}
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="tel"
+                                name="phone"
+                                value={formData?.phone || ""}
+                                onChange={handleInputChange}
+                                placeholder="+254 700 000 000"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Date of Birth
+                              </label>
+                              <input
+                                type="date"
+                                name="date_of_birth"
+                                value={formData?.date_of_birth || ""}
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Location & Language */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Location & Language
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Country <span className="text-red-500">*</span>
+                              </label>
+                              <select
+                                name="country"
+                                value={formData?.country || ""}
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                required
+                              >
+                                <option value="">Select country</option>
+                                <option value="Kenya">Kenya</option>
+                                <option value="Uganda">Uganda</option>
+                                <option value="Tanzania">Tanzania</option>
+                                <option value="Rwanda">Rwanda</option>
+                                <option value="Other">Other</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                City
+                              </label>
+                              <input
+                                type="text"
+                                name="city"
+                                value={formData?.city || ""}
+                                onChange={handleInputChange}
+                                placeholder="e.g., Nairobi"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                              />
+                            </div>
+
+                            {/* Languages - Tag Input */}
+                            <div className="md:col-span-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Languages{" "}
+                                <span className="text-red-500">*</span>
+                              </label>
+
+                              {/* Language Tags */}
+                              {formData?.languages &&
+                                formData.languages.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 mb-3">
+                                    {formData.languages.map((lang, index) => (
+                                      <span
+                                        key={index}
+                                        className="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-800 text-sm rounded-full"
+                                      >
+                                        {lang}
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleRemoveLanguage(index)
+                                          }
+                                          className="ml-1.5 hover:text-blue-900 focus:outline-none"
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
+                              {/* Add Language Input */}
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={newLanguage}
+                                  onChange={(e) =>
+                                    setNewLanguage(e.target.value)
+                                  }
+                                  onKeyDown={(e) =>
+                                    handleKeyDown(e, "language")
+                                  }
+                                  placeholder="Type a language and press Enter or comma"
+                                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleAddLanguage}
+                                  className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                  <Plus className="w-5 h-5" />
+                                </button>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-2">
+                                Type a language and press Enter or comma to add
+                                it. Click the × to remove.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Professional Information */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Professional Information
+                          </h3>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Professional Headline{" "}
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                name="headline"
+                                value={formData?.headline || ""}
+                                onChange={handleInputChange}
+                                placeholder="e.g., Experienced Mathematics Tutor Specializing in KCSE"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Bio <span className="text-red-500">*</span>
+                              </label>
+                              <textarea
+                                name="bio"
+                                value={formData?.bio || ""}
+                                onChange={handleInputChange}
+                                rows={4}
+                                placeholder="Tell students about yourself, your teaching style, and experience..."
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                required
+                              />
+                            </div>
+
+                            {/* Subjects - Tag Input */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Subjects <span className="text-red-500">*</span>
+                              </label>
+
+                              {/* Subject Tags */}
+                              {formData?.subjects &&
+                                formData.subjects.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 mb-3">
+                                    {formData.subjects.map((subject, index) => (
+                                      <span
+                                        key={index}
+                                        className="inline-flex items-center px-3 py-1.5 bg-green-100 text-green-800 text-sm rounded-full"
+                                      >
+                                        {subject}
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleRemoveSubject(index)
+                                          }
+                                          className="ml-1.5 hover:text-green-900 focus:outline-none"
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
+                              {/* Add Subject Input */}
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={newSubject}
+                                  onChange={(e) =>
+                                    setNewSubject(e.target.value)
+                                  }
+                                  onKeyDown={(e) => handleKeyDown(e, "subject")}
+                                  placeholder="Type a subject and press Enter or comma"
+                                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleAddSubject}
+                                  className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                  <Plus className="w-5 h-5" />
+                                </button>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-2">
+                                Type a subject and press Enter or comma to add
+                                it. Click the × to remove.
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Education Tab - Edit Mode */}
-                  {activeTab === "education" && (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Education History
-                        </h3>
-                        <button
-                          type="button"
-                          onClick={handleAddEducation}
-                          className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Education
-                        </button>
-                      </div>
-
-                      <div className="space-y-4">
-                        {formData?.education?.map((edu, index) => (
-                          <div
-                            key={index}
-                            className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                    {/* Education Tab - Edit Mode */}
+                    {activeTab === "education" && (
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Education History
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={handleAddEducation}
+                            className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                           >
-                            <div className="flex items-start justify-between mb-4">
-                              <h4 className="font-medium text-gray-900">
-                                Education #{index + 1}
-                              </h4>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveEducation(index)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add Education
+                          </button>
+                        </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Institution{" "}
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={edu.institution}
-                                  onChange={(e) =>
-                                    handleUpdateEducation(
-                                      index,
-                                      "institution",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                                  placeholder="University of Nairobi"
-                                  required
-                                />
+                        <div className="space-y-4">
+                          {formData?.education?.map((edu, index) => (
+                            <div
+                              key={index}
+                              className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                            >
+                              <div className="flex items-start justify-between mb-4">
+                                <h4 className="font-medium text-gray-900">
+                                  Education #{index + 1}
+                                </h4>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEducation(index)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Degree <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={edu.degree}
-                                  onChange={(e) =>
-                                    handleUpdateEducation(
-                                      index,
-                                      "degree",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                                  placeholder="Bachelor of Education"
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Field of Study{" "}
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={edu.field_of_study}
-                                  onChange={(e) =>
-                                    handleUpdateEducation(
-                                      index,
-                                      "field_of_study",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                                  placeholder="Mathematics"
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Start Date{" "}
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="date"
-                                  value={edu.start_date}
-                                  onChange={(e) =>
-                                    handleUpdateEducation(
-                                      index,
-                                      "start_date",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  End Date{" "}
-                                  {!edu.current && (
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Institution{" "}
                                     <span className="text-red-500">*</span>
-                                  )}
-                                </label>
-                                <input
-                                  type="date"
-                                  value={edu.end_date}
-                                  onChange={(e) =>
-                                    handleUpdateEducation(
-                                      index,
-                                      "end_date",
-                                      e.target.value,
-                                    )
-                                  }
-                                  disabled={edu.current}
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent disabled:bg-gray-100"
-                                  required={!edu.current}
-                                />
-                              </div>
-                              <div className="md:col-span-2">
-                                <label className="flex items-center gap-2">
+                                  </label>
                                   <input
-                                    type="checkbox"
-                                    checked={edu.current}
+                                    type="text"
+                                    value={edu.institution}
                                     onChange={(e) =>
                                       handleUpdateEducation(
                                         index,
-                                        "current",
-                                        e.target.checked,
+                                        "institution",
+                                        e.target.value,
                                       )
                                     }
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                    placeholder="University of Nairobi"
+                                    required
                                   />
-                                  <span className="text-sm text-gray-700">
-                                    I am currently studying here
-                                  </span>
-                                </label>
-                              </div>
-                              <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Description (Optional)
-                                </label>
-                                <textarea
-                                  value={edu.description || ""}
-                                  onChange={(e) =>
-                                    handleUpdateEducation(
-                                      index,
-                                      "description",
-                                      e.target.value,
-                                    )
-                                  }
-                                  rows={2}
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                                  placeholder="Additional details about your studies..."
-                                />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Degree{" "}
+                                    <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={edu.degree}
+                                    onChange={(e) =>
+                                      handleUpdateEducation(
+                                        index,
+                                        "degree",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                    placeholder="Bachelor of Education"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Field of Study{" "}
+                                    <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={edu.field_of_study}
+                                    onChange={(e) =>
+                                      handleUpdateEducation(
+                                        index,
+                                        "field_of_study",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                    placeholder="Mathematics"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Start Date{" "}
+                                    <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={edu.start_date}
+                                    onChange={(e) =>
+                                      handleUpdateEducation(
+                                        index,
+                                        "start_date",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    End Date{" "}
+                                    {!edu.current && (
+                                      <span className="text-red-500">*</span>
+                                    )}
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={edu.end_date}
+                                    onChange={(e) =>
+                                      handleUpdateEducation(
+                                        index,
+                                        "end_date",
+                                        e.target.value,
+                                      )
+                                    }
+                                    disabled={edu.current}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent disabled:bg-gray-100"
+                                    required={!edu.current}
+                                  />
+                                </div>
+                                <div className="md:col-span-2">
+                                  <label className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={edu.current}
+                                      onChange={(e) =>
+                                        handleUpdateEducation(
+                                          index,
+                                          "current",
+                                          e.target.checked,
+                                        )
+                                      }
+                                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">
+                                      I am currently studying here
+                                    </span>
+                                  </label>
+                                </div>
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Description (Optional)
+                                  </label>
+                                  <textarea
+                                    value={edu.description || ""}
+                                    onChange={(e) =>
+                                      handleUpdateEducation(
+                                        index,
+                                        "description",
+                                        e.target.value,
+                                      )
+                                    }
+                                    rows={2}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                    placeholder="Additional details about your studies..."
+                                  />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
 
-                        {formData?.education?.length === 0 && (
-                          <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                            <GraduationCap className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                            <p className="text-gray-600 mb-4">
-                              No education history added yet
-                            </p>
-                            <button
-                              type="button"
-                              onClick={handleAddEducation}
-                              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Add Your First Education
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Experience Tab - Edit Mode */}
-                  {activeTab === "experience" && (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Work Experience
-                        </h3>
-                        <button
-                          type="button"
-                          onClick={handleAddExperience}
-                          className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Experience
-                        </button>
-                      </div>
-
-                      <div className="space-y-4">
-                        {formData?.experience?.map((exp, index) => (
-                          <div
-                            key={index}
-                            className="p-4 bg-gray-50 rounded-lg border border-gray-200"
-                          >
-                            <div className="flex items-start justify-between mb-4">
-                              <h4 className="font-medium text-gray-900">
-                                Experience #{index + 1}
-                              </h4>
+                          {formData?.education?.length === 0 && (
+                            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                              <GraduationCap className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                              <p className="text-gray-600 mb-4">
+                                No education history added yet
+                              </p>
                               <button
                                 type="button"
-                                onClick={() => handleRemoveExperience(index)}
-                                className="text-red-600 hover:text-red-700"
+                                onClick={handleAddEducation}
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Your First Education
                               </button>
                             </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Company / Institution{" "}
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={exp.company}
-                                  onChange={(e) =>
-                                    handleUpdateExperience(
-                                      index,
-                                      "company",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                                  placeholder="Nairobi School"
-                                  required
-                                />
+                    {/* Experience Tab - Edit Mode */}
+                    {activeTab === "experience" && (
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Work Experience
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={handleAddExperience}
+                            className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add Experience
+                          </button>
+                        </div>
+
+                        <div className="space-y-4">
+                          {formData?.experience?.map((exp, index) => (
+                            <div
+                              key={index}
+                              className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                            >
+                              <div className="flex items-start justify-between mb-4">
+                                <h4 className="font-medium text-gray-900">
+                                  Experience #{index + 1}
+                                </h4>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveExperience(index)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </div>
-                              <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Position{" "}
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={exp.position}
-                                  onChange={(e) =>
-                                    handleUpdateExperience(
-                                      index,
-                                      "position",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                                  placeholder="Mathematics Teacher"
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Start Date{" "}
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="date"
-                                  value={exp.start_date}
-                                  onChange={(e) =>
-                                    handleUpdateExperience(
-                                      index,
-                                      "start_date",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  End Date{" "}
-                                  {!exp.current && (
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Company / Institution{" "}
                                     <span className="text-red-500">*</span>
-                                  )}
-                                </label>
-                                <input
-                                  type="date"
-                                  value={exp.end_date}
-                                  onChange={(e) =>
-                                    handleUpdateExperience(
-                                      index,
-                                      "end_date",
-                                      e.target.value,
-                                    )
-                                  }
-                                  disabled={exp.current}
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent disabled:bg-gray-100"
-                                  required={!exp.current}
-                                />
-                              </div>
-                              <div className="md:col-span-2">
-                                <label className="flex items-center gap-2">
+                                  </label>
                                   <input
-                                    type="checkbox"
-                                    checked={exp.current}
+                                    type="text"
+                                    value={exp.company}
                                     onChange={(e) =>
                                       handleUpdateExperience(
                                         index,
-                                        "current",
-                                        e.target.checked,
+                                        "company",
+                                        e.target.value,
                                       )
                                     }
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                    placeholder="Nairobi School"
+                                    required
                                   />
-                                  <span className="text-sm text-gray-700">
-                                    I currently work here
-                                  </span>
+                                </div>
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Position{" "}
+                                    <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={exp.position}
+                                    onChange={(e) =>
+                                      handleUpdateExperience(
+                                        index,
+                                        "position",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                    placeholder="Mathematics Teacher"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Start Date{" "}
+                                    <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={exp.start_date}
+                                    onChange={(e) =>
+                                      handleUpdateExperience(
+                                        index,
+                                        "start_date",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    End Date{" "}
+                                    {!exp.current && (
+                                      <span className="text-red-500">*</span>
+                                    )}
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={exp.end_date}
+                                    onChange={(e) =>
+                                      handleUpdateExperience(
+                                        index,
+                                        "end_date",
+                                        e.target.value,
+                                      )
+                                    }
+                                    disabled={exp.current}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent disabled:bg-gray-100"
+                                    required={!exp.current}
+                                  />
+                                </div>
+                                <div className="md:col-span-2">
+                                  <label className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={exp.current}
+                                      onChange={(e) =>
+                                        handleUpdateExperience(
+                                          index,
+                                          "current",
+                                          e.target.checked,
+                                        )
+                                      }
+                                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">
+                                      I currently work here
+                                    </span>
+                                  </label>
+                                </div>
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Description (Optional)
+                                  </label>
+                                  <textarea
+                                    value={exp.description || ""}
+                                    onChange={(e) =>
+                                      handleUpdateExperience(
+                                        index,
+                                        "description",
+                                        e.target.value,
+                                      )
+                                    }
+                                    rows={2}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                    placeholder="Describe your responsibilities and achievements..."
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {formData?.experience?.length === 0 && (
+                            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                              <Briefcase className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                              <p className="text-gray-600 mb-4">
+                                No work experience added yet
+                              </p>
+                              <button
+                                type="button"
+                                onClick={handleAddExperience}
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Your First Experience
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Certifications & Documents Tab - Edit Mode */}
+                    {activeTab === "certifications-documents" && (
+                      <div className="space-y-8">
+                        {/* Certifications Section */}
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              Certifications
+                            </h3>
+                          </div>
+
+                          {/* Add Certification Form */}
+                          <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <h4 className="font-medium text-gray-900 mb-4">
+                              Add New Certification
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Certification Name
                                 </label>
+                                <input
+                                  type="text"
+                                  value={newCertification.name}
+                                  onChange={(e) =>
+                                    setNewCertification({
+                                      ...newCertification,
+                                      name: e.target.value,
+                                    })
+                                  }
+                                  placeholder="e.g., Certified Mathematics Teacher"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                />
                               </div>
                               <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Description (Optional)
+                                  Issuing Organization
                                 </label>
-                                <textarea
-                                  value={exp.description || ""}
+                                <input
+                                  type="text"
+                                  value={newCertification.issuing_organization}
                                   onChange={(e) =>
-                                    handleUpdateExperience(
-                                      index,
-                                      "description",
-                                      e.target.value,
-                                    )
+                                    setNewCertification({
+                                      ...newCertification,
+                                      issuing_organization: e.target.value,
+                                    })
                                   }
-                                  rows={2}
+                                  placeholder="e.g., Teachers Service Commission"
                                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                                  placeholder="Describe your responsibilities and achievements..."
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Issue Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={newCertification.issue_date}
+                                  onChange={(e) =>
+                                    setNewCertification({
+                                      ...newCertification,
+                                      issue_date: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Expiration Date (Optional)
+                                </label>
+                                <input
+                                  type="date"
+                                  value={newCertification.expiration_date}
+                                  onChange={(e) =>
+                                    setNewCertification({
+                                      ...newCertification,
+                                      expiration_date: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Credential ID
+                                </label>
+                                <input
+                                  type="text"
+                                  value={newCertification.credential_id}
+                                  onChange={(e) =>
+                                    setNewCertification({
+                                      ...newCertification,
+                                      credential_id: e.target.value,
+                                    })
+                                  }
+                                  placeholder="e.g., TSC-2023-12345"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Credential URL (Optional)
+                                </label>
+                                <input
+                                  type="url"
+                                  value={newCertification.credential_url}
+                                  onChange={(e) =>
+                                    setNewCertification({
+                                      ...newCertification,
+                                      credential_url: e.target.value,
+                                    })
+                                  }
+                                  placeholder="https://example.com/certificate"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                                 />
                               </div>
                             </div>
-                          </div>
-                        ))}
-
-                        {formData?.experience?.length === 0 && (
-                          <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                            <Briefcase className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                            <p className="text-gray-600 mb-4">
-                              No work experience added yet
-                            </p>
-                            <button
-                              type="button"
-                              onClick={handleAddExperience}
-                              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Add Your First Experience
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Certifications & Documents Tab - Edit Mode */}
-                  {activeTab === "certifications-documents" && (
-                    <div className="space-y-8">
-                      {/* Certifications Section */}
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            Certifications
-                          </h3>
-                        </div>
-
-                        {/* Add Certification Form */}
-                        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                          <h4 className="font-medium text-gray-900 mb-4">
-                            Add New Certification
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Certification Name
-                              </label>
-                              <input
-                                type="text"
-                                value={newCertification.name}
-                                onChange={(e) =>
-                                  setNewCertification({
-                                    ...newCertification,
-                                    name: e.target.value,
-                                  })
-                                }
-                                placeholder="e.g., Certified Mathematics Teacher"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Issuing Organization
-                              </label>
-                              <input
-                                type="text"
-                                value={newCertification.issuing_organization}
-                                onChange={(e) =>
-                                  setNewCertification({
-                                    ...newCertification,
-                                    issuing_organization: e.target.value,
-                                  })
-                                }
-                                placeholder="e.g., Teachers Service Commission"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Issue Date
-                              </label>
-                              <input
-                                type="date"
-                                value={newCertification.issue_date}
-                                onChange={(e) =>
-                                  setNewCertification({
-                                    ...newCertification,
-                                    issue_date: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Expiration Date (Optional)
-                              </label>
-                              <input
-                                type="date"
-                                value={newCertification.expiration_date}
-                                onChange={(e) =>
-                                  setNewCertification({
-                                    ...newCertification,
-                                    expiration_date: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Credential ID
-                              </label>
-                              <input
-                                type="text"
-                                value={newCertification.credential_id}
-                                onChange={(e) =>
-                                  setNewCertification({
-                                    ...newCertification,
-                                    credential_id: e.target.value,
-                                  })
-                                }
-                                placeholder="e.g., TSC-2023-12345"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Credential URL (Optional)
-                              </label>
-                              <input
-                                type="url"
-                                value={newCertification.credential_url}
-                                onChange={(e) =>
-                                  setNewCertification({
-                                    ...newCertification,
-                                    credential_url: e.target.value,
-                                  })
-                                }
-                                placeholder="https://example.com/certificate"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                              />
-                            </div>
-                          </div>
-                          <div className="mt-4 flex justify-end">
-                            <button
-                              type="button"
-                              onClick={handleAddCertification}
-                              disabled={!newCertification.name.trim()}
-                              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Add Certification
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Certifications List */}
-                        {formData?.certifications &&
-                        formData.certifications.length > 0 ? (
-                          <div className="space-y-4">
-                            {formData.certifications.map((cert, index) => (
-                              <div
-                                key={index}
-                                className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                            <div className="mt-4 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={handleAddCertification}
+                                disabled={!newCertification.name.trim()}
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-gray-900">
-                                      {cert.name}
-                                    </h4>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                      {cert.issuing_organization}
-                                    </p>
-                                    <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
-                                      <span>
-                                        Issued: {formatDate(cert.issue_date)}
-                                      </span>
-                                      {cert.expiration_date && (
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Certification
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Certifications List */}
+                          {formData?.certifications &&
+                          formData.certifications.length > 0 ? (
+                            <div className="space-y-4">
+                              {formData.certifications.map((cert, index) => (
+                                <div
+                                  key={index}
+                                  className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <h4 className="font-semibold text-gray-900">
+                                        {cert.name}
+                                      </h4>
+                                      <p className="text-sm text-gray-600 mt-1">
+                                        {cert.issuing_organization}
+                                      </p>
+                                      <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
                                         <span>
-                                          Expires:{" "}
-                                          {formatDate(cert.expiration_date)}
+                                          Issued: {formatDate(cert.issue_date)}
                                         </span>
-                                      )}
-                                      {cert.credential_id && (
-                                        <span>ID: {cert.credential_id}</span>
+                                        {cert.expiration_date && (
+                                          <span>
+                                            Expires:{" "}
+                                            {formatDate(cert.expiration_date)}
+                                          </span>
+                                        )}
+                                        {cert.credential_id && (
+                                          <span>ID: {cert.credential_id}</span>
+                                        )}
+                                      </div>
+                                      {cert.credential_url && (
+                                        <a
+                                          href={cert.credential_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-700"
+                                        >
+                                          <FileText className="w-3 h-3" />
+                                          View Certificate
+                                        </a>
                                       )}
                                     </div>
-                                    {cert.credential_url && (
-                                      <a
-                                        href={cert.credential_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-700"
-                                      >
-                                        <FileText className="w-3 h-3" />
-                                        View Certificate
-                                      </a>
-                                    )}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleRemoveCertification(index)
-                                    }
-                                    className="text-red-600 hover:text-red-700 ml-4"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 mb-6">
-                            <Award className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                            <p className="text-gray-600">
-                              No certifications added yet
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Documents Section */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Uploaded Documents
-                        </h3>
-
-                        <div className="space-y-4 mb-4">
-                          {documents.map((doc) => (
-                            <div
-                              key={doc.id}
-                              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
-                            >
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  {doc.url.match(
-                                    /\.(jpg|jpeg|png|gif|webp)$/i,
-                                  ) ? (
-                                    <ImageIcon className="w-5 h-5 text-blue-600" />
-                                  ) : (
-                                    <FileText className="w-5 h-5 text-blue-600" />
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-900 truncate">
-                                    {doc.name}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    Uploaded{" "}
-                                    {new Date(
-                                      doc.uploaded_at,
-                                    ).toLocaleDateString()}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3 ml-4">
-                                {doc.verified ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                    <CheckCircle className="w-3 h-3" />
-                                    Verified
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full">
-                                    <AlertCircle className="w-3 h-3" />
-                                    Pending
-                                  </span>
-                                )}
-                                <a
-                                  href={doc.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-700"
-                                >
-                                  <Download className="w-4 h-4" />
-                                </a>
-                                {isEditing && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteDocument(doc.id)}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-
-                          {/* Upload New Document Button */}
-                          <label className="block w-full">
-                            <input
-                              type="file"
-                              accept=".pdf,.jpg,.jpeg,.png"
-                              className="hidden"
-                              onChange={handleDocUpload}
-                              disabled={uploadingDoc}
-                            />
-                            <div className="w-full p-6 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
-                              <div className="flex flex-col items-center">
-                                {uploadingDoc ? (
-                                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin mb-2" />
-                                ) : (
-                                  <Upload className="w-6 h-6 text-gray-400 mb-2" />
-                                )}
-                                <p className="font-medium text-gray-900">
-                                  {uploadingDoc
-                                    ? "Uploading..."
-                                    : "Upload New Document"}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  PDF, PNG, JPG up to 10MB
-                                </p>
-                              </div>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Save/Cancel Buttons */}
-                  <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-gray-200">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsEditing(false);
-                        setFormData(profile);
-                      }}
-                      className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Save Changes
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                /* View Mode */
-                <>
-                  {/* Profile Tab - View Mode */}
-                  {activeTab === "profile" && (
-                    <div className="space-y-6">
-                      {/* Basic Information */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Basic Information
-                        </h3>
-                        <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <dt className="text-sm text-gray-500">Full Name</dt>
-                            <dd className="mt-1 font-medium text-gray-900">
-                              {profile?.first_name} {profile?.last_name}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-sm text-gray-500">Email</dt>
-                            <dd className="mt-1 font-medium text-gray-900">
-                              {profile?.email}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-sm text-gray-500">Phone</dt>
-                            <dd className="mt-1 font-medium text-gray-900">
-                              {profile?.phone || "Not provided"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-sm text-gray-500">
-                              Date of Birth
-                            </dt>
-                            <dd className="mt-1 font-medium text-gray-900">
-                              {profile?.date_of_birth
-                                ? new Date(
-                                    profile.date_of_birth,
-                                  ).toLocaleDateString()
-                                : "Not provided"}
-                            </dd>
-                          </div>
-                        </dl>
-                      </div>
-
-                      {/* Location & Language */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Location & Language
-                        </h3>
-                        <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <dt className="text-sm text-gray-500">Country</dt>
-                            <dd className="mt-1 font-medium text-gray-900">
-                              {profile?.country || "Not provided"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-sm text-gray-500">City</dt>
-                            <dd className="mt-1 font-medium text-gray-900">
-                              {profile?.city || "Not provided"}
-                            </dd>
-                          </div>
-                          <div className="md:col-span-2">
-                            <dt className="text-sm text-gray-500">Languages</dt>
-                            <dd className="mt-1">
-                              <div className="flex flex-wrap gap-2">
-                                {profile?.languages?.map((lang, index) => (
-                                  <span
-                                    key={index}
-                                    className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
-                                  >
-                                    {lang}
-                                  </span>
-                                ))}
-                              </div>
-                            </dd>
-                          </div>
-                        </dl>
-                      </div>
-
-                      {/* Professional Information */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Professional Information
-                        </h3>
-                        <dl className="space-y-4">
-                          <div>
-                            <dt className="text-sm text-gray-500">Headline</dt>
-                            <dd className="mt-1 font-medium text-gray-900">
-                              {profile?.headline || "Not provided"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-sm text-gray-500">Bio</dt>
-                            <dd className="mt-1 text-gray-700 whitespace-pre-line">
-                              {profile?.bio || "No bio provided"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-sm text-gray-500">Subjects</dt>
-                            <dd className="mt-1">
-                              <div className="flex flex-wrap gap-2">
-                                {profile?.subjects?.map((subject, index) => (
-                                  <span
-                                    key={index}
-                                    className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
-                                  >
-                                    {subject}
-                                  </span>
-                                ))}
-                              </div>
-                            </dd>
-                          </div>
-                        </dl>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Education Tab - View Mode */}
-                  {activeTab === "education" && (
-                    <div className="space-y-6">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Education History
-                      </h3>
-                      {profile?.education && profile?.education?.length > 0 ? (
-                        <div className="space-y-4">
-                          {profile.education.map((edu, index) => (
-                            <div
-                              key={index}
-                              className="p-4 bg-gray-50 rounded-lg border border-gray-200"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h4 className="font-semibold text-gray-900">
-                                    {edu.institution}
-                                  </h4>
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    {edu.degree} in {edu.field_of_study}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {formatDate(edu.start_date)} -{" "}
-                                    {edu.current
-                                      ? "Present"
-                                      : formatDate(edu.end_date)}
-                                  </p>
-                                  {edu.description && (
-                                    <p className="text-sm text-gray-700 mt-2">
-                                      {edu.description}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                          <GraduationCap className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                          <p className="text-gray-600">
-                            No education history added yet
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Experience Tab - View Mode */}
-                  {activeTab === "experience" && (
-                    <div className="space-y-6">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Work Experience
-                      </h3>
-                      {profile?.experience &&
-                      profile?.experience?.length > 0 ? (
-                        <div className="space-y-4">
-                          {profile.experience.map((exp, index) => (
-                            <div
-                              key={index}
-                              className="p-4 bg-gray-50 rounded-lg border border-gray-200"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h4 className="font-semibold text-gray-900">
-                                    {exp.company}
-                                  </h4>
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    {exp.position}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {formatDate(exp.start_date)} -{" "}
-                                    {exp.current
-                                      ? "Present"
-                                      : formatDate(exp.end_date)}
-                                  </p>
-                                  {exp.description && (
-                                    <p className="text-sm text-gray-700 mt-2">
-                                      {exp.description}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                          <Briefcase className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                          <p className="text-gray-600">
-                            No work experience added yet
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Certifications & Documents Tab - View Mode */}
-                  {activeTab === "certifications-documents" && (
-                    <div className="space-y-8">
-                      {/* Certifications Section */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Certifications
-                        </h3>
-                        {profile?.certifications &&
-                        profile.certifications.length > 0 ? (
-                          <div className="space-y-4">
-                            {profile.certifications.map((cert, index) => (
-                              <div
-                                key={index}
-                                className="p-4 bg-gray-50 rounded-lg border border-gray-200"
-                              >
-                                <div>
-                                  <h4 className="font-semibold text-gray-900">
-                                    {cert.name}
-                                  </h4>
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    {cert.issuing_organization}
-                                  </p>
-                                  <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
-                                    <span>
-                                      Issued: {formatDate(cert.issue_date)}
-                                    </span>
-                                    {cert.expiration_date && (
-                                      <span>
-                                        Expires:{" "}
-                                        {formatDate(cert.expiration_date)}
-                                      </span>
-                                    )}
-                                    {cert.credential_id && (
-                                      <span>ID: {cert.credential_id}</span>
-                                    )}
-                                  </div>
-                                  {cert.credential_url && (
-                                    <a
-                                      href={cert.credential_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-700"
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleRemoveCertification(index)
+                                      }
+                                      className="text-red-600 hover:text-red-700 ml-4"
                                     >
-                                      <FileText className="w-3 h-3" />
-                                      View Certificate
-                                    </a>
-                                  )}
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 mb-6">
-                            <Award className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                            <p className="text-gray-600">
-                              No certifications added yet
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 mb-6">
+                              <Award className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                              <p className="text-gray-600">
+                                No certifications added yet
+                              </p>
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Documents Section */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                          Uploaded Documents
-                        </h3>
-                        {documents.length > 0 ? (
-                          <div className="space-y-4">
+                        {/* Documents Section */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Uploaded Documents
+                          </h3>
+
+                          <div className="space-y-4 mb-4">
                             {documents.map((doc) => (
                               <div
                                 key={doc.id}
@@ -2662,27 +2266,447 @@ export default function TutorProfile() {
                                   >
                                     <Download className="w-4 h-4" />
                                   </a>
+                                  {isEditing && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleDeleteDocument(doc.id)
+                                      }
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Upload New Document Button */}
+                            <label className="block w-full">
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                className="hidden"
+                                onChange={handleDocUpload}
+                                disabled={uploadingDoc}
+                              />
+                              <div className="w-full p-6 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
+                                <div className="flex flex-col items-center">
+                                  {uploadingDoc ? (
+                                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin mb-2" />
+                                  ) : (
+                                    <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                                  )}
+                                  <p className="font-medium text-gray-900">
+                                    {uploadingDoc
+                                      ? "Uploading..."
+                                      : "Upload New Document"}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    PDF, PNG, JPG up to 10MB
+                                  </p>
+                                </div>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Save/Cancel Buttons */}
+                    <div className="flex items-center justify-end gap-4 mt-8 pt-6 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setFormData(profile);
+                        }}
+                        className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {saving ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            Save Changes
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  /* View Mode */
+                  <>
+                    {/* Profile Tab - View Mode */}
+                    {activeTab === "profile" && (
+                      <div className="space-y-6">
+                        {/* Basic Information */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Basic Information
+                          </h3>
+                          <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <dt className="text-sm text-gray-500">
+                                Full Name
+                              </dt>
+                              <dd className="mt-1 font-medium text-gray-900">
+                                {profile?.first_name} {profile?.last_name}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm text-gray-500">Email</dt>
+                              <dd className="mt-1 font-medium text-gray-900">
+                                {profile?.email}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm text-gray-500">Phone</dt>
+                              <dd className="mt-1 font-medium text-gray-900">
+                                {profile?.phone || "Not provided"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm text-gray-500">
+                                Date of Birth
+                              </dt>
+                              <dd className="mt-1 font-medium text-gray-900">
+                                {profile?.date_of_birth
+                                  ? new Date(
+                                      profile.date_of_birth,
+                                    ).toLocaleDateString()
+                                  : "Not provided"}
+                              </dd>
+                            </div>
+                          </dl>
+                        </div>
+
+                        {/* Location & Language */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Location & Language
+                          </h3>
+                          <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <dt className="text-sm text-gray-500">Country</dt>
+                              <dd className="mt-1 font-medium text-gray-900">
+                                {profile?.country || "Not provided"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm text-gray-500">City</dt>
+                              <dd className="mt-1 font-medium text-gray-900">
+                                {profile?.city || "Not provided"}
+                              </dd>
+                            </div>
+                            <div className="md:col-span-2">
+                              <dt className="text-sm text-gray-500">
+                                Languages
+                              </dt>
+                              <dd className="mt-1">
+                                <div className="flex flex-wrap gap-2">
+                                  {profile?.languages?.map((lang, index) => (
+                                    <span
+                                      key={index}
+                                      className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
+                                    >
+                                      {lang}
+                                    </span>
+                                  ))}
+                                </div>
+                              </dd>
+                            </div>
+                          </dl>
+                        </div>
+
+                        {/* Professional Information */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Professional Information
+                          </h3>
+                          <dl className="space-y-4">
+                            <div>
+                              <dt className="text-sm text-gray-500">
+                                Headline
+                              </dt>
+                              <dd className="mt-1 font-medium text-gray-900">
+                                {profile?.headline || "Not provided"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm text-gray-500">Bio</dt>
+                              <dd className="mt-1 text-gray-700 whitespace-pre-line">
+                                {profile?.bio || "No bio provided"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm text-gray-500">
+                                Subjects
+                              </dt>
+                              <dd className="mt-1">
+                                <div className="flex flex-wrap gap-2">
+                                  {profile?.subjects?.map((subject, index) => (
+                                    <span
+                                      key={index}
+                                      className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                                    >
+                                      {subject}
+                                    </span>
+                                  ))}
+                                </div>
+                              </dd>
+                            </div>
+                          </dl>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Education Tab - View Mode */}
+                    {activeTab === "education" && (
+                      <div className="space-y-6">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Education History
+                        </h3>
+                        {profile?.education &&
+                        profile?.education?.length > 0 ? (
+                          <div className="space-y-4">
+                            {profile.education.map((edu, index) => (
+                              <div
+                                key={index}
+                                className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <h4 className="font-semibold text-gray-900">
+                                      {edu.institution}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {edu.degree} in {edu.field_of_study}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {formatDate(edu.start_date)} -{" "}
+                                      {edu.current
+                                        ? "Present"
+                                        : formatDate(edu.end_date)}
+                                    </p>
+                                    {edu.description && (
+                                      <p className="text-sm text-gray-700 mt-2">
+                                        {edu.description}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
                           <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                            <FileText className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                            <GraduationCap className="w-12 h-12 mx-auto text-gray-400 mb-3" />
                             <p className="text-gray-600">
-                              No documents uploaded yet
+                              No education history added yet
                             </p>
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
-                </>
-              )}
+                    )}
+
+                    {/* Experience Tab - View Mode */}
+                    {activeTab === "experience" && (
+                      <div className="space-y-6">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Work Experience
+                        </h3>
+                        {profile?.experience &&
+                        profile?.experience?.length > 0 ? (
+                          <div className="space-y-4">
+                            {profile.experience.map((exp, index) => (
+                              <div
+                                key={index}
+                                className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <h4 className="font-semibold text-gray-900">
+                                      {exp.company}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {exp.position}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {formatDate(exp.start_date)} -{" "}
+                                      {exp.current
+                                        ? "Present"
+                                        : formatDate(exp.end_date)}
+                                    </p>
+                                    {exp.description && (
+                                      <p className="text-sm text-gray-700 mt-2">
+                                        {exp.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                            <Briefcase className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                            <p className="text-gray-600">
+                              No work experience added yet
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Certifications & Documents Tab - View Mode */}
+                    {activeTab === "certifications-documents" && (
+                      <div className="space-y-8">
+                        {/* Certifications Section */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Certifications
+                          </h3>
+                          {profile?.certifications &&
+                          profile.certifications.length > 0 ? (
+                            <div className="space-y-4">
+                              {profile.certifications.map((cert, index) => (
+                                <div
+                                  key={index}
+                                  className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                                >
+                                  <div>
+                                    <h4 className="font-semibold text-gray-900">
+                                      {cert.name}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {cert.issuing_organization}
+                                    </p>
+                                    <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
+                                      <span>
+                                        Issued: {formatDate(cert.issue_date)}
+                                      </span>
+                                      {cert.expiration_date && (
+                                        <span>
+                                          Expires:{" "}
+                                          {formatDate(cert.expiration_date)}
+                                        </span>
+                                      )}
+                                      {cert.credential_id && (
+                                        <span>ID: {cert.credential_id}</span>
+                                      )}
+                                    </div>
+                                    {cert.credential_url && (
+                                      <a
+                                        href={cert.credential_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-700"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        View Certificate
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 mb-6">
+                              <Award className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                              <p className="text-gray-600">
+                                No certifications added yet
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Documents Section */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Uploaded Documents
+                          </h3>
+                          {documents.length > 0 ? (
+                            <div className="space-y-4">
+                              {documents.map((doc) => (
+                                <div
+                                  key={doc.id}
+                                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
+                                >
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                      {doc.url.match(
+                                        /\.(jpg|jpeg|png|gif|webp)$/i,
+                                      ) ? (
+                                        <ImageIcon className="w-5 h-5 text-blue-600" />
+                                      ) : (
+                                        <FileText className="w-5 h-5 text-blue-600" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-gray-900 truncate">
+                                        {doc.name}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        Uploaded{" "}
+                                        {new Date(
+                                          doc.uploaded_at,
+                                        ).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3 ml-4">
+                                    {doc.verified ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                        <CheckCircle className="w-3 h-3" />
+                                        Verified
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full">
+                                        <AlertCircle className="w-3 h-3" />
+                                        Pending
+                                      </span>
+                                    )}
+                                    <a
+                                      href={doc.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-700"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </a>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                              <FileText className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                              <p className="text-gray-600">
+                                No documents uploaded yet
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

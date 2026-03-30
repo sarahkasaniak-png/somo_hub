@@ -252,7 +252,7 @@ export default function StudentHelpPage() {
             "Add your educational background (optional)",
             "Select subjects you're interested in",
             "Set your preferred learning levels (primary, high school, university, etc.)",
-            "Add your timezone for accurate scheduling",
+            "Set your timezone for accurate scheduling",
             "Specify your learning goals",
             "Save your changes",
           ],
@@ -290,6 +290,7 @@ export default function StudentHelpPage() {
             "  - Availability (days, times)",
             "  - Teaching mode (virtual, in-person, hybrid)",
             "  - Language",
+            "  - Curriculum (KCSE, Cambridge, IB, etc.)",
             "Sort results by relevance, rating, price, or popularity",
             "Click on tutor profiles to view details",
           ],
@@ -298,6 +299,7 @@ export default function StudentHelpPage() {
             "Check tutor ratings and reviews from other students",
             "Look at tutor qualifications and experience",
             "Read course descriptions carefully",
+            "Check which curricula the tutor is qualified to teach",
             "Bookmark promising tutors for later comparison",
           ],
           example:
@@ -315,6 +317,7 @@ export default function StudentHelpPage() {
             "Check their qualifications and experience",
             "Read their bio and teaching philosophy",
             "Look at their subject specialties and levels",
+            "Check which curricula they are qualified to teach (KCSE, Cambridge, IB, etc.)",
             "Check their hourly rate and course prices",
             "Read student reviews and ratings",
             "View their response rate and response time",
@@ -347,7 +350,7 @@ export default function StudentHelpPage() {
             "Ask about their teaching approach",
             "Inquire about availability if not listed",
             "Request more details about course content",
-            "Ask about their experience with your specific needs",
+            "Ask about their experience with your specific needs and curriculum",
             "Wait for the tutor to respond (usually within 24 hours)",
             "Check your messages for their reply",
           ],
@@ -373,16 +376,18 @@ export default function StudentHelpPage() {
           id: "enroll-session",
           title: "How to Enroll in a Session",
           description: "Step-by-step guide to joining a course",
-          content: "Once you've found the right course, here's how to enroll.",
+          content:
+            "Once you've found the right course, here's how to enroll. Note: You pay the full session fee upfront, which secures your spot and ensures the tutor is committed to teaching.",
           steps: [
             "Go to the course or session you want to join",
             "Review all session details:",
             "  - Start and end dates",
             "  - Schedule (days and times)",
             "  - Total weeks and classes",
-            "  - Session fee",
+            "  - Session fee (total for the entire session)",
             "  - Maximum students",
             "  - Current enrollment",
+            "  - Tutor's curriculum qualifications",
             "Click the 'Enroll Now' button",
             "Review your enrollment summary",
             "Proceed to payment",
@@ -395,6 +400,7 @@ export default function StudentHelpPage() {
             "Note the start date so you don't miss the first class",
             "Save the confirmation email for reference",
             "Add session dates to your calendar",
+            "Remember: You pay the full session fee upfront to secure your spot",
           ],
           warning:
             "Enrollment is only confirmed after successful payment. Spaces are limited and available on first-come, first-served basis.",
@@ -405,10 +411,10 @@ export default function StudentHelpPage() {
           title: "Payment Methods for Students",
           description: "How to pay for your sessions",
           content:
-            "SomoHub offers multiple convenient payment options for students.",
+            "SomoHub offers multiple convenient payment options for students. You pay the full session fee upfront when enrolling.",
           steps: [
             "After clicking 'Enroll Now', you'll be taken to checkout",
-            "Review the amount to be paid",
+            "Review the amount to be paid (full session fee)",
             "Select your payment method:",
             "  - M-Pesa (Paybill or Till Number)",
             "  - Bank transfer (EFT)",
@@ -427,7 +433,7 @@ export default function StudentHelpPage() {
             "Check your email for payment confirmation",
             "Contact support if payment isn't confirmed within 24 hours",
           ],
-          note: "Students pay the full session fee upfront. This secures your spot and ensures the tutor is committed to teaching.",
+          note: "You pay the full session fee upfront. This secures your spot and ensures the tutor is committed to teaching throughout the session. The tutor receives payments weekly as they teach.",
           link: "/payment-methods",
         },
         {
@@ -557,12 +563,16 @@ export default function StudentHelpPage() {
           id: "payment-process",
           title: "How Student Payments Work",
           description: "Understanding the payment process",
-          content: "Here's how payments work for students on SomoHub.",
+          content:
+            "Here's how payments work for students on SomoHub. You pay the full session fee upfront, which is then distributed to the tutor weekly as they teach.",
           steps: [
             "When you enroll, you pay the full session fee upfront",
             "Your payment secures your spot in the session",
             "Funds are held securely by SomoHub",
-            "Tutors are paid weekly after teaching classes",
+            "Tutors are paid weekly after completing their classes:",
+            "  - 70% of the weekly allocation goes to the tutor",
+            "  - 25% platform fee supports platform operations",
+            "  - 5% tax withholding (remitted to tax authorities)",
             "You can access all session materials immediately",
             "You'll receive a receipt via email",
             "Payment history is available in your account",
@@ -571,8 +581,9 @@ export default function StudentHelpPage() {
             "Save your receipts for your records",
             "Check your payment history regularly",
             "Contact support immediately if you see unauthorized charges",
+            "Know that your upfront payment ensures the tutor is committed to teaching the full session",
           ],
-          note: "Your upfront payment ensures tutors are committed to teaching and sessions run as scheduled.",
+          note: "Your upfront payment ensures tutors are committed to teaching and sessions run as scheduled. The tutor receives payments weekly as they teach, which incentivizes consistent, quality instruction.",
           link: "/payment-history",
         },
         {
@@ -580,13 +591,13 @@ export default function StudentHelpPage() {
           title: "Cancellation and Refund Policy",
           description: "When and how you can get a refund",
           content:
-            "Our refund policy is designed to be fair to both students and tutors.",
+            "Our refund policy is designed to be fair to both students and tutors. Since tutors are paid weekly as they teach, refunds are pro-rated based on how much of the session remains.",
           steps: [
             "Review refund eligibility before canceling:",
             "  • More than 7 days before session starts: 90% refund",
             "  • 3-7 days before session starts: 50% refund",
             "  • Less than 3 days before session starts: No refund",
-            "  • After session starts: No refund for remaining classes",
+            "  • After session starts: Refund for remaining classes only",
             "  • Tutor cancels session: 100% refund",
             "  • Technical issues preventing attendance: Case-by-case",
             "To request a refund:",
@@ -605,7 +616,7 @@ export default function StudentHelpPage() {
           warning:
             "Refund requests must be submitted through the Platform. Direct requests to tutors cannot be processed.",
           example:
-            "If you cancel a KES 5,000 session 5 days before start, you'll receive KES 2,500 (50% refund).",
+            "If you cancel a KES 10,000, 5-week session 5 days before start, you'll receive KES 5,000 (50% refund). If you cancel after week 2 of 5, you'll receive a refund for the remaining 3 weeks (pro-rated).",
           link: "/refund-policy",
         },
         {
@@ -896,12 +907,6 @@ export default function StudentHelpPage() {
       link: "/student/payments",
       color: "amber",
     },
-    // {
-    //   title: "Get Certificate",
-    //   icon: Award,
-    //   link: "/my-certificates",
-    //   color: "red",
-    // },
     {
       title: "Contact Support",
       icon: MessageSquare,
@@ -914,7 +919,7 @@ export default function StudentHelpPage() {
     {
       question: "How do I find a tutor for my specific subject?",
       answer:
-        "Use the search bar on the Find Tutors page. You can filter by subject, level, price, rating, and availability. Read tutor profiles and reviews to find the best match.",
+        "Use the search bar on the Find Tutors page. You can filter by subject, level, price, rating, availability, and curriculum (KCSE, Cambridge, IB, etc.). Read tutor profiles and reviews to find the best match.",
     },
     {
       question: "How much do tutoring sessions cost?",
@@ -924,7 +929,7 @@ export default function StudentHelpPage() {
     {
       question: "What if I need to cancel my enrollment?",
       answer:
-        "You can cancel through your My Learning page. Refunds are based on how far in advance you cancel: 90% refund if more than 7 days before start, 50% if 3-7 days before, and no refund if less than 3 days before or after session starts.",
+        "You can cancel through your My Learning page. Refunds are based on how far in advance you cancel: 90% refund if more than 7 days before start, 50% if 3-7 days before start, and no refund if less than 3 days before or after session starts. If you cancel after the session starts, you'll receive a refund for remaining classes only.",
     },
     {
       question: "How do I join my live classes?",
@@ -1021,61 +1026,6 @@ export default function StudentHelpPage() {
           })}
         </div>
 
-        {/* Category Tabs */}
-        {/* <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 overflow-x-auto pb-1">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === "all"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              All Topics
-            </button>
-            <button
-              onClick={() => setActiveTab("finding")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === "finding"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Finding Tutors
-            </button>
-            <button
-              onClick={() => setActiveTab("learning")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === "learning"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Attending Classes
-            </button>
-            <button
-              onClick={() => setActiveTab("payments")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === "payments"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Payments & Refunds
-            </button>
-            <button
-              onClick={() => setActiveTab("account")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === "account"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Account Settings
-            </button>
-          </nav>
-        </div> */}
         <div className="m-7"></div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
@@ -1267,35 +1217,6 @@ export default function StudentHelpPage() {
               </div>
             </div>
 
-            {/* Video Tutorials */}
-            {/* <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl p-6 text-white">
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <PlayCircle className="w-5 h-5" />
-              Video Tutorials
-            </h3>
-            <p className="text-sm text-blue-100 mb-4">
-              Watch step-by-step video guides for students
-            </p>
-            <div className="space-y-3">
-              <button className="w-full flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-                <PlayCircle className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">
-                  How to Find and Enroll in a Course
-                </span>
-              </button>
-              <button className="w-full flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-                <PlayCircle className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">Joining Your First Live Class</span>
-              </button>
-              <button className="w-full flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-                <PlayCircle className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">
-                  Understanding Payments and Refunds
-                </span>
-              </button>
-            </div>
-          </div> */}
-
             {/* Contact Support */}
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1313,22 +1234,6 @@ export default function StudentHelpPage() {
                   <Mail className="w-5 h-5 text-blue-600" />
                   <span className="text-sm font-medium">Email Support</span>
                 </Link>
-                {/* <Link
-                href="/chat"
-                className="flex items-center gap-3 p-3 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <MessageSquare className="w-5 h-5 text-purple-600" />
-                <span className="text-sm font-medium">Live Chat</span>
-              </Link>
-              <a
-                href="tel:+254700000000"
-                className="flex items-center gap-3 p-3 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <Phone className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-medium">
-                  Call Us: +254 700 000 000
-                </span>
-              </a> */}
               </div>
               <p className="text-xs text-gray-500 mt-4">
                 Available Mon-Fri, 8:00 AM - 6:00 PM EAT
@@ -1350,7 +1255,10 @@ export default function StudentHelpPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span>Read tutor reviews before enrolling</span>
+                  <span>
+                    Read tutor reviews and check curriculum expertise before
+                    enrolling
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
@@ -1386,13 +1294,6 @@ export default function StudentHelpPage() {
               <Mail className="w-5 h-5 mr-2" />
               Contact Support
             </Link>
-            {/* <Link
-            href="/faq"
-            className="inline-flex items-center justify-center px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-400 transition-colors"
-          >
-            <HelpCircle className="w-5 h-5 mr-2" />
-            View All FAQs
-          </Link> */}
           </div>
         </div>
       </div>
