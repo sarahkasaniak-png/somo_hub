@@ -4,7 +4,9 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function TutorOnboardingPage() {
   return (
-    <ProtectedRoute requiredRoles={["student", "tutor", "community"]}>
+    <ProtectedRoute
+      requiredRoles={["student", "tutor", "community", "affiliate"]}
+    >
       <div className="min-h-screen ">
         <div className="container mx-auto px-4 w-full py-12">
           <div className="mb-8">
