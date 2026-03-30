@@ -225,7 +225,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/affiliate/help"
+                  href="/help/affiliate"
                   className="text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1 group"
                 >
                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
