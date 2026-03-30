@@ -5,7 +5,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function CreateSessionPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requiredRoles={["tutor"]}>
       <Suspense
         fallback={
           <div className="max-w-6xl mx-auto space-y-6 animate-pulse">

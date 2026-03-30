@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default function TutorSessionsPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requiredRoles={["tutor"]}>
       <Suspense
         fallback={
           <div className="flex items-center justify-center min-h-screen">

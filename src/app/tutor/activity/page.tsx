@@ -45,6 +45,7 @@ import {
   Info,
 } from "lucide-react";
 import userApi from "@/lib/api/user";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 interface ActivityItem {
   id: number;
@@ -747,317 +748,333 @@ export default function TutorActivityPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Activity className="w-6 h-6 text-blue-600" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Activity Log
-            </h1>
-          </div>
-          <p className="text-sm text-gray-600 mt-1">
-            Track all your teaching activities, enrollments, payments, and more
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleRefresh}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </button>
-          <button
-            onClick={handleExport}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        {statCards.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={index}
-              className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
-            >
-              <div
-                className={`${stat.bg} w-10 h-10 rounded-lg flex items-center justify-center mb-3`}
-              >
-                <Icon className={`w-5 h-5 ${stat.iconColor}`} />
-              </div>
-              <p className="text-sm text-gray-600 font-medium">{stat.title}</p>
-              <p className="text-xl font-semibold text-gray-900 mt-1">
-                {stat.value}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4 sm:p-6 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <ProtectedRoute requiredRoles={["tutor"]}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
             <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-gray-500" />
-              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+              <Activity className="w-6 h-6 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                Activity Log
+              </h1>
             </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Track all your teaching activities, enrollments, payments, and
+              more
+            </p>
+          </div>
+          <div className="flex gap-2">
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+              onClick={handleRefresh}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
             >
-              {showFilters ? "Hide Filters" : "Show Filters"}
-              <ChevronDown
-                className={`w-4 h-4 ml-1 transition-transform ${showFilters ? "rotate-180" : ""}`}
-              />
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </button>
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
             </button>
           </div>
-
-          {showFilters && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Search */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Search
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search activities..."
-                    value={filters.search}
-                    onChange={(e) =>
-                      handleFilterChange("search", e.target.value)
-                    }
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Activity Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Activity Type
-                </label>
-                <select
-                  value={filters.type}
-                  onChange={(e) => handleFilterChange("type", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">All Activities</option>
-                  <option value="enrollment">Enrollments</option>
-                  <option value="payment">Payments</option>
-                  <option value="session">Sessions</option>
-                  <option value="course">Courses</option>
-                  <option value="review">Reviews</option>
-                  <option value="application">Applications</option>
-                  <option value="system">System</option>
-                </select>
-              </div>
-
-              {/* Date Range */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date Range
-                </label>
-                <select
-                  value={filters.dateRange}
-                  onChange={(e) =>
-                    handleFilterChange("dateRange", e.target.value)
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">All Time</option>
-                  <option value="today">Today</option>
-                  <option value="yesterday">Yesterday</option>
-                  <option value="week">Last 7 Days</option>
-                  <option value="month">Last 30 Days</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Active Filters Summary */}
-          {(filters.type !== "all" ||
-            filters.dateRange !== "all" ||
-            filters.search) && (
-            <div className="mt-4 flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-gray-600">Active filters:</span>
-              {filters.type !== "all" && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs">
-                  Type: {filters.type}
-                </span>
-              )}
-              {filters.dateRange !== "all" && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs">
-                  Date: {filters.dateRange}
-                </span>
-              )}
-              {filters.search && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs">
-                  Search: "{filters.search}"
-                </span>
-              )}
-              <button
-                onClick={clearFilters}
-                className="text-sm text-red-600 hover:text-red-700 ml-2"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Activity List */}
-        <div className="divide-y divide-gray-200">
-          {getPaginatedActivities().length > 0 ? (
-            getPaginatedActivities().map((activity) => (
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          {statCards.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
               <div
-                key={activity.id}
-                className="p-4 sm:p-6 hover:bg-gray-50 transition-colors"
+                key={index}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
               >
-                <div className="flex items-start gap-4">
-                  {/* Icon */}
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${getActivityIconColor(activity.type)}`}
-                  >
-                    {getActivityIcon(activity.type)}
+                <div
+                  className={`${stat.bg} w-10 h-10 rounded-lg flex items-center justify-center mb-3`}
+                >
+                  <Icon className={`w-5 h-5 ${stat.iconColor}`} />
+                </div>
+                <p className="text-sm text-gray-600 font-medium">
+                  {stat.title}
+                </p>
+                <p className="text-xl font-semibold text-gray-900 mt-1">
+                  {stat.value}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 sm:p-6 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5 text-gray-500" />
+                <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+              >
+                {showFilters ? "Hide Filters" : "Show Filters"}
+                <ChevronDown
+                  className={`w-4 h-4 ml-1 transition-transform ${showFilters ? "rotate-180" : ""}`}
+                />
+              </button>
+            </div>
+
+            {showFilters && (
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Search */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Search
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search activities..."
+                      value={filters.search}
+                      onChange={(e) =>
+                        handleFilterChange("search", e.target.value)
+                      }
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
                   </div>
+                </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {activity.description}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-500">
-                            {activity.date} at {activity.time}
-                          </span>
-                          {getStatusBadge(activity.status)}
+                {/* Activity Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Activity Type
+                  </label>
+                  <select
+                    value={filters.type}
+                    onChange={(e) => handleFilterChange("type", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Activities</option>
+                    <option value="enrollment">Enrollments</option>
+                    <option value="payment">Payments</option>
+                    <option value="session">Sessions</option>
+                    <option value="course">Courses</option>
+                    <option value="review">Reviews</option>
+                    <option value="application">Applications</option>
+                    <option value="system">System</option>
+                  </select>
+                </div>
+
+                {/* Date Range */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date Range
+                  </label>
+                  <select
+                    value={filters.dateRange}
+                    onChange={(e) =>
+                      handleFilterChange("dateRange", e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="week">Last 7 Days</option>
+                    <option value="month">Last 30 Days</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Active Filters Summary */}
+            {(filters.type !== "all" ||
+              filters.dateRange !== "all" ||
+              filters.search) && (
+              <div className="mt-4 flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-gray-600">Active filters:</span>
+                {filters.type !== "all" && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs">
+                    Type: {filters.type}
+                  </span>
+                )}
+                {filters.dateRange !== "all" && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs">
+                    Date: {filters.dateRange}
+                  </span>
+                )}
+                {filters.search && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs">
+                    Search: "{filters.search}"
+                  </span>
+                )}
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-red-600 hover:text-red-700 ml-2"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Activity List */}
+          <div className="divide-y divide-gray-200">
+            {getPaginatedActivities().length > 0 ? (
+              getPaginatedActivities().map((activity) => (
+                <div
+                  key={activity.id}
+                  className="p-4 sm:p-6 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-start gap-4">
+                    {/* Icon */}
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${getActivityIconColor(activity.type)}`}
+                    >
+                      {getActivityIcon(activity.type)}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {activity.description}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500">
+                              {activity.date} at {activity.time}
+                            </span>
+                            {getStatusBadge(activity.status)}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Metadata Preview */}
-                      {activity.metadata &&
-                        Object.keys(activity.metadata).length > 0 && (
-                          <button
-                            onClick={() => {
-                              // You could show a modal with metadata details
-                              console.log(
-                                "Activity metadata:",
-                                activity.metadata,
-                              );
-                            }}
-                            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
-                          >
-                            <Info className="w-4 h-4 mr-1" />
-                            Details
-                          </button>
-                        )}
+                        {/* Metadata Preview */}
+                        {activity.metadata &&
+                          Object.keys(activity.metadata).length > 0 && (
+                            <button
+                              onClick={() => {
+                                // You could show a modal with metadata details
+                                console.log(
+                                  "Activity metadata:",
+                                  activity.metadata,
+                                );
+                              }}
+                              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+                            >
+                              <Info className="w-4 h-4 mr-1" />
+                              Details
+                            </button>
+                          )}
+                      </div>
                     </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <Activity className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  No activities found
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {filters.type !== "all" ||
+                  filters.dateRange !== "all" ||
+                  filters.search
+                    ? "Try adjusting your filters to see more activities"
+                    : "Your activity log will appear here as you start teaching"}
+                </p>
+                {(filters.type !== "all" ||
+                  filters.dateRange !== "all" ||
+                  filters.search) && (
+                  <button
+                    onClick={clearFilters}
+                    className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
-            ))
-          ) : (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Activity className="w-8 h-8 text-gray-400" />
+            )}
+          </div>
+
+          {/* Pagination */}
+          {filteredActivities.length > 0 && (
+            <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <p className="text-sm text-gray-600">
+                  Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total,
+                  )}{" "}
+                  of {pagination.total} activities
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        page: prev.page - 1,
+                      }))
+                    }
+                    disabled={pagination.page === 1}
+                    className="p-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        page: prev.page + 1,
+                      }))
+                    }
+                    disabled={pagination.page === pagination.totalPages}
+                    className="p-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No activities found
-              </h3>
-              <p className="text-gray-600 mb-6">
-                {filters.type !== "all" ||
-                filters.dateRange !== "all" ||
-                filters.search
-                  ? "Try adjusting your filters to see more activities"
-                  : "Your activity log will appear here as you start teaching"}
-              </p>
-              {(filters.type !== "all" ||
-                filters.dateRange !== "all" ||
-                filters.search) && (
-                <button
-                  onClick={clearFilters}
-                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Clear Filters
-                </button>
-              )}
             </div>
           )}
         </div>
 
-        {/* Pagination */}
-        {filteredActivities.length > 0 && (
-          <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <p className="text-sm text-gray-600">
-                Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-                of {pagination.total} activities
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() =>
-                    setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
-                  }
-                  disabled={pagination.page === 1}
-                  className="p-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <span className="text-sm text-gray-700">
-                  Page {pagination.page} of {pagination.totalPages}
-                </span>
-                <button
-                  onClick={() =>
-                    setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
-                  }
-                  disabled={pagination.page === pagination.totalPages}
-                  className="p-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+        {/* Quick Tips */}
+        <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Zap className="w-5 h-5 text-blue-600" />
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Quick Tips */}
-      <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Zap className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-blue-900 mb-1">Quick Tips</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Use filters to narrow down specific activity types</li>
-              <li>
-                • Click the "Details" button on any activity to see more
-                information
-              </li>
-              <li>• Export your activity log for record keeping or analysis</li>
-              <li>
-                • Activities are automatically tracked for all your teaching
-                actions
-              </li>
-            </ul>
+            <div>
+              <h3 className="font-semibold text-blue-900 mb-1">Quick Tips</h3>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Use filters to narrow down specific activity types</li>
+                <li>
+                  • Click the "Details" button on any activity to see more
+                  information
+                </li>
+                <li>
+                  • Export your activity log for record keeping or analysis
+                </li>
+                <li>
+                  • Activities are automatically tracked for all your teaching
+                  actions
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }
