@@ -690,7 +690,7 @@ export default function ApplicationSummary({
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-yellow-700">
-                An application fee of <span className="font-bold">KES 565</span>{" "}
+                An application fee of <span className="font-bold">KES 265</span>{" "}
                 is required
               </p>
               <p className="text-sm text-yellow-600 mt-1">
@@ -698,7 +698,7 @@ export default function ApplicationSummary({
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-yellow-800">KES 565</p>
+              <p className="text-2xl font-bold text-yellow-800">KES 265</p>
             </div>
           </div>
 
@@ -742,7 +742,7 @@ export default function ApplicationSummary({
               </div>
 
               <PaystackPayment
-                amount={565}
+                amount={265}
                 email={userEmail}
                 applicationId={application.id}
                 onPaymentSuccess={handlePaymentSuccess}
