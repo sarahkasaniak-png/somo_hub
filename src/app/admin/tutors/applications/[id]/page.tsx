@@ -560,7 +560,7 @@ export default function TutorApplicationDetailPage({
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="font-semibold text-gray-900">Actions</h2>
             </div>
@@ -615,6 +615,108 @@ export default function TutorApplicationDetailPage({
                 </>
               )}
 
+              {(application.application_status === "approved" ||
+                application.application_status === "rejected") && (
+                <button
+                  onClick={() => handleStatusChange("pending")}
+                  disabled={actionLoading}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                >
+                  <Clock className="w-4 h-4" />
+                  Reopen Application
+                </button>
+              )}
+            </div>
+          </div> */}
+          {/* Actions */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="font-semibold text-gray-900">Actions</h2>
+            </div>
+            <div className="p-6 space-y-3">
+              {/* Actions for draft applications */}
+              {application.application_status === "draft" && (
+                <>
+                  <button
+                    onClick={() => handleStatusChange("pending")}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                  >
+                    <Clock className="w-4 h-4" />
+                    Submit for Review (Mark as Pending)
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange("approved")}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Approve Application (Skip Review)
+                  </button>
+                  <button
+                    onClick={() => setShowRejectModal(true)}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject Application
+                  </button>
+                </>
+              )}
+
+              {/* Existing actions for pending status */}
+              {application.application_status === "pending" && (
+                <>
+                  <button
+                    onClick={() => handleStatusChange("under_review")}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Clock className="w-4 h-4" />
+                    Mark as Under Review
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange("approved")}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Approve Application
+                  </button>
+                  <button
+                    onClick={() => setShowRejectModal(true)}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject Application
+                  </button>
+                </>
+              )}
+
+              {/* Existing actions for under_review status */}
+              {application.application_status === "under_review" && (
+                <>
+                  <button
+                    onClick={() => handleStatusChange("approved")}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Approve Application
+                  </button>
+                  <button
+                    onClick={() => setShowRejectModal(true)}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject Application
+                  </button>
+                </>
+              )}
+
+              {/* Existing reopen action for approved/rejected statuses */}
               {(application.application_status === "approved" ||
                 application.application_status === "rejected") && (
                 <button
